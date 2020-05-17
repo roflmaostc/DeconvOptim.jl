@@ -23,12 +23,14 @@ function deconvolution(meas, otf;
     end
 
     lossf!, m, m_inv = loss
-    img0 = m_inv(Utils.conv_real_otf(meas, otf))
 
-    f! = (F, G, img) -> lossf!(F, G, img, otf, meas)
+    meas_m = meas ./ mean(meas)
+    img0 = m_inv(conv_real_otf(meas_m, otf))
+
+    f! = (F, G, img) -> lossf!(F, G, img, otf, meas_m)
     res = Optim.optimize(Optim.only_fg!(f!), img0, LBFGS(), optim_options)
 
-    return m(Optim.minimizer(res)), res
+    return mean(meas) .* m(Optim.minimizer(res)), res
 end
 
 
