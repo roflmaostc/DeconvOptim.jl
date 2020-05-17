@@ -16,11 +16,7 @@ function TV(; λ=0.05)
 end
 
 function TVf(img)
-    dy = img[1:end - 2, 1:end - 2] .- img[3:end, 1:end - 2]
-    dy_s = dy.^2
-    dx = img[1:end - 2, 1:end - 2] .- img[1:end - 2, 3:end]
-    dx_s = dx.^2
-    return mean(dy_s .+ dx_s)
+    return mean(Δ_square(img))
 end
 
 
@@ -29,9 +25,14 @@ function GR(; λ=0.05)
 end
 
 function GRf(img, ϵ=1e-5)
+    return 0.25 .* mean(Δ_square(img) ./ (img[2:end - 1, 2:end - 1] .+ ϵ))
+end
+
+
+function Δ_square(img)
     ∇y = img[1:end - 2, 1:end - 2] .- img[3:end, 1:end - 2]
     ∇y_s = ∇y.^2
     ∇x = img[1:end - 2, 1:end - 2] .- img[1:end - 2, 3:end]
     ∇x_s = ∇x.^2
-    return 0.25 * mean((∇x_s .+ ∇y_s) ./(img[2:end - 1, 2:end - 1] .+ ϵ))
+    return ∇x_s .+ ∇y_s
 end
