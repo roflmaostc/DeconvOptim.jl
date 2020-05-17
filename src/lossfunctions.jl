@@ -1,6 +1,6 @@
 
 export Poisson
-
+export Gauss
 
 
 
@@ -26,11 +26,11 @@ function Poisson(; regularizer=GR(), mapping=Non_negative())
         n = length(img)
 
         img_m = m(img)
-        μ = Utils.conv_real_otf(img_m, otf)
+        μ = conv_real_otf(img_m, otf)
 
         if G != nothing
             G .= ∇m(img) .* (∇reg(img_m) .+
-                 1 / n .* Utils.conv_real_otf(1 .- meas ./ μ, conj(otf)))
+                 1 / n .* conv_real_otf(1 .- meas ./ μ, conj(otf)))
         end
         if F != nothing
             return  reg(img_m) + 1 / n * sum(μ .- meas .* log.(μ))
@@ -40,22 +40,32 @@ function Poisson(; regularizer=GR(), mapping=Non_negative())
 end
 
 
-function gauss(img, otf, meas)
-    ν = my_conv_otf(img, otf) - meas
-    return sum(ν.^2)
-end
+function Gauss(; regularizer=nothing, mapping=nothing)
 
-function ∇gauss(img, otf, meas)
-    ν = my_conv_otf(img, otf) - meas
-    return 2 * my_conv_otf(ν, otf)
-end
+    if mapping == nothing
+        mapping = IDm()
+    end
+    m, ∇m, m_inv = mapping
 
-function gauss_comb!(F, G, img, otf, meas)
-    ν = my_conv_otf(img, otf) - meas
-    if G != nothing
-        G .= 2 * my_conv_otf(ν, otf)
+    if regularizer == nothing
+        regularizer = ID()
     end
-    if F != nothing
-        return sum(ν.^2)
+    reg, ∇reg = regularizer
+
+    function f!(F, G, img, otf, meas)
+        n = length(img)
+
+        img_m = m(img)
+        ν = conv_real_otf(img_m, otf) - meas
+
+        if G != nothing
+            G .= ∇m(img) .* (∇reg(img_m) .+
+                 2 * conv_real_otf(ν, otf))
+
+        end
+        if F != nothing
+            return sum(ν.^2)
+        end
     end
+    return f!, m, m_inv
 end
