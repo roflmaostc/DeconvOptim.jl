@@ -2,6 +2,7 @@ using Zygote: @adjoint, gradient
 
 export Non_negative
 export map_0_1
+export Exp
 
 function map_0_1()
     f(x) = 1 .- exp.(.- x.^2)
@@ -9,6 +10,11 @@ function map_0_1()
     f_inv(x) = sqrt.(.- log.(1 .- min.(1, x)))
     return f, ∇f, f_inv
 end
+
+function Exp()
+    return ((x -> exp.(x)), (x -> exp.(x)) , (x -> log.(x)))
+end
+
 
 function IDm()
     return identity, (x -> 1), identity
