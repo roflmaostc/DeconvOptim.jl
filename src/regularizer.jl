@@ -3,8 +3,8 @@ using Zygote: @adjoint, gradient
 using Statistics
 
 
-export GR, TV
-
+export GR, GR2, TV
+export ∇s_square, ∇s_square2, ∇_∇s_square2
 
 
 function ID(; λ=0.05)
@@ -16,23 +16,56 @@ function TV(; λ=0.05)
 end
 
 function TVf(img)
-    return mean(Δ_square(img))
+    return mean(∇s_square(img))
 end
 
-
-function GR(; λ=0.05)
+function GR(; λ=0.05, ϵ=1e-5)
     return (x -> λ .* GRf(x)), (x -> λ .* gradient(GRf, x)[1])
 end
 
+function GR2(; λ=0.05, ϵ=1e-5)
+    return (x -> λ .* GRf2(x)), (img -> 0.25 .* λ .* ∇_∇s_square2(img))
+end
+
 function GRf(img, ϵ=1e-5)
-    return 0.25 .* mean(Δ_square(img) ./ (img[2:end - 1, 2:end - 1] .+ ϵ))
+    return 0.25 ./ length(img[2:end-1, 2:end-1]) .* sum(∇s_square(img) ./ (img[2:end-1, 2:end-1] .+ ϵ))
 end
 
 
-function Δ_square(img)
-    ∇y = img[1:end - 2, 1:end - 2] .- img[3:end, 1:end - 2]
-    ∇y_s = ∇y.^2
-    ∇x = img[1:end - 2, 1:end - 2] .- img[1:end - 2, 3:end]
-    ∇x_s = ∇x.^2
-    return ∇x_s .+ ∇y_s
+function GRf2(img, ϵ=1e-5)
+    return 0.25 .* ∇s_square2(img)
 end
+
+function ∇s_square(img)
+    ∇y = img[3:end, 2:end - 1] .- img[1:end - 2, 2:end - 1]
+    ∇x = img[2:end - 1, 3:end] .- img[2:end - 1, 1:end - 2]
+    return (∇x .^2 .+ ∇y .^2) ./ 4
+end
+
+
+
+function ∇s_square2(img; ϵ=1e-5)
+    res = 0
+    for i = 2:size(img)[1] - 1
+        for j = 2:size(img)[2] - 1
+            res = res + ((img[i, j + 1] - img[i, j - 1])^2 +
+                (img[i + 1, j] - img[i - 1, j])^2) / (img[i,j] + ϵ)
+        end
+    end
+    return res / 4 / length(img[2:end-1, 2:end-1])
+end
+
+function ∇_∇s_square2(img, ϵ=1e-5)
+    res = zeros(size(img))
+    for i = 3:size(img)[1] - 2
+        for j = 3:size(img)[2] - 2
+            res[i, j] = 2 *   (1*(img[i, j]   - img[i-2, j])/(img[i-1, j]  + ϵ)
+                              +1* (img[i, j]   - img[i, j-2])/(img[i,   j-1]+ ϵ)
+                              -1* (img[i+2, j] - img[i,j]   )/(img[i+1, j]  + ϵ)
+                              -1*  (img[i, j+2] - img[i,j]   )/(img[i,   j+1]+ ϵ))-
+                            ((img[i, j + 1] - img[i, j - 1])^2 + (img[i + 1, j] - img[i - 1, j])^2) / (img[i,j] + ϵ)^2
+        end
+    end
+    return res ./ 4 / length(img[2:end - 1, 2:end - 1])
+end
+#@adjoint ∇s_square2(img) = ∇s_square2(img), c -> (c * ∇_∇s_square2(img),)
