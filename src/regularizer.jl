@@ -3,7 +3,7 @@ using Zygote: @adjoint, gradient
 using Statistics
 
 
-export GR, GR2, TV
+export GR, GR2, GR3, TV
 export ∇s_square, ∇s_square2, ∇_∇s_square2
 
 
@@ -25,6 +25,10 @@ end
 
 function GR2(; λ=0.05, ϵ=1e-5)
     return (x -> λ .* GRf2(x)), (img -> 0.25 .* λ .* ∇_∇s_square2(img))
+end
+
+function GR3(; λ=0.05, ϵ=1e-5)
+    return (x -> λ .* GRf2(x)), (img -> 0.25 .* λ .* gradient(∇s_square2, img)[1])
 end
 
 function GRf(img, ϵ=1e-5)
@@ -54,6 +58,7 @@ function ∇s_square2(img; ϵ=1e-5)
     end
     return res / 4 / length(img[2:end-1, 2:end-1])
 end
+@adjoint ∇s_square2(img) = ∇s_square2(img), c -> (c * ∇_∇s_square2(img),)
 
 function ∇_∇s_square2(img, ϵ=1e-5)
     res = zeros(size(img))
@@ -68,4 +73,3 @@ function ∇_∇s_square2(img, ϵ=1e-5)
     end
     return res ./ 4 / length(img[2:end - 1, 2:end - 1])
 end
-#@adjoint ∇s_square2(img) = ∇s_square2(img), c -> (c * ∇_∇s_square2(img),)
