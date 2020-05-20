@@ -3,12 +3,17 @@ using Zygote: @adjoint, gradient
 using Statistics
 
 
-export GR, GR2, GR3, TV
+export GR, GR2, GR3, TV, TV2
 export ∇s_square, ∇s_square2, ∇_∇s_square2
 
 
 function ID(; λ=0.05)
     return (x -> 0), (x -> 0)
+end
+
+
+function TV2(; λ=0.05)
+    return (x -> λ .* ∇s_square2(x), (x -> λ .* ∇_∇s_square2(x)))
 end
 
 function TV(; λ=0.05)
