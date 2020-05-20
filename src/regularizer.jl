@@ -24,8 +24,18 @@ function TVf(img)
     return mean(∇s_square(img))
 end
 
-function GR(; λ=0.05, ϵ=1e-5)
-    return (x -> λ .* GRf(x)), (x -> λ .* gradient(GRf, x)[1])
+function GR(; λ=0.05)
+    function f!(F, G, rec)
+
+        if G != nothing
+            G = λ .* ∇_∇s_square2(rec)
+        end
+
+        if F != nothing
+            return λ .* ∇s_square2(rec)
+        end
+    end
+    return f!
 end
 
 function GR2(; λ=0.05, ϵ=1e-5)

@@ -13,30 +13,20 @@ The `otf` needs to be generated out of the PSF by `rtff(psf)`.
 """
 
 
-function Poisson(; regularizer=GR(), mapping=Non_negative())
-    m, ∇m, m_inv = mapping
+function Poisson()
 
-    if regularizer == nothing
-        regularizer = ID()
-    end
-
-    reg, ∇reg = regularizer
-
-    function f!(F, G, img, otf, meas)
-        n = length(img)
-
-        img_m = m(img)
-        μ = conv_real_otf(img_m, otf)
+    function f!(F, G, rec, otf, meas)
+        n = length(rec)
+        μ = conv_real_otf(rec, otf)
 
         if G != nothing
-            G .= ∇m(img) .* (∇reg(img_m) .+
-                 1 / n .* conv_real_otf(1 .- meas ./ μ, conj(otf)))
+            G .= 1 ./ n .* conv_real_otf(1 .- meas ./ μ, conj(otf))
         end
         if F != nothing
-            return  reg(img_m) + 1 / n * sum(μ .- meas .* log.(μ))
+            return 1 ./ n .* sum(μ .- meas .* log.(μ))
         end
     end
-    return f!, m, m_inv
+    return f!
 end
 
 
