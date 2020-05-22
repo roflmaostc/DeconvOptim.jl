@@ -3,36 +3,34 @@ module DeconvOptim
 using Zygote: @adjoint, gradient
 using Optim
 using Statistics
+using FFTW
 
-export deconvolution, Deconvolution
+export deconvolution
+
+
 include("utils.jl")
 include("regularizer.jl")
 include("mappings.jl")
 include("lossfunctions.jl")
 
 
-#function deconvolution(meas, otf;
-#        iterations=50,
-#        options=nothing,
-#        loss=Poisson(; regularizer=GR()))
-#
-#    # if not special options are given, just restrict iterations
-#    if options == nothing
-#        optim_options = Optim.Options(iterations=iterations)
-#    end
-#
-#    lossf!, m, m_inv = loss
-#
-#    img0 = m_inv(conv_real_otf(meas, otf))
-#
-#    f! = (F, G, img) -> lossf!(F, G, img, otf, meas)
-#    res = Optim.optimize(Optim.only_fg!(f!), img0, LBFGS(), optim_options)
-#
-#    return m(Optim.minimizer(res)), res
-#end
+"""
+    deconvolution(measured, psf; <keyword arguments>)
+Computes the deconvolution of `measured` and `psf`.
 
+Multiple keyword arguments can be specified for different loss functions,
+regularizers and mappings.
 
-function deconvolution(meas, otf;
+# Arguments
+- `lossf`: the lossfunction taking a vector the same shape as measured. 
+           Default is `Poisson()`.
+- `regularizerf`: A regularizer function, same form as `lossf`. Default
+                  is `GR()`. 
+- `mappingf`: Applies a mapping of the optimizer weight. Default is a 
+              parabola which achieves a non-negativity constraint.
+
+"""
+function deconvolution(measured, psf;
         lossf=Poisson(),
         regularizerf=GR(),
         mappingf=Non_negative(),
@@ -58,9 +56,12 @@ function deconvolution(meas, otf;
         regularizerf = n_regularizerf
     end
 
-    # lossf needs otf and meas, but only once, therefore
+    # transform the PSF to OTF, is more efficient
+    otf = rfft(psf)
+
+    # lossf needs otf and measured, but only once, therefore
     # an extra anonymous function
-    lossf2(F, G, rec) = lossf(F, G, rec, otf, meas)
+    lossf2(F, G, rec) = lossf(F, G, rec, otf, measured)
 
     # this is the function which will be provided to Optimize
     # we use the trick and share computations
@@ -73,7 +74,7 @@ function deconvolution(meas, otf;
         # if gradient should be calculated, we must allocate some space
         # for the gradient of the regularizer
         if G != nothing
-            ∇reg = zeros(size(meas))
+            ∇reg = zeros(size(measured))
         end
 
         # calculate the regularizer loss
@@ -91,11 +92,11 @@ function deconvolution(meas, otf;
 
     # if not special options are given, just restrict iterations
     if options == nothing
-        optim_options = Optim.Options(iterations=iterations)
+        options = Optim.Options(iterations=iterations)
     end
 
-    rec0 = m_invf(conv_real_otf(meas, otf))
-    res = Optim.optimize(Optim.only_fg!(f!), rec0, LBFGS(), optim_options)
+    rec0 = m_invf(conv_real_otf(measured, otf))
+    res = Optim.optimize(Optim.only_fg!(f!), rec0, LBFGS(), options)
 
     return mf(Optim.minimizer(res)), res
 

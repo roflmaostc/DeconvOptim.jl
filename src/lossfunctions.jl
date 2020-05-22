@@ -5,17 +5,24 @@ export Gauss
 
 
 """
-    poisson_loss(img, otf, meas)
-Computes the poisson loss between the `img` (filtered with the `otf`) with
-respect to the measured image `meas`.
-`img` and `meas` need to be in the same shape.
-The `otf` needs to be generated out of the PSF by `rtff(psf)`.
+    Poisson()
+
+Returns a function to calculate poisson loss and gradient of it.
+
 """
-
-
 function Poisson()
 
-    function f!(F, G, rec, otf, meas)
+    """
+        poisson_loss!(F, G, rec, otf, meas)
+    Computes the poisson loss between the `rec` (filtered with the `otf`) with
+    respect to the measured image `meas`.
+
+    `rec`, `otf` and `meas` need to be in the same shape.
+    If `F` is unequal to `nothing`, the function will return the loss.
+    If `G` is unequal to `nothing` (and a array), the gradient
+    will be stored withing `G`.
+    """
+    function poisson_loss!(F, G, rec, otf, meas)
         n = length(rec)
         μ = conv_real_otf(rec, otf)
 
@@ -26,36 +33,29 @@ function Poisson()
             return 1 ./ n .* sum(μ .- meas .* log.(μ))
         end
     end
-    return f!
+    return poisson_loss!
 end
 
 
-function Gauss(; regularizer=nothing, mapping=nothing)
+"""
+    Gauss()
 
-    if mapping == nothing
-        mapping = IDm()
-    end
-    m, ∇m, m_inv = mapping
+Returns a function to calculate Gauss loss and gradient of it.
+"""
+function Gauss()
 
-    if regularizer == nothing
-        regularizer = ID()
-    end
-    reg, ∇reg = regularizer
+    function gauss_loss!(F, G, rec, otf, meas)
+        n = length(rec)
 
-    function f!(F, G, img, otf, meas)
-        n = length(img)
-
-        img_m = m(img)
-        ν = conv_real_otf(img_m, otf) - meas
+        ν = conv_real_otf(rec, otf) - meas
 
         if G != nothing
-            G .= ∇m(img) .* (∇reg(img_m) .+
-                 2 * conv_real_otf(ν, otf))
+            G .= 2 * conv_real_otf(ν, otf)
 
         end
         if F != nothing
             return sum(ν.^2)
         end
     end
-    return f!, m, m_inv
+    return gauss_loss!
 end
