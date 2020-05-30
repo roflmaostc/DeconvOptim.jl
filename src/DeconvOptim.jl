@@ -1,9 +1,12 @@
 module DeconvOptim
 
 using Zygote: @adjoint, gradient
+using ReverseDiff
 using Optim
 using Statistics
 using FFTW
+using Distributed
+
 
 export deconvolution
 

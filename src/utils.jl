@@ -2,6 +2,7 @@ export generate_psf, conv_real_otf, conv_real
 
 using FFTW
 
+export conv_real_otf
 
 
 function conv_real_otf(img, otf)
