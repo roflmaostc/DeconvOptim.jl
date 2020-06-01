@@ -6,7 +6,7 @@ using Optim
 using Statistics
 using FFTW
 using Distributed
-
+using Tullio
 
 export deconvolution
 
@@ -101,7 +101,7 @@ function deconvolution(measured, psf;
     rec0 = m_invf(conv_real_otf(measured, otf))
     res = Optim.optimize(Optim.only_fg!(f!), rec0, LBFGS(), options)
 
-    return mf(Optim.minimizer(res)), res
+    return mf(Optim.minimizer(res)), res, rec0
 
 end
 
