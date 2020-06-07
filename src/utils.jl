@@ -5,14 +5,22 @@ using FFTW
 export conv_real_otf
 
 
-function conv_real_otf(img, otf)
-    return real(irfft(rfft(img) .* otf, size(img)[1]))
+function conv_real_otf(rec, otf)
+    return real(irfft(rfft(rec) .* otf, size(rec)[1]))
+end
+
+function conv_real_otf5D(rec, otf)
+    return real(irfft(rfft(rec, [1, 2, 3]) .* otf, size(rec)[1], [1, 2, 3]))
 end
 
 function conv_real(img, psf)
-    return real(irfft(rfft(img) .* rfft(psf), size[img][1]))
+    return real(irfft(rfft(rec, [1, 2, 3]) .* rfft(psf, [1, 2, 3]),
+                      size(rec)[1], [1, 2, 3]))
 end
 
+function conv_real_otf_p(P, P_inv, rec, otf)
+    return real(P_inv * ((P * rec) .* otf))
+end
 
 
 function rr(img)

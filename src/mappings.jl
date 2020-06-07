@@ -49,7 +49,7 @@ function Non_negative2()
     
     f(x) = x < 0 ? f1(x) : f2(x) 
     ∇f(x) = x < 0 ? ∇f1(x) : ∇f2(x) 
-    f_inv(y) = y < 1 ? f1_inv(y) : f2_inv(y)
+    f_inv(y) = y < 1.0 ? f1_inv(y) : f2_inv(y)
 
     return (x -> f.(x)), (x -> ∇f.(x)), (y -> f_inv.(y))
 end

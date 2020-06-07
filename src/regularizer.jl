@@ -2,24 +2,24 @@ using Zygote: @adjoint, gradient
 using Statistics
 using Distributed
 
-export GR, GR2
-export Tikhonov, Tikhonov_vec
-export TV, TV_vec
+export GR, GR_old
+export Tikhonov_old, Tikhonov
+export TV, TV_old
 export Positivity
 export laplace
 
-function laplace(rec)
-    a = (rec[1:end-2, 2:end-1] .- 2 .* rec[2:end - 1, 2:end - 1] 
-            .+ rec[3:end, 2:end - 1]) 
-    b = (rec[2:end-1, 1:end-2] .- 2 .* rec[2:end - 1, 2:end - 1] 
-            .+ rec[2:end - 1, 3:end])
-
-    return sum((a .+ b) .^ 2)
-end
-
+ # First we define several functions which are helpful
+ # to use in some of the regularizers
 function laplace(rec) 
     @tullio res = (rec[i - 1, j] + rec[i + 1, j] +   
                    rec[i, j + 1] + rec[i, j - 1] - 4 * rec[i,j])^2
+    return res
+end
+
+
+function spatial_grad_square(rec)
+    @tullio res = ((rec[i - 1, j] - rec[i + 1, j])^2 +
+                   (rec[i, j - 1] - rec[i, j + 1])^2)
     return res
 end
 
@@ -53,27 +53,50 @@ function Positivity(; λ=0.05)
     return f!
 end
 
-function Tikhonov(; λ=0.05, ϵ=1e-5)
+
+
+function GR(; λ=0.05, mode="central", ϵ=1e-5)
+    function GR_central(rec)
+        @tullio reg = ((rec[i - 1, j, k, l, m] - rec[i + 1, j, k, l, m])^2 + 
+                       (rec[i, j - 1, k, l, m] - rec[i, j + 1, k, l, m])^2) / 
+                      (rec[i, j, k, l, m] + ϵ)
+        return reg 
+    end
+    function GR_forward(rec)
+        @tullio reg = ((rec[i, j] - rec[i + 1, j])^2 + 
+                       (rec[i, j] - rec[i, j + 1])^2) / (rec[i, j] + ϵ)
+        return reg
+    end
+
+    if mode == "central"
+        GRf = GR_central 
+    elseif mode == "forward"
+        GRf = GR_forward 
+    end
+
     function f!(F, G, rec)
         if G != nothing
-            G .= λ .* ∇_∇spatial_square(rec)
+            G .= λ ./ 4 .* gradient(GRf, rec)[1] / length(rec) 
         end
-
         if F != nothing
-            return λ .* sum(∇spatial_square(rec))
+            return λ * GRf(rec) / 4 / length(rec) 
         end
     end
-    return f! 
+    return f!
 end
 
 
-function Tikhonov_vec(; λ=0.05, mode="laplace")
-
+# Tikhonov is the preferred implementation over Tikhonov_old
+function Tikhonov(; λ=0.05, mode="laplace")
 
     if mode == "laplace"
-        Γ = laplace_tullio
-    elseif mode == "gradient"
-        Γ = laplace 
+        Γ = laplace
+    elseif mode == "spatial_grad_square"
+        Γ = spatial_grad_square
+    elseif mode == "forward_grad"
+        Γ = forward_gradient 
+    elseif mode == "central_grad"
+        Γ = central_gradient 
     end
 
     function f!(F, G, rec)
@@ -88,7 +111,63 @@ function Tikhonov_vec(; λ=0.05, mode="laplace")
     return f!
 end
 
-function TV(; λ=0.05, ϵ=1e-5)
+function TV(; λ=0.05, mode="central")
+    function total_var_center(rec)
+        @tullio reg = sqrt((rec[i - 1, j] - rec[i + 1, j])^2 + 
+                           (rec[i, j - 1] - rec[i, j + 1])^2)
+        return reg 
+    end
+
+    function total_var_forward(rec)
+        @tullio reg = sqrt((rec[i, j] - rec[i + 1, j])^2 + 
+                           (rec[i, j] - rec[i, j + 1])^2)
+        return reg
+    end
+
+    if mode == "central"
+        total_var = total_var_center
+    elseif mode == "forward"
+        total_var = total_var_forward
+    end
+
+    # definition of the function which will be called by Optim
+    function f!(F, G, rec)
+        c = spatial_diff_sqrt(rec)
+        if G != nothing
+            G .= λ .* gradient(total_var, rec)[1] / length(rec) 
+        end
+
+        if F != nothing
+            return λ * total_var(rec) / length(rec)
+        end
+    end
+    
+    return f!
+end
+
+
+
+
+
+
+
+# Old stuff from here on which will be removed
+
+function Tikhonov_old(; λ=0.05, ϵ=1e-5)
+    function f!(F, G, rec)
+        if G != nothing
+            G .= λ .* ∇_∇spatial_square(rec)
+        end
+
+        if F != nothing
+            return λ .* sum(∇spatial_square(rec))
+        end
+    end
+    return f! 
+end
+
+
+function TV_old(; λ=0.05, ϵ=1e-5)
     function f!(F, G, rec)
         c = spatial_diff_sqrt(rec)
         if G != nothing
@@ -103,61 +182,6 @@ function TV(; λ=0.05, ϵ=1e-5)
     return f!
 end
 
-function TV_vec(; λ=0.05, mode="central", ϵ=1e-5)
-    function total_var_center(rec)
-        a = @view(rec[1:end - 2, 2:end - 1]) - @view(rec[3:end, 2:end - 1])
-        b = @view(rec[2:end - 1, 1:end - 2]) - @view(rec[2:end - 1, 3:end])
-        #= a = rec[1:end - 2, 2:end - 1] - rec[3:end, 2:end - 1] =#
-        #= b = rec[2:end - 1, 1:end - 2] - rec[2:end - 1, 3:end] =#
-        #= a = @view(rec[1:end - 2, 2:end - 1]) - @view(rec[3:end, 2:end - 1]) =#
-        #= b = @view(rec[2:end - 1, 1:end - 2]) - @view(rec[2:end - 1, 3:end]) =#
-        return 0.5 .* sum(sqrt.(a .^ 2 + b .^ 2))
-    end
-
-    function total_var_forward(rec)
-        @tullio a = sqrt((rec[i, j] - rec[i + 1, j])^2 + 
-                         (rec[i, j] - rec[i, j + 1])^2)
-        return a
-    end
-
-    function total_var_backward(rec)
-        a = rec[2:end - 1, 2:end - 1] - rec[1:end - 2, 2:end - 1]
-        b = rec[2:end - 1, 2:end - 1] - rec[2:end - 1, 1:end - 2]
-        return sum(sqrt.(a .^ 2 + b .^ 2))
-    end
-    
-    function total_var_forward_backward(rec)
-        # center - next 
-        a = rec[2:end - 1, 2:end - 1] - rec[3:end, 2:end - 1]
-        b = rec[2:end - 1, 2:end - 1] - rec[2:end - 1, 3:end]
-        # center - previous
-        c = rec[2:end - 1, 2:end - 1] - rec[1:end - 2, 2:end - 1]
-        d = rec[2:end - 1, 2:end - 1] - rec[2:end - 1, 1:end - 2]
-        return 0.5 .* sum(sqrt.(a .^ 2 + b .^ 2 + c .^2 + d .^ 2))
-    end
-
-    if mode == "central"
-        total_var = total_var_center
-    elseif mode == "forward_backward" 
-        total_var = total_var_forward_backward
-    elseif mode == "forward"
-        total_var = total_var_forward
-    elseif mode == "backward"
-        total_var = total_var_backward
-    end
-    function f!(F, G, rec)
-        c = spatial_diff_sqrt(rec)
-        if G != nothing
-            G .= λ .* gradient(total_var, rec)[1] / length(rec) 
-        end
-
-        if F != nothing
-            return λ * total_var(rec) / length(rec)
-        end
-    end
-    
-    return f!
-end
 
 """
     ∇_spatial_diff_sqrt(rec; ϵ=1e-5)
@@ -200,7 +224,7 @@ function spatial_diff_sqrt(rec)
 end
 
 
-function GR(; λ=0.05, ϵ=1e-5)
+function GR_old(; λ=0.05, ϵ=1e-5)
     function f!(F, G, rec)
         precomputed =  ∇spatial_square(rec)
         if G != nothing
@@ -214,19 +238,8 @@ function GR(; λ=0.05, ϵ=1e-5)
     return f!
 end
 
-function GR2(; λ=0.05, ϵ=1e-5)
-    function f!(F, G, rec)
-        precomputed =  ∇spatial_square(rec) ./ (rec .+ ϵ)
-        if G != nothing
-            G .= λ .* ReverseDiff.gradient(rec -> sum(∇spatial_square(rec)./ (rec .+ ϵ)), rec)[1]
-        end
 
-        if F != nothing
-            return λ .* sum(precomputed) 
-        end
-    end
-    return f!
-end
+
 
 function ∇spatial_square2(rec)
     out = zeros(size(rec))

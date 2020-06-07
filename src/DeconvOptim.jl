@@ -33,13 +33,34 @@ regularizers and mappings.
               parabola which achieves a non-negativity constraint.
 
 """
-function deconvolution(measured, psf;
+function deconvolution(measured::AbstractArray{T, N}, psf;
         lossf=Poisson(),
         regularizerf=GR(),
         mappingf=Non_negative(),
         iterations=50,
-        options=nothing)
+        options=nothing,
+        plan_fft=true) where {T, N}
 
+    if N == 2
+        new_size = (size(measured)..., 1, 1, 1)
+        measured = reshape(measured, new_size)
+        psf = reshape(psf, new_size) 
+    elseif N == 3 
+        new_size = (size(measured)..., 1, 1)
+        measured = reshape(measured, new_size)
+        psf = reshape(psf, new_size) 
+    end
+
+    if plan_fft
+        P = plan_rfft(measured, [1, 2, 3])
+        measured_fft = P * measured
+        P_inv = plan_irfft(measured_fft, size(measured)[1], [1, 2, 3])
+        conv(rec, otf) = conv_real_otf_p(P, P_inv, rec, otf)
+    else
+        conv = conv_real_otf
+    end
+
+ 
     # parsing of arguments
     if mappingf != nothing
         mf, ∇mf, m_invf = mappingf
@@ -64,7 +85,7 @@ function deconvolution(measured, psf;
 
     # lossf needs otf and measured, but only once, therefore
     # an extra anonymous function
-    lossf2(F, G, rec) = lossf(F, G, rec, otf, measured)
+    lossf2(F, G, rec) = lossf(conv, F, G, rec, otf, measured)
 
     # this is the function which will be provided to Optimize
     # we use the trick and share computations
@@ -98,7 +119,7 @@ function deconvolution(measured, psf;
         options = Optim.Options(iterations=iterations)
     end
 
-    rec0 = m_invf(conv_real_otf(measured, otf))
+    rec0 = m_invf(conv(measured, otf))
     res = Optim.optimize(Optim.only_fg!(f!), rec0, LBFGS(), options)
 
     return mf(Optim.minimizer(res)), res, rec0

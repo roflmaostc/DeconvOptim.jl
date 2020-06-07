@@ -13,21 +13,22 @@ Returns a function to calculate poisson loss and gradient of it.
 function Poisson()
 
     """
-        poisson_loss!(F, G, rec, otf, meas)
+        poisson_loss!(conv, F, G, rec, otf, meas)
     Computes the poisson loss between the `rec` (filtered with the `otf`) with
-    respect to the measured image `meas`.
+    respect to the measured image `meas`. `conv` is the used convolution
+    algorithm.
 
     `rec`, `otf` and `meas` need to be in the same shape.
     If `F` is unequal to `nothing`, the function will return the loss.
     If `G` is unequal to `nothing` (and a array), the gradient
     will be stored withing `G`.
     """
-    function poisson_loss!(F, G, rec, otf, meas)
+    function poisson_loss!(conv, F, G, rec, otf, meas)
         n = length(rec)
-        μ = conv_real_otf(rec, otf)
+        μ = conv(rec, otf)
 
         if G != nothing
-            G .= 1 ./ n .* conv_real_otf(1 .- meas ./ μ, conj(otf))
+            G .= 1 ./ n .* conv(1 .- meas ./ μ, conj(otf))
         end
         if F != nothing
             return 1 ./ n .* sum(μ .- meas .* log.(μ))
@@ -47,10 +48,10 @@ function Gauss()
     function gauss_loss!(F, G, rec, otf, meas)
         n = length(rec)
 
-        ν = conv_real_otf(rec, otf) - meas
+        ν = conv(rec, otf) - meas
 
         if G != nothing
-            G .= 2 * conv_real_otf(ν, otf)
+            G .= 2 * conv(ν, otf)
 
         end
         if F != nothing
