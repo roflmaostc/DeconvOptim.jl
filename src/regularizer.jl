@@ -11,31 +11,31 @@ export laplace
  # First we define several functions which are helpful
  # to use in some of the regularizers
 function laplace(rec) 
-    @tullio res = (rec[i - 1, j] + rec[i + 1, j] +   
-                   rec[i, j + 1] + rec[i, j - 1] - 4 * rec[i,j])^2
+    @tullio res = (rec[i - 1, j, k, l, m] + rec[i + 1, j, k, l, m] +   
+                   rec[i, j + 1, k, l, m] + rec[i, j - 1, k, l, m] - 4 * rec[i,j])^2
     return res
 end
 
 
 function spatial_grad_square(rec)
-    @tullio res = ((rec[i - 1, j] - rec[i + 1, j])^2 +
-                   (rec[i, j - 1] - rec[i, j + 1])^2)
+    @tullio res = ((rec[i - 1, j, k, l, m] - rec[i + 1, j, k, l, m])^2 +
+                   (rec[i, j - 1, k, l, m] - rec[i, j + 1, k, l, m])^2)
     return res
 end
 
 function forward_gradient(rec)
-    @tullio res = rec[i + 1, j] - rec[i, j] 
+    @tullio res = rec[i + 1, j, k, l, m] - rec[i, j, k, l, m] 
     return res 
 end
 
 function backward_gradient(rec)
-    @tullio res = rec[i, j] - rec[i - 1, j]  
+    @tullio res = rec[i, j, k, l, m] - rec[i - 1, j, k, l, m]  
     return res 
 end
 
 
 function central_gradient(rec)
-    @tullio res = 0.5 * (rec[i + 1, j] - rec[i - 1, j])  
+    @tullio res = 0.5 * (rec[i + 1, j, k, l, m] - rec[i - 1, j, k, l, m])  
     return res 
 end
 
@@ -63,8 +63,9 @@ function GR(; λ=0.05, mode="central", ϵ=1e-5)
         return reg 
     end
     function GR_forward(rec)
-        @tullio reg = ((rec[i, j] - rec[i + 1, j])^2 + 
-                       (rec[i, j] - rec[i, j + 1])^2) / (rec[i, j] + ϵ)
+        @tullio reg = ((rec[i, j, k, l, m] - rec[i + 1, j, k, l, m])^2 + 
+                       (rec[i, j, k, l, m] - rec[i, j + 1, k, l, m])^2) / 
+                      (rec[i, j, k, l, m] + ϵ)
         return reg
     end
 
@@ -113,14 +114,14 @@ end
 
 function TV(; λ=0.05, mode="central")
     function total_var_center(rec)
-        @tullio reg = sqrt((rec[i - 1, j] - rec[i + 1, j])^2 + 
-                           (rec[i, j - 1] - rec[i, j + 1])^2)
+        @tullio reg = sqrt((rec[i - 1, j, k, l, m] - rec[i + 1, j, k, l, m])^2 + 
+                           (rec[i, j - 1, k, l, m] - rec[i, j + 1, k, l, m])^2)
         return reg 
     end
 
     function total_var_forward(rec)
-        @tullio reg = sqrt((rec[i, j] - rec[i + 1, j])^2 + 
-                           (rec[i, j] - rec[i, j + 1])^2)
+        @tullio reg = sqrt((rec[i, j, k, l, m] - rec[i + 1, j, k, l, m])^2 + 
+                           (rec[i, j, k, l, m] - rec[i, j + 1, k, l, m])^2)
         return reg
     end
 
