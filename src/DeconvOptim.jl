@@ -1,7 +1,6 @@
 module DeconvOptim
 
 using Zygote: @adjoint, gradient
-using Distributed
 using DiffRules
 using Optim
 using Statistics

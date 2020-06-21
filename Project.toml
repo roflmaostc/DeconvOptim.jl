@@ -10,6 +10,7 @@ FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
 Noise = "81d43f40-5267-43b7-ae1c-8b967f377efa"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+Tullio = "bc48ee85-29a4-5162-ae0b-a64e1601d4bc"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]

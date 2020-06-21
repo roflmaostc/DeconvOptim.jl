@@ -1,5 +1,3 @@
-using Zygote: @adjoint, gradient
-
 export Non_negative
 export Non_negative2
 export Non_negative3
