@@ -6,8 +6,6 @@ export Tikhonov_old, Tikhonov
 export TV, TV_old
 export Positivity
 export laplace
-export create_Ndim_regularizer
-export lol
 export generate_spatial_grad_square_n
 
  # First we define several functions which are helpful
@@ -34,29 +32,7 @@ end
  #      dimensions
  # off1 and off2 are offsets of the filter
  #
-function create_Ndim_regularizer(expr, comb_f, Ndim;off1=1, off2=-1)
-    out, add = [], []
-    for d in 1:Ndim
-        ind = :i # @gensym ind                                                  
-        inds1 = map(1:Ndim) do di                                         
-            i = Symbol(ind, di)                                                 
-            di == d ? :($i + $off1) : i                                               
-        end                                                                     
-        inds2 = map(1:Ndim) do di                                         
-            i = Symbol(ind, di)                                                 
-            di == d ? :($i + $off2) : i                                               
-        end                                                                     
-        res = Symbol(:res_,d) # @gensym res                                     
-        push!(out, :($res = let
-            @tullio $res = $(expr(d, inds1, inds2))
-        end))                                                                   
-        push!(add, res)                                                         
-    end                                                                         
-    push!(out, :($comb_f(+($(add...)))))
-    return out
-end
-
-function create_Ndim_regularizer2(expr, comb_f, num_dim, sum_dim)
+function create_Ndim_regularizer(expr, comb_f, num_dim, sum_dim)
     out, add = [], []
     for d in 1:sum_dim
         ind = :i # @gensym ind
@@ -78,28 +54,14 @@ function create_Ndim_regularizer2(expr, comb_f, num_dim, sum_dim)
     return out
 end
 
+ # function to generate a spatial_grad_square filter for n dimensions
 function generate_spatial_grad_square_n(num_dim, sum_dim)
-    expr(inds1, inds2) = :(arr[$(inds1...)] - arr[$(inds2...)])
+    expr(inds1, inds2) = :(abs2(arr[$(inds1...)] - arr[$(inds2...)]))
     comb_f = nothing#:abs2 
-    @eval x = arr -> ($(create_Ndim_regularizer2(expr, comb_f,
+    @eval x = arr -> ($(create_Ndim_regularizer(expr, comb_f,
                                                  num_dim, sum_dim)...))
     return x
 end
-
- # defining the spatial grad_regularizer for different dimensions 
-for N in 1:10
-expr(d, inds1, inds2) = :(weights[$d] * abs2(arr[$(inds1...)] 
-                                           - arr[$(inds2...)]))
-    @eval function spatial_grad_square(arr::AbstractArray{T,$N}; 
-            weights=nothing) where T
-        if weights == nothing
-            weights = ones(ndims(arr))
-        end
-        $(create_Ndim_regularizer(expr, identity, N)...)
-    end
-end
-
-
 
 
  # quadrat für rotationsinvarianz
@@ -132,6 +94,9 @@ function Tikhonov(; λ=0.05, mode="laplace")
     if mode == "laplace"
         Γ = laplace
     elseif mode == "spatial_grad_square"
+        # this line needs to be fixed
+        # Tikhonov must have num_dim and sum_dim as parameters to indicate
+        # which axis must be sum and which axes are present
         Γ = generate_spatial_grad_square_n(5,2)#spatial_grad_square
     elseif mode == "forward_grad"
         Γ = forward_gradient 
