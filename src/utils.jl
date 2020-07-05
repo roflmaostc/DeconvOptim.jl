@@ -1,5 +1,5 @@
 export generate_psf, conv_real_otf, conv_real
-
+export generate_downsample
 
 export conv_real_otf
 
@@ -20,6 +20,43 @@ end
 function conv_real_otf_p(P, P_inv, rec, otf)
     return real(P_inv * ((P * rec) .* otf))
 end
+
+"""
+    generate_downsample(num_dim, factor)
+
+Generate a Tullio statement which can be used to downsample arrays.
+`num_dim` are the dimensions of the array
+`factor` is a downsampling factor. It needs to be an integer number,
+
+"""
+function generate_downsample(num_dim, factor)
+    # create unit cell with Cartesian Index 
+    one = oneunit(CartesianIndex(ones(Int, num_dim)...))
+    # output list
+    add = []
+    ind = :i
+    # create list of symbols for each dimension
+    inds_out = map(1:num_dim) do di
+        i = Symbol(ind, di)
+    end
+    # via CartesianIndex we can loop over all rectangular neighbours
+    for n = one:one * factor
+        # for each index calculate the offset
+        inds = map(1:num_dim) do di
+            i = Symbol(ind, di)
+            expr = :($factor * $i)
+            diff = n[di] - factor
+            di = :($expr + $diff)
+        end
+        push!(add, :(arr[$(inds...)]))
+    end
+    # combine the different parts and divide for averaging
+    expr = [:(@tullio res[$(inds_out...)] := (+($(add...))) / $factor ^ $num_dim)]
+    # evaluate to function
+    @eval f = arr -> ($(expr...))
+    return f
+end
+
 
 
 function rr(img)
