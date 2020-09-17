@@ -1,7 +1,8 @@
 export generate_psf, conv_real_otf, conv_real
 export generate_downsample
+export my_interpolate 
 
-export conv_real_otf
+export conv_real_otf5D
 
 
 function conv_real_otf(rec, otf)
@@ -57,6 +58,25 @@ function generate_downsample(num_dim, factor)
     return f
 end
 
+function my_interpolate(arr, size_n)
+
+    interp = []
+    for s in size_n
+        if s == 1
+            push!(interp, NoInterp())
+        else
+            push!(interp, BSpline(Linear()))
+        end
+    end
+    arr_n = interpolate(arr, Tuple(interp))
+    
+    inds = []
+    for d = 1:ndims(arr)
+        push!(inds, LinRange(1, size(arr)[d], size_n[d]))
+    end
+
+    return arr_n(inds...)
+end
 
 
 function rr(img)
