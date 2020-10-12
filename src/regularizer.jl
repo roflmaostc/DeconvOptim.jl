@@ -159,16 +159,7 @@ function Tikhonov(;sum_dims=[1, 2], weights=[1, 1], step=1, λ=0.05, mode="lapla
                             weights, step, (-1) * step)...))
     end
 
-    function f!(F, G, rec)
-        if G != nothing
-            G .= λ .* gradient(Γ, rec)[1] / length(rec)
-        end
-
-        if F != nothing
-            return λ * Γ(rec) / length(rec)
-        end
-    end
-    return f!
+    return rec -> λ * Γ(rec) / length(rec)
 end
 
 
@@ -234,16 +225,9 @@ function GR(; sum_dims=[1, 1], weights=[1, 1], step=1,
         GRf = @eval arr -> ($(generate_GR(num_dim, sum_dims, weights,
                                         step, 0, ϵ)...))
     end
+    
 
-    function f!(F, G, rec)
-        if G != nothing
-            G .= λ ./ 4 .* gradient(GRf, rec)[1] / length(rec) 
-        end
-        if F != nothing
-            return λ * GRf(rec) / 4 / length(rec) 
-        end
-    end
-    return f!
+    return rec -> λ * GRf(rec) / 4 / length(rec)
 end
 
 
@@ -305,16 +289,6 @@ function TV(; sum_dims=[1, 1], weights=[1, 1], step=1, λ=0.05, mode="central")
                                         step, 0)...))
     end
 
-    # definition of the function which will be called by Optim
-    function f!(F, G, rec)
-        if G != nothing
-            G .= λ .* gradient(total_var, rec)[1] / length(rec) 
-        end
-
-        if F != nothing
-            return λ * total_var(rec) / length(rec)
-        end
-    end
     
-    return f!
+    return rec -> λ * total_var(rec) / length(rec)
 end
