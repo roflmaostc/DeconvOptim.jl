@@ -4,6 +4,7 @@ export Non_negative3
 export Map_0_1
 export Exp
 
+
 function Map_0_1()
     f(x) = 1 .- exp.(.- x.^2)
     ∇f(x) = 2 .* x .* exp.(.- x.^2)
@@ -18,7 +19,7 @@ end
 
 
 function Non_negative()
-    return (x -> x .^ 2), (x -> 2 .* x),  (x -> sqrt.(x))
+    return x -> x .^ 2 , (x -> sqrt.(x))
 end
 
 function Non_negative3()
