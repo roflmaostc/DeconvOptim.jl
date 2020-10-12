@@ -39,7 +39,7 @@ with an `otf`.
 Same arguments as `conv_otf` but with `obj` being real and `otf=rfft(psf)`.
 """
 function conv_otf_r(obj, otf, dims=[1, 2, 3])
-    return real(irfft(rfft(obj, dims) .* obj, size(obj)[1], dims))
+    return real(irfft(rfft(obj, dims) .* otf, size(obj)[1], dims))
 end
 
 
@@ -56,14 +56,14 @@ The second return is the convolution function `conv`.
 
 This function achieves faster convolution than `conv_psf(obj, psf)`.
 """
-function plan_conv_r(psf, dims=[1, 2, 3])
+function plan_conv_r(psf, rec0, dims=[1, 2, 3])
     # do the preplanning step
-    P = plan_rfft(psf, dims)
-    psf_fft = P * psf
-    P_inv = plan_irfft(psf_fft, size(psf)[1], dims)
+    P = plan_rfft(rec0, dims)
+    rec0_fft = P * rec0 
+    P_inv = plan_irfft(rec0_fft, size(psf)[1], dims)
     
     # obtain the otf by real based fft
-    otf = rfft(psf)
+    otf = rfft(psf, dims)
     # construct the efficient conv function
     conv(obj, otf) = real(P_inv * ((P * obj) .* otf))
 
@@ -109,28 +109,39 @@ function generate_downsample(num_dim, downsample_dims, factor)
 end
 
 """
-    my_interpolate(arr, size_n)
+    my_interpolate(arr, size_n, [interp_type])
 
-    Interpolates `arr` to the sizes provided in `size_n`.
-    Therefore it holds `ndims(arr) == length(size_n)`.
+Interpolates `arr` to the sizes provided in `size_n`.
+Therefore it holds `ndims(arr) == length(size_n)`.
+`interp_type` specifies the interpolation type.
+See Interpolations.jl for all options
 """
-function my_interpolate(arr, size_n)
+function my_interpolate(arr, size_n, interp_type=BSpline(Linear()))
 
+    # we construct a arr which includes the interpolation
+    # type for each dimension
     interp = []
     for s in size_n
+        # if the outpute size is of the s-th dimension=1, 
+        # do NoInterp
         if s == 1
             push!(interp, NoInterp())
         else
-            push!(interp, BSpline(Linear()))
+            push!(interp, interp_type)
         end
     end
+    # prepare the interpolation
     arr_n = interpolate(arr, Tuple(interp))
-    
+   
+    # interpolate introduces fractional indices 
+    # via LinRange we access these fractional indices
     inds = []
     for d = 1:ndims(arr)
         push!(inds, LinRange(1, size(arr)[d], size_n[d]))
     end
 
+    # return the new array sampled at the positions of inds
+    # this accessing actually interpolates the data 
     return arr_n(inds...)
 end
 
@@ -236,7 +247,9 @@ function rr(img)
     rarr = similar(img)
     for i = 1:s[1]
         for j = 1:s[2]
-            rarr[i, j] = sqrt( (i-s[1] / 2)^2 + (j-s[2] / 2)^2)
+            for k = 1:s[3]
+                rarr[i, j, k] = sqrt( (i-s[1] / 2)^2 + (j-s[2] / 2)^2 + (k- s[3] / 2)^2)
+            end
         end
     end
     return rarr
