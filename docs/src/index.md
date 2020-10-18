@@ -27,11 +27,11 @@ To get the latest stable release of DevonOptim.jl type `]` in the Julia REPL:
 ## Quick Example
 Below is a quick example how to deconvolve a image which is blurred with a Gaussian Kernel.
 
-```@example
-using DeconvOptim, TestImages
+```@jldoctest
+using DeconvOptim, TestImages, Images, FFTW, Noise
 
 # load test images
-img = channelview(testimage("fabio_gray"))
+img = channelview(testimage("resolution_test_512"))
 
 # create a Gaussian blur kernel (not very sophisticated for a real lens)
 dist = [sqrt((i - size(img)[1] / 2)^2 + (j - size(img)[2] / 2)^2)
@@ -49,7 +49,7 @@ img_n ./= maximum(img_n)
 # define a Good's Roughness regularizer
 reg = DeconvOptim.GR(sum_dims=[1, 2], weights=[1, 1], λ=0.05, mode="central", step=1)
 # deconvolve
-res, o = deconvolution(img_n, psf, iterations=10,
+@time res, o = deconvolution(img_n, psf, iterations=10,
         lossf=Poisson(), mappingf=Non_negative(), regularizerf=reg)
 ```
 

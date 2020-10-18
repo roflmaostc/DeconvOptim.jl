@@ -1,4 +1,4 @@
-# Reguarlizers
+# Regularizers
 
 ```@docs
 TV
