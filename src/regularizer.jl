@@ -214,8 +214,8 @@ For the spatial gradient `"forward"` is used.
 julia> GR(sum_dims=[1, 2, 3], weights=[1, 1, 0.25], λ=0.05, mode="forward")
 ```
 """
-function GR(; sum_dims=[1, 1], weights=[1, 1], step=1,
-              λ=0.05, mode="central", ϵ=1e-5)
+function GR(; sum_dims=[1, 2], weights=[1, 1], step=1,
+              λ=0.05, mode="central", ϵ=1e-14)
     num_dim = 5
     
     if mode == "central"
@@ -240,14 +240,16 @@ Generate the Tullio statement for computing the Good's roughness.
 indicating over which dimensions we must sum over.
 `weights` is a array of a weight for the different dimension.
 `ind1` and `ind2` are the offsets for the difference.
-`ϵ` is a numerical constant to prevent division by zero.
+`ϵ` is a numerical constant to prevent division by zero. 
+    this is important for the gradient 
 """
-function generate_TV(num_dim, sum_dims_arr, weights, ind1, ind2)
+function generate_TV(num_dim, sum_dims_arr, weights, ind1, ind2, ϵ=1e-8)
     out, add = [], []
     for (d, w) in zip(sum_dims_arr, weights)
         inds1, inds2 = generate_indices(num_dim, d, ind1, ind2) 
         push!(add, :(abs2($w * arr[$(inds1...)] - $w * arr[$(inds2...)])))
     end
+    push!(add, ϵ)
     push!(out, :(@tullio res = sqrt(+($(add...)))))
     return out
 end
@@ -278,7 +280,7 @@ For the spatial gradient `"forward"` is used.
 julia> GR(sum_dims=[1, 2, 3], weights=[1, 1, 0.25], λ=0.05, mode="forward")
 ```
 """
-function TV(; sum_dims=[1, 1], weights=[1, 1], step=1, λ=0.05, mode="central")
+function TV(; sum_dims=[1, 2], weights=[1, 1], step=1, λ=0.05, mode="central")
     num_dim = 5
 
     if mode == "central"
@@ -288,7 +290,5 @@ function TV(; sum_dims=[1, 1], weights=[1, 1], step=1, λ=0.05, mode="central")
         total_var = @eval arr -> ($(generate_TV(num_dim, sum_dims, weights,
                                         step, 0)...))
     end
-
-    
     return rec -> λ * total_var(rec) / length(rec)
 end
