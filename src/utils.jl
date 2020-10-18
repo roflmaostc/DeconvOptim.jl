@@ -74,36 +74,69 @@ end
 """
     generate_downsample(num_dim, downsample_dims, factor)
 
-Generate a Tullio statement which can be used to downsample arrays.
+Generate a function (based on Tullio.jl) which can be used to downsample arrays.
 `num_dim` (Integer) are the dimensions of the array.
-`downsample_dims` is a list of which dimensions should be downsampled
-`factor` is a downsampling factor. It needs to be an integer number,
+`downsample_dims` is a list of which dimensions should be downsampled.
+`factor` is a downsampling factor. It needs to be an integer number.
 
+# Examples
+```jldoctest
+julia> ds = generate_downsample(2, [1, 2], 2) 
+[...]
+julia> ds([1 2; 3 4; 5 6; 7 8])
+2×1 Array{Float64,2}:
+ 2.5
+ 6.5
+
+julia> ds = generate_downsample(2, [1], 2)
+[...]
+julia> ds([1 2; 3 5; 5 6; 7 8])
+2×2 Array{Float64,2}:
+ 2.0  3.5
+ 6.0  7.0
+```
 """
 function generate_downsample(num_dim, downsample_dims, factor)
+    @assert num_dim ≥ length(downsample_dims)
     # create unit cell with Cartesian Index 
-    one = oneunit(CartesianIndex(ones(Int, downsample_dims)...))
-    # output list
-    add = []
+    # dims_units containts every where a 1 where the downsampling should happen
+    dims_units = zeros(Int, num_dim)
+    # here we set which dimensions should be downsamples
+    dims_units[downsample_dims] .= 1
+    # the unit cell expressed in CartesianIndex
+    one = CartesianIndex(dims_units...)
+
+
+    # create a list of symbols 
+    # these list represents the symbols to access the arrays
     ind = :i
-    # create list of symbols for each dimension
     inds_out = map(1:num_dim) do di
         i = Symbol(ind, di)
     end
+
+    
+    # output list for the add commands
+    add = []
     # via CartesianIndex we can loop over all rectangular neighbours
+    # we loop only over the neighbours in the downsample_dims
     for n = one:one * factor
-        # for each index calculate the offset
-        inds = map(1:downsample_dims) do di
-            i = Symbol(ind, di)
-            expr = :($factor * $i)
-            diff = n[di] - factor
-            di = :($expr + $diff)
-        end
-        inds = [inds..., inds_out[downsample_dims+1:end]...]
+        # for each index calculate the offset to the neighbour
+        inds = map(1:num_dim) do di
+                i = Symbol(ind, di)
+                if n[di] == 0
+                    di = i
+                else
+                    expr = :($factor * $i)
+                    diff = -factor + n[di]
+                    di = :($expr + $diff)
+                end
+            end
+        # push this single neighbour to add list
         push!(add, :(arr[$(inds...)]))
     end
     # combine the different parts and divide for averaging
-    expr = [:(@tullio res[$(inds_out...)] := (+($(add...))) / $factor ^ $num_dim)]
+    expr = [:(@tullio res[$(inds_out...)] := (+($(add...))) / $factor ^ $(length(downsample_dims)))]
+    #= return expr =#
     # evaluate to function
     @eval f = arr -> ($(expr...))
     return f
