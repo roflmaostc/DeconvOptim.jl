@@ -1,13 +1,10 @@
 module DeconvOptim
 
 using Zygote: @adjoint, gradient
-using DiffRules
 using Optim
 using Statistics
 using FFTW
-using Distributed
 using Tullio
-using Images
 using Interpolations
 using Requires
 
