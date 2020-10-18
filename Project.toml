@@ -9,11 +9,12 @@ Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
 Noise = "81d43f40-5267-43b7-ae1c-8b967f377efa"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 Requires = "ae029012-a4dd-5104-9daa-d747884805df"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 Tullio = "bc48ee85-29a4-5162-ae0b-a64e1601d4bc"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
-
 [compat]
+julia = "1.5"
 FFTW = "1.2.4"
 Interpolations = "0.12.10"
 Noise = "0.2.0"
@@ -22,11 +23,9 @@ Requires = "1.1.0"
 Tullio = "0.2.8"
 Zygote = "0.5.9"
 
-
 [extras]
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-
 
 [targets]
 test = ["Test", "Random"]
