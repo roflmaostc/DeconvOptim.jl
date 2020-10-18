@@ -4,9 +4,8 @@ export poisson_aux
 
 function poisson_aux(conv, rec, otf, meas, up_sampling)
     n = length(rec)
-    μ = conv(rec, otf)
+    μ = max.(0, conv(rec, otf))  #psf>=0
     μ = center_extract(μ, size(meas))
-    print("lol")
     return 1 ./ n .* sum(μ .- meas .* log.(μ))
 end
 
