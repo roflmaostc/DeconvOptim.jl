@@ -9,15 +9,30 @@ using Distributed
 using Tullio
 using Images
 using Interpolations
-
+using Requires
 
 export deconvolution
 
+
+# via require we can check whether CUDA is loaded
+# to enable CUDA support simply load CUDA before load DeconvOptim
+to_gpu_or_not(x) = x
+function __init__()
+    @require CUDA="052768ef-5323-5732-b1bb-66c8b64840ba" begin
+        print("CUDA support is enabled")
+        @eval using CUDA
+        @eval to_gpu_or_not(x) = CuArray(x)
+    end
+end
+    
 
 include("utils.jl")
 include("regularizer.jl")
 include("mappings.jl")
 include("lossfunctions.jl")
+
+
+
 
 
 """
@@ -46,20 +61,18 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
         lossf=Poisson(),
         regularizerf=GR(),
         mappingf=Non_negative(),
-        iterations=50,
+        iterations=20,
         options=nothing,
         plan_fft=true,
         padding=true,
         up_sampling=1) where {T, N}
 
-    # rec0 will the array storing the final reconstruction
+    # rec0 will be the array storing the final reconstruction
     # we choose it larger than the measured array to reduce
     # wrap around artifacts of the Fourier Transform
-
     # we create a array size_padded which stores a new array size
     # our reconstruction array will be larger than measured
     # to prevent wrap around artifacts
-
     size_padded = []
     for i = 1:5
         # if measured is smaller than i-th dimensional
@@ -85,16 +98,6 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     rec0 = ones(T, (size_padded...)) * mean(measured)
 
 
-#    if ndims(psf) < 5
-#        # create a new tuple containing the sizes of psf
-#        n_size_psf = (size(psf)..., ones(Integer, 5 - ndims(psf))...) 
-#        psf = reshape(psf, n_size_psf)
-#    end
-
-    # transform the PSF to OTF, is more efficient
-    # it is important to do the FFT of the 0-padded OTF
-    # Wrong is: doing the FFT first and then padding the OTF with 0s
-    #           will lead to artifacts
 
 
     # do some reshaping if the data is not provided
@@ -116,9 +119,13 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
 
     # psf_n is the psf with the same size as rec0
     # we put the small psf into the new one
+    # it is important to pad the PSF instead of the OTF
     psf_n = zeros(Float32, size(rec0))
     psf_n = center_set!(psf_n, fftshift(psf))
     psf = ifftshift(psf_n)
+
+    # the psf should be normalized to 1
+    psf ./= sum(psf)
 
     # use plan_fft (function of the FFTW.jl has the same name)
     # for speed improvement
@@ -154,6 +161,7 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     end
 
     # create the loss function which depends simply on the x
+    # does Zygote recognizes that the derivatives of mf are reoccuring
     loss(x) = (poisson_aux(conv, mf(x), otf, measured, 1) + regularizerf(mf(x)))
     
     
