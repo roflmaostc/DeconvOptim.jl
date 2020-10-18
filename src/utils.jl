@@ -12,7 +12,7 @@ Convolve `obj` with `psf` over `dims` dimensions.
 Based on FFT convolution.
 """
 function conv_psf(obj, psf, dims=[1, 2, 3])
-    return real(ifft(fft(obj, dims) .* fft(psf, dims)))
+    return real.(ifft(fft(obj, dims) .* fft(psf, dims), dims))
 end
 
 
@@ -27,7 +27,7 @@ The convolution happens over the `dims` array. Any further dimensions are broadc
 Per default `dims = [1, 2, 3]`.
 """
 function conv_otf(obj, otf, dims=[1, 2, 3])
-    return real(ifft(fft(obj, dims) .* otf, dims))
+    return real.(ifft(fft(obj, dims) .* otf, dims))
 end
 
 
@@ -39,7 +39,7 @@ with an `otf`.
 Same arguments as `conv_otf` but with `obj` being real and `otf=rfft(psf)`.
 """
 function conv_otf_r(obj, otf, dims=[1, 2, 3])
-    return real(irfft(rfft(obj, dims) .* otf, size(obj)[1], dims))
+    return real.(irfft(rfft(obj, dims) .* otf, size(obj)[1], dims))
 end
 
 
@@ -65,17 +65,18 @@ function plan_conv_r(psf, rec0, dims=[1, 2, 3])
     # obtain the otf by real based fft
     otf = rfft(psf, dims)
     # construct the efficient conv function
-    conv(obj, otf) = real(P_inv * ((P * obj) .* otf))
+    conv(obj, otf) = real.(P_inv * ((P * obj) .* otf))
 
     return otf, conv
 end
 
 
 """
-    generate_downsample(num_dim, factor)
+    generate_downsample(num_dim, downsample_dims, factor)
 
 Generate a Tullio statement which can be used to downsample arrays.
-`num_dim` are the dimensions of the array
+`num_dim` (Integer) are the dimensions of the array.
+`downsample_dims` is a list of which dimensions should be downsampled
 `factor` is a downsampling factor. It needs to be an integer number,
 
 """
@@ -242,6 +243,8 @@ end
 
 
 
+
+# untested functions which will be probably removed in future version
 function rr(img)
     s = size(img)
     rarr = similar(img)
@@ -254,6 +257,25 @@ function rr(img)
     end
     return rarr
 end
+
+function rr2D(img)
+    s = size(img)
+    rarr = similar(img)
+    for i = 1:s[1]
+        for j = 1:s[2]
+               rarr[i, j] = sqrt( (i-s[1] / 2)^2 + (j-s[2] / 2)^2)
+        end
+    end
+    return rarr
+end
+
+function generate_psf2D(img, r)
+    mask = rr2D(img) .< r
+    mask_ft = ifft(ifftshift(mask))
+    psf = abs2.(mask_ft)
+    return psf ./ sum(psf)
+end
+
 
 function generate_psf(img, r)
     mask = rr(img) .< r
