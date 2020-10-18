@@ -21,4 +21,4 @@ makedocs(modules=[DeconvOptim],
         )
          
 
-
+deploydocs(repo = "github.com/roflmaostc/DeconvOptim.jl.git")
