@@ -2,30 +2,43 @@ export Poisson
 export Gauss
 export poisson_aux
 
-function poisson_aux(conv, rec, otf, meas, up_sampling)
-    n = length(rec)
-    μ = max.(0, conv(rec, otf))  #psf>=0
+function poisson_aux(μ, meas)
+    n = length(μ)
     μ = center_extract(μ, size(meas))
     return 1 ./ n .* sum(μ .- meas .* log.(μ))
 end
 
-@adjoint poisson_aux(conv, rec, otf, meas, up_sampling) = begin
-    n = length(rec)
-    μ = conv(rec, otf)
 
-    # we need to pad the measured array with the values of μ
-    meas_new = copy(μ)
-    meas_new = center_set!(meas_new, meas)
-    
-    # calculate the final gradient
-    out_arr = 1 ./ n .* conv(1 .- meas_new ./ μ, conj(otf))
-    # we need to return a 5-tuple because the function poisson_aux has 5 parameter 
-    b = (c -> (-1, c .* out_arr, -1, -1, -1))
-   
-    # calculate finally the loss value 
-    loss_value = poisson_aux(conv,rec, otf, meas, up_sampling)
-    return (loss_value, b)
+function ChainRulesCore.rrule(::typeof(poisson_aux), μ, meas)
+    n = length(μ)
+    Y = poisson_aux(μ, meas)
+
+    function poisson_aux_pullback(xbar)
+        meas_new = copy(μ)
+        meas_new = center_set!(meas_new, meas)
+        return NO_FIELDS, xbar ./ n .* (1 .- meas_new ./ μ), DoesNotExist()
+    end
+
+    return Y, poisson_aux_pullback
 end
+
+
+ #@adjoint poisson_aux(μ, meas) = begin
+ #    n = length(μ)
+ #
+ #    # we need to pad the measured array with the values of μ
+ #    #= meas_new = zeros(eltype(meas), size(μ))#copy(μ) =#
+ #    meas_new = copy(μ)
+ #    meas_new = center_set!(meas_new, meas)
+ #    
+ #    # we need to return a 2-tuple because the function poisson_aux
+ #    # has 2 parameter 
+ #    ∇ = (c -> (c ./ n .* (1 .- meas_new ./ μ) , -1))
+ #   
+ #    # calculate finally the loss value 
+ #    loss_value = poisson_aux(μ, meas)
+ #    return (loss_value, ∇)
+ #end
 
 """
     Poisson()

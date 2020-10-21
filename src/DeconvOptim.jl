@@ -1,12 +1,15 @@
 module DeconvOptim
 
-using Zygote: @adjoint, gradient
 using Optim
 using Statistics
 using FFTW
 using Tullio
 using Interpolations
 using Requires
+
+
+ # remove maybe later
+using ChainRulesCore
 
 export deconvolution
 
@@ -23,12 +26,15 @@ function __init__()
 end
     
 
-include("utils.jl")
-include("regularizer.jl")
-include("mappings.jl")
+include("forward_models.jl")
 include("lossfunctions.jl")
+include("mappings.jl")
+include("regularizer.jl")
+include("utils.jl")
 
 
+# refresh Zygote to load the custom rrules defined with ChainRulesCore
+using Zygote: @adjoint, gradient
 
 
 
@@ -83,8 +89,10 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
             # only pad, if padding is true
             if padding
                 # either add a total of 20% to each dimension
-                # or add 5, if 20% is just too few   
-                x = max(5, round(Int, size(measured)[i] * 0.2))
+                # or add 5, if 20% is just too few  
+                # x % 2 == 0
+                # ensures symmetric padding
+                x = max(6, 2 * round(Int, size(measured)[i] * 0.05))
             else
                 x = 0
             end
@@ -93,7 +101,6 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     end
     # create rec0 which will be the initial guess for the reconstruction
     rec0 = ones(T, (size_padded...)) * mean(measured)
-
 
 
 
@@ -157,9 +164,23 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
         regularizerf = x -> 0 
     end
 
-    # create the loss function which depends simply on the x
-    # does Zygote recognizes that the derivatives of mf are reoccuring
-    loss(x) = (poisson_aux(conv, mf(x), otf, measured, 1) + regularizerf(mf(x)))
+
+    # forward model is a convolution
+    # due to numerics, we need to clip at 0
+    # analytically it's a convolution psf ≥ 0 and image ≥ 0
+    # so it must be conv(psf, image) ≥ 0
+    forward(x) = max.(0.1, conv_aux(conv, x, otf))
+    # create the loss function which depends simply on the current rec 
+    function loss(rec)
+        mf_rec = mf(rec)
+        forward_v = forward(mf_rec)
+        return poisson_aux(forward_v, measured)# + regularizerf(mf_rec)
+    end
+
+ # should rather look like this
+    #loss(x) = (poisson_aux(Forward(mf(x)), measured) + regularizerf(mf(x)))
+    #= ∇mf = gradient(mf, x) =#
+
     
     
     
