@@ -52,8 +52,3 @@ function Non_negative2()
 
     return (x -> f.(x)), (x -> ∇f.(x)), (y -> f_inv.(y))
 end
-
-
-
-parabola(x) = x.^2
-@adjoint parabola(x) = (f(x), c -> (c .* 2 .* x, ))
