@@ -235,9 +235,8 @@ function center_extract(arr, index_arrays)
     out_indices1 = [x[1]:x[2] for x = out_indices1]
 
 
-    out_indices2 = map(eval, [Symbol(":") for i = (1 + size(index_arrays)[1]):ndims(arr)])
-#    return view(arr, out_indices1..., out_indices2...)
-    return arr[out_indices1..., out_indices2...]
+    out_indices2 = map(eval, [1:size(arr)[length(out_indices1) + i] for i = (1 + size(index_arrays)[1]):ndims(arr)])
+    return view(arr, out_indices1..., out_indices2...)
 end
 
 
