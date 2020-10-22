@@ -46,28 +46,34 @@ Multiple keyword arguments can be specified for different loss functions,
 regularizers and mappings.
 
 # Arguments
-- `lossf`: the lossfunction taking a vector the same shape as measured. 
-           Default is `Poisson()`.
-- `regularizerf`: A regularizer function, same form as `lossf`. Default
-                  is `GR()`. 
-- `mappingf`: Applies a mapping of the optimizer weight. Default is a 
+- `lossf=Poisson()`: the lossfunction taking a vector the same shape as measured. 
+- `regularizerf=GR()`: A regularizer function, same form as `lossf`.
+- `λ=0.05`: A float indicating the total weighting of the regularizer with 
+    respect to the global loss function
+- `mappingf=Non_negative()`: Applies a mapping of the optimizer weight. Default is a 
               parabola which achieves a non-negativity constraint.
-- `iterations`: Specifies a number of iterations after the optimization
+- `iterations=20`: Specifies a number of iterations after the optimization.
     definitely should stop.
-- `options`: Can be a options file required by Optim.jl. 
+- `options=nothing`: Can be a options file required by Optim.jl. 
     Will overwrite iterations.
-- `plan_fft`: Boolean whether plan_fft is used. Default `true`.
-- `up_sampling` enables up sampling of the reconstruction. Needs to be an
+- `plan_fft=true`: Boolean whether plan_fft is used
+- `padding=0.05`: an float indicating the amount (fraction of the size in that dimension) 
+        of padded regions around the reconstruction. Prevents wrap around effects of the FFT.
+        A array with `size(arr)=(400, 400)` with `padding=0.05` would result in reconstruction size of 
+        `(440, 440)`. However, we only return the reconstruction cropped to the original size.
+        `padding=0` disables any padding.
+- `up_sampling=1` enables up sampling of the reconstruction. Needs to be an
     integer number. Default is 1.
 """
 function deconvolution(measured::AbstractArray{T, N}, psf;
         lossf=Poisson(),
         regularizerf=GR(),
+        λ=0.05,
         mappingf=Non_negative(),
         iterations=20,
         options=nothing,
         plan_fft=true,
-        padding=true,
+        padding=0.05,
         up_sampling=1) where {T, N}
 
     # rec0 will be the array storing the final reconstruction
@@ -87,12 +93,12 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
             push!(size_padded, 1)
         else
             # only pad, if padding is true
-            if padding
+            if padding != 0
                 # either add a total of 20% to each dimension
                 # or add 5, if 20% is just too few  
                 # x % 2 == 0
                 # ensures symmetric padding
-                x = max(6, 2 * round(Int, size(measured)[i] * 0.05))
+                x = max(6, 2 * round(Int, size(measured)[i] * padding))
             else
                 x = 0
             end
@@ -106,15 +112,22 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
 
     # do some reshaping if the data is not provided
     # as a 5D array
+    
+    # first case means that input data is both 2D or 3D (standary case
     if (N == 2 && ndims(psf) == 2)|| (N == 3 && ndims(psf) == 3)
         new_size = (size(measured)..., ones(Integer, 5 - N)...)
         measured = reshape(measured, new_size)
         psf = reshape(psf, new_size)
         fft_dims = collect(1:N) # [1,2,3] or [1,2]
+    # that means that we have 4 dim data
+    # therefore we have a 3D stack recorded with different channels (like a color sensor)
+    # if the psf is only 3D, then we assume the PSF is achromatic
     elseif N == 4 && ndims(psf) == 3 
         measured = reshape(measured, (size(measured)..., 1))
         psf = reshape(psf, (size(psf)..., 1, 1))
         fft_dims = [1, 2, 3] 
+    # here we could model chromatic PSFs etc.
+    # time series etc.
     else                       
         throw("Such a combination of the dimensions of PSF and Image
                is not supported at the moment.")
@@ -124,7 +137,7 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     # psf_n is the psf with the same size as rec0
     # we put the small psf into the new one
     # it is important to pad the PSF instead of the OTF
-    psf_n = zeros(Float32, size(rec0))
+    psf_n = zeros(eltype(rec0), size(rec0))
     psf_n = center_set!(psf_n, fftshift(psf))
     psf = ifftshift(psf_n)
 
@@ -134,8 +147,8 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     # use plan_fft (function of the FFTW.jl has the same name)
     # for speed improvement
     if plan_fft
-        # otf is obtained by rfft(psf) and therefore 
-        # size(psf)[1:3] != size(rec0)[1:3]
+        # otf is obtained by rfft(psf)
+        # therefore size(psf) != size(otf)
         otf, conv = plan_conv_r(psf, rec0, fft_dims) 
     else
         otf = rfft(psf, fft_dims)
@@ -147,8 +160,6 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     if up_sampling != 1
         throw("up_sampling is not supported at the moment")
         downsample = generate_downsample(5, 2, up_sampling)
-        # fix according to documentation
-        #= Base.invokelatest(downsample) =#
     end
  
     # Get the mapping functions to achieve constraints
@@ -161,28 +172,24 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
 
     # if no regularizer is provided, simply use x -> 0
     if regularizerf == nothing
-        regularizerf = x -> 0 
+        regularizerf = x -> zero(eltype(rec0)) 
     end
-
 
     # forward model is a convolution
     # due to numerics, we need to clip at 0
     # analytically it's a convolution psf ≥ 0 and image ≥ 0
     # so it must be conv(psf, image) ≥ 0
-    forward(x) = max.(0.1, conv_aux(conv, x, otf))
+    #= forward(x) = (@tullio res[a,b,c,d,e] := 1 + conv_aux(conv, x, otf)[a,b,c,d,e]) =#
+    forward(x) = (conv_aux(conv, x, otf))
     # create the loss function which depends simply on the current rec 
     function loss(rec)
         mf_rec = mf(rec)
         forward_v = forward(mf_rec)
-        return poisson_aux(forward_v, measured)# + regularizerf(mf_rec)
+        loss_v = lossf(forward_v, measured)
+        reg_v = regularizerf(mf_rec)
+        return loss_v + λ .* reg_v 
     end
 
- # should rather look like this
-    #loss(x) = (poisson_aux(Forward(mf(x)), measured) + regularizerf(mf(x)))
-    #= ∇mf = gradient(mf, x) =#
-
-    
-    
     
     # this is the function which will be provided to Optimize
     # check Optims documentation for the purpose of F and Get
