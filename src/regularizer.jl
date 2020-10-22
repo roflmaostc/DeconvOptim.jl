@@ -131,13 +131,12 @@ This function returns a function to calculate the Tikhonov regularizer
 of a n-dimensional array. 
 
 # Arguments
-- `sum_dims`: A array containing the dimensions we want to sum over
-- `weights`: A array containing weights to weight the contribution of 
+- `num_dim=5`: 
+- `sum_dims=[1, 2]`: A array containing the dimensions we want to sum over
+- `weights=[1, 1]`: A array containing weights to weight the contribution of 
     different dimensions
-- `step`: A integer indicating the step width for the array indexing
-- `λ`: A float indicating the total weighting of the regularizer with 
-    respect to the global loss function
-- `mode`: Either `"laplace"` or `"spatial_grad_square"` accounting for different
+- `step=1`: A integer indicating the step width for the array indexing
+- `mode="laplace"`: Either `"laplace"` or `"spatial_grad_square"` accounting for different
     modes of the Tikhonov regularizer. Default is `"laplace"`.
 
 # Examples
@@ -145,12 +144,10 @@ To create a regularizer for a 3D dataset where the third dimension
 has a different sampling (factor 4 larger) than the first two dimensions.
 
 ```julia-repl
-julia> Tikhonov(sum_dims=[1, 2, 3], weights=[1, 1, 0.25], λ=0.05)
+julia> Tikhonov(sum_dims=[1, 2, 3], weights=[1, 1, 0.25])
 ```
 """
-function Tikhonov(;sum_dims=[1, 2], weights=[1, 1], step=1, λ=0.05, mode="laplace")
-    num_dim = 5
-
+function Tikhonov(;num_dim=5, sum_dims=[1, 2], weights=[1, 1], step=1, mode="laplace")
     if mode == "laplace"
         Γ = @eval arr -> ($(generate_laplace(num_dim, sum_dims, weights)...))
     elseif mode == "spatial_grad_square"
@@ -159,7 +156,7 @@ function Tikhonov(;sum_dims=[1, 2], weights=[1, 1], step=1, λ=0.05, mode="lapla
                             weights, step, (-1) * step)...))
     end
 
-    return rec -> λ * Γ(rec) / length(rec)
+    return rec -> Γ(rec) / length(rec)
 end
 
 
@@ -196,13 +193,12 @@ This function returns a function to calculate the Good's roughness regularizer
 of a n-dimensional array. 
 
 # Arguments
-- `sum_dims`: A array containing the dimensions we want to sum over
-- `weights`: A array containing weights to weight the contribution of 
+- `num_dim=5`: Dimension of the array that should be regularized 
+- `sum_dims=[1, 2]`: A array containing the dimensions we want to sum over
+- `weights=[1, 1]`: A array containing weights to weight the contribution of 
     different dimensions
-- `step`: A integer indicating the step width for the array indexing
-- `λ`: A float indicating the total weighting of the regularizer with 
-    respect to the global loss function
-- `mode`: Either `"central"` or `"forward"` accounting for different
+- `step=1`: A integer indicating the step width for the array indexing
+- `mode="forward"`: Either `"central"` or `"forward"` accounting for different
     modes of the spatial gradient. Default is "central".
 
 # Examples
@@ -211,13 +207,11 @@ has a different sampling (factor 4 larger) than the first two dimensions.
 For the spatial gradient `"forward"` is used.
 
 ```julia-repl
-julia> GR(sum_dims=[1, 2, 3], weights=[1, 1, 0.25], λ=0.05, mode="forward")
+julia> GR(sum_dims=[1, 2, 3], weights=[1, 1, 0.25], mode="forward")
 ```
 """
-function GR(; sum_dims=[1, 2], weights=[1, 1], step=1,
-              λ=0.05, mode="central", ϵ=1e-14)
-    num_dim = 5
-    
+function GR(; num_dim=5, sum_dims=[1, 2], weights=[1, 1], step=1,
+              mode="central", ϵ=1e-14)
     if mode == "central"
         GRf = @eval arr -> ($(generate_GR(num_dim, sum_dims, weights,
                                         step, (-1) * step, ϵ)...))
@@ -227,7 +221,7 @@ function GR(; sum_dims=[1, 2], weights=[1, 1], step=1,
     end
     
 
-    return rec -> λ * GRf(rec) / 4 / length(rec)
+    return rec -> GRf(rec) / 4 / length(rec)
 end
 
 
@@ -262,26 +256,31 @@ This function returns a function to calculate the Total Variation regularizer
 of a n-dimensional array. 
 
 # Arguments
-- `sum_dims`: A array containing the dimensions we want to sum over
-- `weights`: A array containing weights to weight the contribution of 
+- `num_dim=5`: 
+- `sum_dims=[1, 2, 3]`: A array containing the dimensions we want to sum over
+- `weights=[1, 1, 0.25]`: A array containing weights to weight the contribution of 
     different dimensions
-- `step`: A integer indicating the step width for the array indexing
-- `λ`: A float indicating the total weighting of the regularizer with 
-    respect to the global loss function
-- `mode`: Either `"central"` or `"forward"` accounting for different
+- `step=1`: A integer indicating the step width for the array indexing
+- `mode="central"`: Either `"central"` or `"forward"` accounting for different
     modes of the spatial gradient. Default is "central".
 
 # Examples
-To create a regularizer for a 3D dataset where the third dimension
+To create a regularizer for a 4D dataset where the third dimension
 has a different sampling (factor 4 larger) than the first two dimensions.
-For the spatial gradient `"forward"` is used.
+For the spatial gradient `"forward"` is used. The fourth dimensions is not
+considered in the regularizing process itself 
+but just acts as a summation of all 3D regularizers.
 
 ```julia-repl
-julia> GR(sum_dims=[1, 2, 3], weights=[1, 1, 0.25], λ=0.05, mode="forward")
+julia> GR(num_dim=3, sum_dims=[1, 2, 3], weights=[1, 1, 0.25], mode="forward")
 ```
+
+
+# Bugs
+Result is sometimes NaN -> current issue
+
 """
-function TV(; sum_dims=[1, 2], weights=[1, 1], step=1, λ=0.05, mode="central")
-    num_dim = 5
+function TV(; num_dim=5, sum_dims=[1, 2], weights=[1, 1], step=1, mode="central")
 
     if mode == "central"
         total_var = @eval arr -> ($(generate_TV(num_dim, sum_dims, weights,
@@ -290,5 +289,5 @@ function TV(; sum_dims=[1, 2], weights=[1, 1], step=1, λ=0.05, mode="central")
         total_var = @eval arr -> ($(generate_TV(num_dim, sum_dims, weights,
                                         step, 0)...))
     end
-    return rec -> λ * total_var(rec) / length(rec)
+    return rec -> total_var(rec) / length(rec)
 end
