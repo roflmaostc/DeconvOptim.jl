@@ -1,49 +1,41 @@
 export Poisson
 export Gauss
-export poisson_aux
 
+"""
+    poisson_aux(μ, meas)
+
+Calculates the Poisson loss for `μ` and `meas`.
+`μ` can be of larger size than `meas`. In that case
+we extract a centered region from `μ` of the same size as `meas`.
+""" 
 function poisson_aux(μ, meas)
-    n = length(μ)
+    n = convert(eltype(μ), length(μ))
     μ = center_extract(μ, size(meas))
-    return 1 ./ n .* sum(μ .- meas .* log.(μ))
+    return one(eltype(μ)) ./ n .* sum(μ .- meas .* log.(μ))
 end
 
 
+ # define custom gradient for speed-up
+ # ChainRulesCore offers the possibility to define a backward AD rule
+ # which can be used by several different AD systems
 function ChainRulesCore.rrule(::typeof(poisson_aux), μ, meas)
-    n = length(μ)
+    n = convert(eltype(μ), length(μ))
     Y = poisson_aux(μ, meas)
 
     function poisson_aux_pullback(xbar)
         meas_new = copy(μ)
         meas_new = center_set!(meas_new, meas)
-        return NO_FIELDS, xbar ./ n .* (1 .- meas_new ./ μ), DoesNotExist()
+        return zero(eltype(μ)), xbar ./ n .* (one(eltype(μ)) .- meas_new ./ μ), zero(eltype(μ)) 
     end
 
     return Y, poisson_aux_pullback
 end
 
 
- #@adjoint poisson_aux(μ, meas) = begin
- #    n = length(μ)
- #
- #    # we need to pad the measured array with the values of μ
- #    #= meas_new = zeros(eltype(meas), size(μ))#copy(μ) =#
- #    meas_new = copy(μ)
- #    meas_new = center_set!(meas_new, meas)
- #    
- #    # we need to return a 2-tuple because the function poisson_aux
- #    # has 2 parameter 
- #    ∇ = (c -> (c ./ n .* (1 .- meas_new ./ μ) , -1))
- #   
- #    # calculate finally the loss value 
- #    loss_value = poisson_aux(μ, meas)
- #    return (loss_value, ∇)
- #end
-
 """
     Poisson()
 
-Returns a function to calculate poisson loss and gradient of it.
+Returns a function to calculate Poisson loss
 
 """
 function Poisson()
@@ -51,25 +43,38 @@ function Poisson()
 end
 
 
+
+"""
+    gauss_aux(μ, meas)
+
+Calculates the Gauss loss for `μ` and `meas`.
+`μ` can be of larger size than `meas`. In that case
+we extract a centered region from `μ` of the same size as `meas`.
+""" 
+function gauss_aux(μ, meas)
+    n = convert(eltype(μ), length(μ))
+    μ = center_extract(μ, size(meas))
+    return sum(abs2.(μ - meas)) / n
+end
+
+ # define custom gradient for speed-up
+function ChainRulesCore.rrule(::typeof(gauss_aux), μ, meas)
+    n = convert(eltype(μ), length(μ))
+    Y = gauss_aux(μ, meas) 
+    function gauss_aux_pullback(xbar)
+        meas_new = copy(μ)
+        meas_new = center_set!(meas_new, meas)
+        return zero(eltype(μ)), 2 .* (μ - meas_new), zero(eltype(μ)) 
+    end
+    return Y, gauss_aux_pullback
+end
+
+
 """
     Gauss()
 
-Returns a function to calculate Gauss loss and gradient of it.
+Returns a function to calculate Gauss loss.
 """
 function Gauss()
-
-    function gauss_loss!(F, G, rec, otf, meas)
-        n = length(rec)
-
-        ν = conv(rec, otf) - meas
-
-        if G != nothing
-            G .= 2 * conv(ν, otf)
-
-        end
-        if F != nothing
-            return sum(ν.^2)
-        end
-    end
-    return gauss_loss!
+    return gauss_aux
 end
