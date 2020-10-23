@@ -76,16 +76,20 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
         padding=0.05,
         up_sampling=1) where {T, N}
 
-    #= λ = convert(eltype(measured), λ) =#
+    # do some type conversion to ensure same type everywhere
+    # provides speed-up
+    λ = convert(eltype(measured), λ)
+    psf = convert(Array{eltype(measured)}, psf)
+    
 
-    # rec0 will be the array storing the final reconstruction
+    # rec0 will be an array storing the final reconstruction
     # we choose it larger than the measured array to reduce
     # wrap around artifacts of the Fourier Transform
     # we create a array size_padded which stores a new array size
     # our reconstruction array will be larger than measured
     # to prevent wrap around artifacts
     size_padded = []
-    for i = 1:5
+    for i = 1:ndims(measured)
         # if measured is smaller than i-th dimensional
         # simply add size 1 as this dimension 
         # if the size of the i-th dimension is 1
@@ -96,11 +100,10 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
         else
             # only pad, if padding is true
             if ~(padding ≈ 0)
-                # either add a total of 20% to each dimension
-                # or add 5, if 20% is just too few  
-                # x % 2 == 0
-                # ensures symmetric padding
+                # 2 * ensures symmetric padding
+                # minimum padding is 2 (4 in total) on each side
                 x = max(4, 2 * round(Int, size(measured)[i] * padding))
+                print(x)
             else
                 x = 0
             end
@@ -108,34 +111,10 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
         end
     end
     # create rec0 which will be the initial guess for the reconstruction
-    measured = max.(one(eltype(measured)), measured)
-    # 
     rec0 = ones(T, (size_padded...))
 
-
-    # do some reshaping if the data is not provided
-    # as a 5D array
-    
-    # first case means that input data is both 2D or 3D (standary case
-    if (N == 2 && ndims(psf) == 2)|| (N == 3 && ndims(psf) == 3)
-        new_size = (size(measured)..., ones(Integer, 5 - N)...)
-        measured = reshape(measured, new_size)
-        psf = reshape(psf, new_size)
-        fft_dims = collect(1:N) # [1,2,3] or [1,2]
-    # that means that we have 4 dim data
-    # therefore we have a 3D stack recorded with different channels (like a color sensor)
-    # if the psf is only 3D, then we assume the PSF is achromatic
-    elseif N == 4 && ndims(psf) == 3 
-        measured = reshape(measured, (size(measured)..., 1))
-        psf = reshape(psf, (size(psf)..., 1, 1))
-        fft_dims = [1, 2, 3] 
-    # here we could model chromatic PSFs etc.
-    # time series etc.
-    else                       
-        throw("Such a combination of the dimensions of PSF and Image
-               is not supported at the moment.")
-    end
-
+    # the dimensions we do the Fourier Transform over
+    fft_dims = collect(1:ndims(psf)) 
 
     # psf_n is the psf with the same size as rec0
     # we put the small psf into the new one
@@ -155,7 +134,7 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
         otf, conv = plan_conv_r(psf, rec0, fft_dims) 
     else
         otf = rfft(psf, fft_dims)
-        conv = conv_otf_r
+        conv(psf, otf) = conv_otf_r(psf, otf, fft_dims)
     end
     
     # we are running into a world age counter problem
@@ -173,10 +152,10 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
         mf, m_invf = identity, identity
     end
 
-    # if no regularizer is provided, simply use x -> 0
-    if regularizerf == nothing
-        regularizerf = x -> zero(eltype(rec0)) 
-    end
+    #= # if no regularizer is provided, simply use x -> 0 =#
+    #= if regularizerf == nothing =#
+    #=     regularizerf = x -> zero(eltype(rec0)) =# 
+    #= end =#
 
     # forward model is a convolution
     # due to numerics, we need to clip at 0
@@ -189,8 +168,12 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
         mf_rec = mf(rec)
         forward_v = forward(mf_rec)
         loss_v = lossf(forward_v, measured)
-        reg_v = regularizerf(mf_rec)
-        out = loss_v + λ * reg_v
+        if regularizerf != nothing
+            reg_v = regularizerf(mf_rec)
+            out = loss_v + λ * reg_v
+        else
+            out = loss_v
+        end
         return out 
     end
 
