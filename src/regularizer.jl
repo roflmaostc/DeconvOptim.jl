@@ -131,7 +131,7 @@ This function returns a function to calculate the Tikhonov regularizer
 of a n-dimensional array. 
 
 # Arguments
-- `num_dim=5`: 
+- `num_dim=2`: 
 - `sum_dims=[1, 2]`: A array containing the dimensions we want to sum over
 - `weights=[1, 1]`: A array containing weights to weight the contribution of 
     different dimensions
@@ -147,7 +147,7 @@ has a different sampling (factor 4 larger) than the first two dimensions.
 julia> Tikhonov(sum_dims=[1, 2, 3], weights=[1, 1, 0.25])
 ```
 """
-function Tikhonov(;num_dim=5, sum_dims=[1, 2], weights=[1, 1], step=1, mode="laplace")
+function Tikhonov(;num_dim=2, sum_dims=[1, 2], weights=[1, 1], step=1, mode="laplace")
     if mode == "laplace"
         Γ = @eval arr -> ($(generate_laplace(num_dim, sum_dims, weights)...))
     elseif mode == "spatial_grad_square"
@@ -193,7 +193,7 @@ This function returns a function to calculate the Good's roughness regularizer
 of a n-dimensional array. 
 
 # Arguments
-- `num_dim=5`: Dimension of the array that should be regularized 
+- `num_dim=2`: Dimension of the array that should be regularized 
 - `sum_dims=[1, 2]`: A array containing the dimensions we want to sum over
 - `weights=[1, 1]`: A array containing weights to weight the contribution of 
     different dimensions
@@ -210,7 +210,7 @@ For the spatial gradient `"forward"` is used.
 julia> GR(sum_dims=[1, 2, 3], weights=[1, 1, 0.25], mode="forward")
 ```
 """
-function GR(; num_dim=5, sum_dims=[1, 2], weights=[1, 1], step=1,
+function GR(; num_dim=2, sum_dims=[1, 2], weights=[1, 1], step=1,
               mode="central", ϵ=1e-14)
     if mode == "central"
         GRf = @eval arr -> ($(generate_GR(num_dim, sum_dims, weights,
@@ -256,7 +256,7 @@ This function returns a function to calculate the Total Variation regularizer
 of a n-dimensional array. 
 
 # Arguments
-- `num_dim=5`: 
+- `num_dim=2`: 
 - `sum_dims=[1, 2, 3]`: A array containing the dimensions we want to sum over
 - `weights=[1, 1, 0.25]`: A array containing weights to weight the contribution of 
     different dimensions
@@ -280,7 +280,7 @@ julia> GR(num_dim=3, sum_dims=[1, 2, 3], weights=[1, 1, 0.25], mode="forward")
 Result is sometimes NaN -> current issue
 
 """
-function TV(; num_dim=5, sum_dims=[1, 2], weights=[1, 1], step=1, mode="central")
+function TV(; num_dim=2, sum_dims=[1, 2], weights=[1, 1], step=1, mode="central")
 
     if mode == "central"
         total_var = @eval arr -> ($(generate_TV(num_dim, sum_dims, weights,
