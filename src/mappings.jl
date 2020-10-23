@@ -3,8 +3,20 @@ export Non_negative2
 export Non_negative3
 export Map_0_1
 export Exp
+ 
+
+ # All these functions return a mapping function and 
+ # the inverse of it 
+ # they are used to map the real numbers to non-negative real numbers
+function Non_negative()
+    return x -> map(abs2, x) , (x -> sqrt.(x))
+end
 
 
+
+
+ # old functions with old semantics
+ # leave them here unused. Will be replaced in future
 function Map_0_1()
     f(x) = 1 .- exp.(.- x.^2)
     ∇f(x) = 2 .* x .* exp.(.- x.^2)
@@ -17,10 +29,6 @@ function Exp()
     return (x -> exp.(x)), (x -> exp.(x)) , (x -> log.(x))
 end
 
-
-function Non_negative()
-    return x -> x .^ 2 , (x -> sqrt.(x))
-end
 
 function Non_negative3()
     function ∇f(x)
