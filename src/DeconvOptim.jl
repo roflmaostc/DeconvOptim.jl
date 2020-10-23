@@ -76,6 +76,8 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
         padding=0.05,
         up_sampling=1) where {T, N}
 
+    #= λ = convert(eltype(measured), λ) =#
+
     # rec0 will be the array storing the final reconstruction
     # we choose it larger than the measured array to reduce
     # wrap around artifacts of the Fourier Transform
@@ -93,12 +95,12 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
             push!(size_padded, 1)
         else
             # only pad, if padding is true
-            if padding != 0
+            if ~(padding ≈ 0)
                 # either add a total of 20% to each dimension
                 # or add 5, if 20% is just too few  
                 # x % 2 == 0
                 # ensures symmetric padding
-                x = max(6, 2 * round(Int, size(measured)[i] * padding))
+                x = max(4, 2 * round(Int, size(measured)[i] * padding))
             else
                 x = 0
             end
@@ -106,8 +108,9 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
         end
     end
     # create rec0 which will be the initial guess for the reconstruction
-    rec0 = ones(T, (size_padded...)) * mean(measured)
-
+    measured = max.(one(eltype(measured)), measured)
+    # 
+    rec0 = ones(T, (size_padded...))
 
 
     # do some reshaping if the data is not provided
@@ -187,7 +190,8 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
         forward_v = forward(mf_rec)
         loss_v = lossf(forward_v, measured)
         reg_v = regularizerf(mf_rec)
-        return loss_v + λ .* reg_v 
+        out = loss_v + λ * reg_v
+        return out 
     end
 
     
@@ -214,7 +218,8 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
 
     # since we do some padding we need to extract the core part
     # also apply the mapping
-    res_out = center_extract(mf(Optim.minimizer(res)), size(measured))    
+    res_out = mf(Optim.minimizer(res))
+    res_out = center_extract(res_out, size(measured))    
     return res_out, res
 end
 
