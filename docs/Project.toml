@@ -1,5 +1,8 @@
 [deps]
+DeconvOptim = "03e7cd2f-1a03-4ea9-b59b-760a446df67f"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+DocumenterCitations = "daee34ce-89f3-4625-b898-19384cb65244"
+Noise = "81d43f40-5267-43b7-ae1c-8b967f377efa"
 
 [compat]
 Documenter = "0.25"
