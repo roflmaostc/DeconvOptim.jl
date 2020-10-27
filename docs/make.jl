@@ -1,8 +1,10 @@
-using Documenter, DeconvOptim 
+using Documenter, DocumenterCitations, DeconvOptim
 
+
+cite_bib = CitationBibliography("src/references.bib")
 
 DocMeta.setdocmeta!(DeconvOptim, :DocTestSetup, :(using DeconvOptim); recursive=true)
-makedocs(modules=[DeconvOptim],
+makedocs(cite_bib, modules=[DeconvOptim],
          sitename="DeconvOptim.jl",
          doctest = false,
          pages = Any[
@@ -11,12 +13,14 @@ makedocs(modules=[DeconvOptim],
                 "Background" => Any[
                     "background/physical_background.md",
                     "background/mathematical_optimization.md",
+                    "background/loss_functions.md",
                     "background/regularizer.md",
                     ],
                 "Function references" => Any[
                     "function_references/regularizer.md",
                     "function_references/utils.md",
-                    ]
+                    ],
+                "References" => "references.md"
                 ],
         )
          
