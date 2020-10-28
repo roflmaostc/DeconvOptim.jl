@@ -1,29 +1,36 @@
 module DeconvOptim
 
+ # for optimization
 using Optim
+ #mean
 using Statistics
 using FFTW
+ # for fast array regularizers
 using Tullio
+ # possible up_sampling 
 using Interpolations
+ # to check wether CUDA is enabled
 using Requires
-
-
- # remove maybe later
+ # using eval style in regularizers
+using GeneralizedGenerated
+# for defining custom derivatives
 using ChainRulesCore
+
+
 
 export deconvolution
 
 
 # via require we can check whether CUDA is loaded
 # to enable CUDA support simply load CUDA before load DeconvOptim
-to_gpu_or_not(x) = x
-function __init__()
-    @require CUDA="052768ef-5323-5732-b1bb-66c8b64840ba" begin
-        print("CUDA support is enabled")
-        @eval using CUDA
-        @eval to_gpu_or_not(x) = CuArray(x)
-    end
-end
+ #to_gpu_or_not(x) = x
+ #function __init__()
+ #    @require CUDA="052768ef-5323-5732-b1bb-66c8b64840ba" begin
+ #        print("CUDA support is enabled")
+ #        @eval using CUDA
+ #        @eval to_gpu_or_not(x) = CuArray(x)
+ #    end
+ #end
     
 
 include("forward_models.jl")
@@ -46,8 +53,8 @@ Multiple keyword arguments can be specified for different loss functions,
 regularizers and mappings.
 
 # Arguments
-- `lossf=Poisson()`: the lossfunction taking a vector the same shape as measured. 
-- `regularizerf=GR()`: A regularizer function, same form as `lossf`.
+- `loss=Poisson()`: the lossunction taking a vector the same shape as measured. 
+- `regularizer=GR()`: A regularizer function, same form as `loss`.
 - `λ=0.05`: A float indicating the total weighting of the regularizer with 
     respect to the global loss function
 - `mappingf=Non_negative()`: Applies a mapping of the optimizer weight. Default is a 
@@ -66,8 +73,8 @@ regularizers and mappings.
     integer number. Default is 1.
 """
 function deconvolution(measured::AbstractArray{T, N}, psf;
-        lossf=Poisson(),
-        regularizerf=GR(),
+        loss=Poisson(),
+        regularizer=GR(),
         λ=0.05,
         mappingf=Non_negative(),
         iterations=20,
@@ -103,7 +110,6 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
                 # 2 * ensures symmetric padding
                 # minimum padding is 2 (4 in total) on each side
                 x = max(4, 2 * round(Int, size(measured)[i] * padding))
-                print(x)
             else
                 x = 0
             end
@@ -152,11 +158,6 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
         mf, m_invf = identity, identity
     end
 
-    #= # if no regularizer is provided, simply use x -> 0 =#
-    #= if regularizerf == nothing =#
-    #=     regularizerf = x -> zero(eltype(rec0)) =# 
-    #= end =#
-
     # forward model is a convolution
     # due to numerics, we need to clip at 0
     # analytically it's a convolution psf ≥ 0 and image ≥ 0
@@ -164,12 +165,12 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     #= forward(x) = (@tullio res[a,b,c,d,e] := 1 + conv_aux(conv, x, otf)[a,b,c,d,e]) =#
     forward(x) = (conv_aux(conv, x, otf))
     # create the loss function which depends simply on the current rec 
-    function loss(rec)
+    function total_loss(rec)
         mf_rec = mf(rec)
         forward_v = forward(mf_rec)
-        loss_v = lossf(forward_v, measured)
-        if regularizerf != nothing
-            reg_v = regularizerf(mf_rec)
+        loss_v = loss(forward_v, measured)
+        if regularizer != nothing
+            reg_v = regularizer(mf_rec)
             out = loss_v + λ * reg_v
         else
             out = loss_v
@@ -182,12 +183,17 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     # check Optims documentation for the purpose of F and Get
     # but simply speaking F is the loss value and G it's gradient
     # depending whether one of them is nothing, we skip some computations
+    # we need to call Base.invokelatest becauser regualarizer is f function
+    # generated at runtime with eval.
+    # This leads to the common "world age problem" in Julia
+    # for more details on that check:
+    # https://discourse.julialang.org/t/dynamically-create-a-function-initial-idea-with-eval-failed-due-to-world-age-issue/49139/17
     function f!(F, G, rec)
         if G != nothing
-            G .= gradient(loss, rec)[1]
+            G .= Base.invokelatest(gradient, total_loss, rec)[1]
         end
         if F != nothing
-            return loss(rec)
+            return Base.invokelatest(total_loss, rec)
         end
     end
 
