@@ -16,13 +16,11 @@ export generate_spatial_grad_square, generate_GR, generate_TV
 
 """
     generate_indices(num_dim, d, ind1, ind2)
-
 Generates a list of symbols which can be used to generate Tullio expressions
 via metaprogramming.
 `num_dim` is the total number of dimensions.
 `d` is the dimension where there is a offset in the index.
 `ind1` and `ind2` are the offsets each.
-
  # Examples
  ```julia-repl
 julia> a, b = generate_indices(5, 2, 1, 1)
@@ -51,7 +49,6 @@ end
 
 """
     generate_laplace(num_dim, sum_dims_arr, weights)
-
 Generate the Tullio statement for computing the Laplacian.
 `num_dim` is the dimension of the array. 
 `sum_dims_arr` is a array indicating over which dimensions we must sum over.
@@ -77,17 +74,15 @@ function generate_laplace(num_dim, sum_dims_arr, weights)
     # subtract this final term
     push!(add, :(-$(2 * length(sum_dims_arr)) * arr[$(inds...)]))
     # create final expressions by adding all elements of the add list
-    push!(out, :(@tullio res = abs2(+$(add...))))
+    push!(out, :(@tullio threads=false res = abs2(+$(add...))))
     return out
 end
 
 
 """
     create_Ndim_regularizer(expr, num_dim, sum_dims_arr, weights, ind1, ind2)
-
     A helper function to create a N-dimensional regularizer. In principle
     the same as `generate_laplace` but more general
-
     `expr` needs to be a function which takes `inds1`, `inds2` and a weight `w`-
     `num_dim` is the total amount of dimensions
     `sum_dims_arr` is a array indicating over which dimensions we must sum over.
@@ -101,14 +96,13 @@ function create_Ndim_regularizer(expr, num_dim, sum_dims_arr, weights,
         inds1, inds2 = generate_indices(num_dim, d, ind1, ind2) 
         push!(add, expr(inds1, inds2, w))
     end
-    push!(out, :(@tullio res = +($(add...))))
+    push!(out, :(@tullio threads=false res = +($(add...))))
     return out
 end
 
 
 """ 
     generate_spatial_grad_square(num_dim, sum_dims_arr, weights)
-
 Generate the Tullio statement for calculating the squared spatial gradient
 over n dimensions.
 `num_dim` is the dimension of the array. 
@@ -126,10 +120,8 @@ end
 
 """
     Tikhonov(; <keyword arguments>)
-
 This function returns a function to calculate the Tikhonov regularizer
 of a n-dimensional array. 
-
 # Arguments
 - `num_dim=2`: 
 - `sum_dims=[1, 2]`: A array containing the dimensions we want to sum over
@@ -138,11 +130,9 @@ of a n-dimensional array.
 - `step=1`: A integer indicating the step width for the array indexing
 - `mode="laplace"`: Either `"laplace"` or `"spatial_grad_square"` accounting for different
     modes of the Tikhonov regularizer. Default is `"laplace"`.
-
 # Examples
 To create a regularizer for a 3D dataset where the third dimension
 has a different sampling (factor 4 larger) than the first two dimensions.
-
 ```julia-repl
 julia> Tikhonov(sum_dims=[1, 2, 3], weights=[1, 1, 0.25])
 ```
@@ -163,7 +153,6 @@ end
 
 """
     generate_GR(num_dim, sum_dims_arr, weights, ind1, ind2, ϵ)
-
 Generate the Tullio statement for computing the Good's roughness.
 `num_dim` is the dimension of the array. `sum_dims_arr` is a array
 indicating over which dimensions we must sum over.
@@ -181,17 +170,15 @@ function generate_GR(num_dim, sum_dims_arr, weights, ind1, ind2, ϵ)
         i = Symbol(:i, di)
     end
     denom = :(sqrt(abs2(arr[$(inds...)])) + $ϵ)
-    push!(out, :(@tullio res = +($(add...)) / $denom))
+    push!(out, :(@tullio threads=false res = +($(add...)) / $denom))
     return out
 end
 
 
 """
     GR(; <keyword arguments>)
-
 This function returns a function to calculate the Good's roughness regularizer
 of a n-dimensional array. 
-
 # Arguments
 - `num_dim=2`: Dimension of the array that should be regularized 
 - `sum_dims=[1, 2]`: A array containing the dimensions we want to sum over
@@ -200,12 +187,10 @@ of a n-dimensional array.
 - `step=1`: A integer indicating the step width for the array indexing
 - `mode="forward"`: Either `"central"` or `"forward"` accounting for different
     modes of the spatial gradient. Default is "central".
-
 # Examples
 To create a regularizer for a 3D dataset where the third dimension
 has a different sampling (factor 4 larger) than the first two dimensions.
 For the spatial gradient `"forward"` is used.
-
 ```julia-repl
 julia> GR(sum_dims=[1, 2, 3], weights=[1, 1, 0.25], mode="forward")
 ```
@@ -227,7 +212,6 @@ end
 
 """
     generate_TV(num_dim, sum_dims_arr, weights, ind1, ind2, ϵ)
-
 Generate the Tullio statement for computing the Good's roughness.
 `num_dim` is the dimension of the array. 
 `sum_dims_arr` is a array
@@ -244,17 +228,15 @@ function generate_TV(num_dim, sum_dims_arr, weights, ind1, ind2, ϵ=1e-8)
         push!(add, :(abs2($w * arr[$(inds1...)] - $w * arr[$(inds2...)])))
     end
     push!(add, ϵ)
-    push!(out, :(@tullio res = sqrt(+($(add...)))))
+    push!(out, :(@tullio threads=false res = sqrt(+($(add...)))))
     return out
 end
 
 
 """
     TV(; <keyword arguments>)
-
 This function returns a function to calculate the Total Variation regularizer
 of a n-dimensional array. 
-
 # Arguments
 - `num_dim=2`: 
 - `sum_dims=[1, 2, 3]`: A array containing the dimensions we want to sum over
@@ -263,22 +245,15 @@ of a n-dimensional array.
 - `step=1`: A integer indicating the step width for the array indexing
 - `mode="central"`: Either `"central"` or `"forward"` accounting for different
     modes of the spatial gradient. Default is "central".
-
 # Examples
 To create a regularizer for a 4D dataset where the third dimension
 has a different sampling (factor 4 larger) than the first two dimensions.
 For the spatial gradient `"forward"` is used. The fourth dimensions is not
 considered in the regularizing process itself 
 but just acts as a summation of all 3D regularizers.
-
 ```julia-repl
-julia> GR(num_dim=3, sum_dims=[1, 2, 3], weights=[1, 1, 0.25], mode="forward")
+julia> TV(num_dim=3, sum_dims=[1, 2, 3], weights=[1, 1, 0.25], mode="forward")
 ```
-
-
-# Bugs
-Result is sometimes NaN -> current issue
-
 """
 function TV(; num_dim=2, sum_dims=[1, 2], weights=[1, 1], step=1, mode="central")
 
