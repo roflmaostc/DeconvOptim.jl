@@ -11,8 +11,6 @@ using Tullio
 using Interpolations
  # to check wether CUDA is enabled
 using Requires
- # using eval style in regularizers
-using GeneralizedGenerated
 # for defining custom derivatives
 using ChainRulesCore
 
