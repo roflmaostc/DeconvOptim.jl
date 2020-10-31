@@ -196,7 +196,7 @@ julia> GR(sum_dims=[1, 2, 3], weights=[1, 1, 0.25], mode="forward")
 ```
 """
 function GR(; num_dim=2, sum_dims=[1, 2], weights=[1, 1], step=1,
-              mode="central", ϵ=1e-14)
+              mode="central", ϵ=1f-14)
     if mode == "central"
         GRf = @eval arr -> ($(generate_GR(num_dim, sum_dims, weights,
                                         step, (-1) * step, ϵ)...))
@@ -221,7 +221,7 @@ indicating over which dimensions we must sum over.
 `ϵ` is a numerical constant to prevent division by zero. 
     this is important for the gradient 
 """
-function generate_TV(num_dim, sum_dims_arr, weights, ind1, ind2, ϵ=1e-8)
+function generate_TV(num_dim, sum_dims_arr, weights, ind1, ind2, ϵ=1f-8)
     out, add = [], []
     for (d, w) in zip(sum_dims_arr, weights)
         inds1, inds2 = generate_indices(num_dim, d, ind1, ind2) 
