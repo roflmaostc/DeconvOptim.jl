@@ -31,7 +31,7 @@ $ \underset{S(r)}{\arg \min} (- \log(p(Y(r)|\mu(r)))) = \underset{S(r)}{\arg \mi
 
 which is equivalent to
 
-$\underset{S(r)}{\arg \min} L = \underset{S(r)}{\arg \min} \sum_r (\mu(r)  - Y(r) \log(\mu(r))$
+$\underset{S(r)}{\arg \min}\, L = \underset{S(r)}{\arg \min} \sum_r (\mu(r)  - Y(r) \log(\mu(r))$
 
 since the second term only depends on $Y(r)$ but not on $\mu(r)$.
 The gradient of $L$ with respect to $\mu(r)$ is simply
@@ -39,4 +39,36 @@ The gradient of $L$ with respect to $\mu(r)$ is simply
 $\nabla L = 1 - \frac{Y(r)}{\mu(r)}.$
 
 The function $L$ and the gradient $\nabla L$ are needed for any gradient descent optimization algorithm.
+The numerical evaluation of the Poisson loss can lead to issues. Since $\mu(r)=0$ can happen for a measurement with zero intensity background. However, the loss is not defined for $\mu \leq 0$. In our source code we set all intensity values below a certain threshold $\epsilon$ to $\epsilon$ itself. This prevents the evaluation of the logarithm at undefined values.
+
+
+## Scaled Gaussian Loss
+It is well known that the Poisson density function behaves similar as a Gaussian density function for $\mu\gg 1$. This approximation is almost for all use cases in microscopy valid since regions of interest in an image usually consists of multiple photons and not to a single measured photon.
+Mathematically the Poisson probability can be approximately (using Stirling's formula in the derivation) expressed as:
+
+$p(Y(r)|\mu(r)) \approx \prod_r \frac{\exp \left(-\frac{(x-\mu(r) )^2}{2 \mu(r) }\right)}{\sqrt{2 \pi  \mu(r) }}$
+
+Applying the negative logarithm we get for the loss function:
+
+$\underset{S(r)}{\arg \min}\, L = \underset{S(r)}{\arg \min} \sum_r \frac12 \log(\mu(r)) + \frac{(Y(r)-\mu(r))^2}{2 \mu(r)}$ 
+
+The gradient is given by:
+
+$\nabla L = \frac{\mu(r) + \mu(r)^2 - Y(r)^2}{2 \mu^2}$
+
+
+## Gaussian Loss
+A very common loss in optimization (and Deep Learning) is a simple Gaussian loss. However, this loss is not recommended for low intensity microscopy since it doesn't considers Poisson noise.
+However, still combined with suitable regularizer reasonable results can be achieved.
+The probability is defined as 
+
+$p(Y(r)|\mu(r)) = \prod_r \frac1{\sqrt{2 \pi \sigma^2}} \exp\left(- \frac{(Y(r) - \mu(r))^2}{2 \sigma ^2} \right)$
+where $\sigma$ is the standard deviation of the Gaussian.
+
+Applying the negative logarithm we can simplify the loss to be minimized:
+
+$\underset{S(r)}{\arg \min}\, L = \underset{S(r)}{\arg \min} \sum_r (Y(r) - \mu(r))^2$
+
+Since we are looking for $\mu(r)$ minimizing this expression, $\sigma$ is just a constant offset being irrelevant for the solution.
+This expression is also called *L2 loss*.
 

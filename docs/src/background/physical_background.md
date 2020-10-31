@@ -18,7 +18,11 @@ Mathematically an ideal imaging process of specimen emitting incoherent light by
 $Y(r) = (S * \text{PSF})(r)$
 
 where $*$ being a convolution, $r$ being the position, $S$ being the sample and $\text{PSF}$ being the point spread function of the system.
-In frequency space the equation is:
+One can also a background term $b$ independent of the position, which models a constant offset of the imaging sensor:
+
+$Y(r) = (S * \text{PSF})(r) + b$
+
+In frequency space the equation with $b=0$ is:
 
 $\tilde Y(k) = (\tilde S * \tilde{\text{PSF}})(k)$
 
