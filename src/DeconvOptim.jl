@@ -55,7 +55,8 @@ regularizers and mappings.
 - `regularizer=GR()`: A regularizer function, same form as `loss`.
 - `λ=0.05`: A float indicating the total weighting of the regularizer with 
     respect to the global loss function
-- `mappingf=Non_negative()`: Applies a mapping of the optimizer weight. Default is a 
+- `background=0`: A float indicating a background intensity level.
+- `mapping=Non_negative()`: Applies a mapping of the optimizer weight. Default is a 
               parabola which achieves a non-negativity constraint.
 - `iterations=20`: Specifies a number of iterations after the optimization.
     definitely should stop.
@@ -74,7 +75,8 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
         loss=Poisson(),
         regularizer=GR(),
         λ=0.05,
-        mappingf=Non_negative(),
+        background=0,
+        mapping=Non_negative(),
         iterations=20,
         options=nothing,
         plan_fft=true,
@@ -85,7 +87,7 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     # provides speed-up
     λ = convert(eltype(measured), λ)
     psf = convert(Array{eltype(measured)}, psf)
-    
+    background = convert(eltype(measured), background) 
 
     # rec0 will be an array storing the final reconstruction
     # we choose it larger than the measured array to reduce
@@ -147,26 +149,31 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
         throw("up_sampling is not supported at the moment")
         downsample = generate_downsample(5, 2, up_sampling)
     end
- 
+
     # Get the mapping functions to achieve constraints
     # like non negativity
-    if mappingf != nothing
-        mf, m_invf = mappingf
-    else
-        mf, m_invf = identity, identity
+    if mapping != nothing
+        mf, m_invf = mapping
     end
+
 
     # forward model is a convolution
     # due to numerics, we need to clip at 0
     # analytically it's a convolution psf ≥ 0 and image ≥ 0
     # so it must be conv(psf, image) ≥ 0
     #= forward(x) = (@tullio res[a,b,c,d,e] := 1 + conv_aux(conv, x, otf)[a,b,c,d,e]) =#
-    forward(x) = (conv_aux(conv, x, otf))
-    # create the loss function which depends simply on the current rec 
+    forward(x) = (conv_aux(conv, x, otf)) .+ background
+    # create the loss function which depends simply on the current rec  
     function total_loss(rec)
-        mf_rec = mf(rec)
+        # handle if there is a provided mapping function
+        if mapping != nothing
+            mf_rec = mf(rec)
+        else
+            mf_rec = rec
+        end
         forward_v = forward(mf_rec)
         loss_v = loss(forward_v, measured)
+        # handle if there is a regularizer
         if regularizer != nothing
             reg_v = regularizer(mf_rec)
             out = loss_v + λ * reg_v
@@ -203,8 +210,8 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     # do the optimization with LBGFS
     res = Optim.optimize(Optim.only_fg!(f!), rec0, LBFGS(), options)
 
-    # since we do some padding we need to extract the core part
-    # also apply the mapping
+    # since we do some padding we need to extract the center part
+    # also apply the mapping to get the real result
     res_out = mf(Optim.minimizer(res))
     res_out = center_extract(res_out, size(measured))    
     return res_out, res
