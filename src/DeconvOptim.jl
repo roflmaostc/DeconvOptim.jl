@@ -51,7 +51,7 @@ Multiple keyword arguments can be specified for different loss functions,
 regularizers and mappings.
 
 # Arguments
-- `loss=Poisson()`: the lossunction taking a vector the same shape as measured. 
+- `loss=Poisson()`: the loss function taking a vector the same shape as measured. 
 - `regularizer=GR()`: A regularizer function, same form as `loss`.
 - `λ=0.05`: A float indicating the total weighting of the regularizer with 
     respect to the global loss function
@@ -60,28 +60,27 @@ regularizers and mappings.
               parabola which achieves a non-negativity constraint.
 - `iterations=20`: Specifies a number of iterations after the optimization.
     definitely should stop.
-- `options=nothing`: Can be a options file required by Optim.jl. 
-    Will overwrite iterations.
 - `plan_fft=true`: Boolean whether plan_fft is used
-- `padding=0.05`: an float indicating the amount (fraction of the size in that dimension) 
+- `padding=0`: an float indicating the amount (fraction of the size in that dimension) 
         of padded regions around the reconstruction. Prevents wrap around effects of the FFT.
         A array with `size(arr)=(400, 400)` with `padding=0.05` would result in reconstruction size of 
         `(440, 440)`. However, we only return the reconstruction cropped to the original size.
         `padding=0` disables any padding.
-- `up_sampling=1` enables up sampling of the reconstruction. Needs to be an
-    integer number. Default is 1.
+- `optim_options=nothing`: Can be a options file required by Optim.jl. Will overwrite iterations.
+- `optim_optimizer=LBFGS()`: The choosen Optim.jl optimizer. 
 """
 function deconvolution(measured::AbstractArray{T, N}, psf;
         loss=Poisson(),
         regularizer=GR(),
-        λ=0.05,
+        λ=0.01,
         background=0,
         mapping=Non_negative(),
         iterations=20,
-        options=nothing,
         plan_fft=true,
-        padding=0.05,
-        up_sampling=1) where {T, N}
+        padding=0.00,
+        optim_options=nothing,
+        optim_optimizer=LBFGS(),
+        ) where {T, N}
 
     # do some type conversion to ensure same type everywhere
     # provides speed-up
@@ -97,12 +96,10 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     # to prevent wrap around artifacts
     size_padded = []
     for i = 1:ndims(measured)
-        # if measured is smaller than i-th dimensional
-        # simply add size 1 as this dimension 
         # if the size of the i-th dimension is 1
         # don't do any padding because there won't be no
-        # convolution happening in that dimension
-        if ndims(measured) < i || size(measured)[i] == 1
+        # convolution in that dimension
+        if  size(measured)[i] == 1
             push!(size_padded, 1)
         else
             # only pad, if padding is true
@@ -140,15 +137,9 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
         otf, conv = plan_conv_r(psf, rec0, fft_dims) 
     else
         otf = rfft(psf, fft_dims)
-        conv(psf, otf) = conv_otf_r(psf, otf, fft_dims)
+        conv(rec, otf) = conv_otf_r(rec, otf, fft_dims)
     end
     
-    # we are running into a world age counter problem
-    # https://docs.julialang.org/en/v1/manual/methods/#Redefining-Methods
-    if up_sampling != 1
-        throw("up_sampling is not supported at the moment")
-        downsample = generate_downsample(5, 2, up_sampling)
-    end
 
     # Get the mapping functions to achieve constraints
     # like non negativity
@@ -161,7 +152,6 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     # due to numerics, we need to clip at 0
     # analytically it's a convolution psf ≥ 0 and image ≥ 0
     # so it must be conv(psf, image) ≥ 0
-    #= forward(x) = (@tullio res[a,b,c,d,e] := 1 + conv_aux(conv, x, otf)[a,b,c,d,e]) =#
     forward(x) = (conv_aux(conv, x, otf)) .+ background
     # create the loss function which depends simply on the current rec  
     function total_loss(rec)
@@ -203,16 +193,21 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     end
 
     # if not special options are given, just restrict iterations
-    if options == nothing
-        options = Optim.Options(iterations=iterations)
+    if optim_options == nothing
+        optim_options = Optim.Options(iterations=iterations)
     end
     
     # do the optimization with LBGFS
-    res = Optim.optimize(Optim.only_fg!(f!), rec0, LBFGS(), options)
+    res = Optim.optimize(Optim.only_fg!(f!), rec0, optim_optimizer, optim_options)
+
+    # apply the mapping to get the real result
+    if mapping != nothing
+        res_out = mf(Optim.minimizer(res))
+    else
+        res_out = Optim.minimizer(res)
+    end
 
     # since we do some padding we need to extract the center part
-    # also apply the mapping to get the real result
-    res_out = mf(Optim.minimizer(res))
     res_out = center_extract(res_out, size(measured))    
     return res_out, res
 end
