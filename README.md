@@ -1,7 +1,6 @@
 # DeconvOptim.jl
 
-A package for image based deconvolution via Optim.jl.
-This Package is in an early stage of development. First release until mid of november 2020.
+A package for microscopy image based deconvolution via Optim.jl. This package works with N dimensional Point Spread Functions and images.
 
 
 | **Documentation**                       | **Build Status**                          | **Code Coverage**               |
@@ -11,13 +10,13 @@ This Package is in an early stage of development. First release until mid of nov
 
 
 ## Documentation
-The documentation of the latest release is [here](docs-stable-url)
-The documentation of current master is [here](docs-dev-url)
+The documentation of the latest release is [here](docs-stable-url).
+The documentation of current master is [here](docs-dev-url).
 
 ## Installation
 Type `]`in the REPL to get to the package manager:
 ```julia
-] add DeconvOptim
+julia> ] add DeconvOptim
 ```
 
 ## Usage
@@ -51,12 +50,12 @@ you can submit bug reports and make suggestions.
 
 
 # Contributions
-I would like to thank the thank Rainer Heintzmann (@RainerHeintzmann) for the great support and discussions during development.
-Furthermore without [Tullio.jl](https://github.com/mcabbott/Tullio.jl) and @mcabbott this package wouldn't be as fast as it is. His package and ideas are the basis of the regularizers.
+I would like to thank Rainer Heintzmann for the great support and discussions during development.
+Furthermore without [Tullio.jl](https://github.com/mcabbott/Tullio.jl) and [@mcabbott](https://github.com/mcabbott/) this package wouldn't be as fast as it is. His package and ideas are the basis for the implementations of the regularizers.
 
 
 # To-Dos
-* [ ] GPU support for improved version -> check Tullio for that. But won't be tackled soon
+* [ ] GPU support for improved version -> check Tullio for that. But won't be tackled soon.
 
 
 [docs-dev-img]: https://img.shields.io/badge/docs-dev-pink.svg 
@@ -65,8 +64,8 @@ Furthermore without [Tullio.jl](https://github.com/mcabbott/Tullio.jl) and @mcab
 [docs-stable-img]: https://img.shields.io/badge/docs-stable-darkgreen.svg 
 [docs-stable-url]: https://roflmaostc.github.io/DeconvOptim.jl/stable/
 
-[travis-img]: https://travis-ci.org/roflmaostc/DeconvOptim.jl.svg?branch=master
-[travis-url]: https://travis-ci.org/github/roflmaostc/DeconvOptim.jl
+[travis-img]: https://travis-ci.com/roflmaostc/DeconvOptim.jl.svg?branch=master 
+[travis-url]: https://travis-ci.com/github/roflmaostc/DeconvOptim.jl 
 
 [appvey-img]: https://ci.appveyor.com/api/projects/status/i389imi077mcj0tc/branch/master?svg=true 
 [appvey-url]: https://ci.appveyor.com/project/roflmaostc/deconvoptim-jl 
