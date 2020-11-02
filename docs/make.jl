@@ -9,7 +9,11 @@ makedocs(cite_bib, modules=[DeconvOptim],
          doctest = false,
          pages = Any[
                 "DeconvOptim.jl" => "index.md",
-                "Basic Workflow" => "basic_workflow.md",
+                "Workflow" => Any[
+                        "workflow/basic_workflow.md",
+                        "workflow/changing_regularizers.md",
+                        "workflow/changing_loss.md",
+                    ],
                 "Background" => Any[
                     "background/physical_background.md",
                     "background/mathematical_optimization.md",

@@ -37,7 +37,7 @@ img = channelview(testimage("resolution_test_512"))
 dist = [sqrt((i - size(img)[1] / 2)^2 + (j - size(img)[2] / 2)^2)
             for i = 1:size(img)[1],  j = 1:size(img)[2]]
 psf = ifftshift(exp.(-dist .^2 ./ 4.0 .^2))
-# normalize the sum
+# normalize the sum of the PSF 
 psf ./= sum(psf)
 
 # create a blurred, noisy version of that image
@@ -46,16 +46,13 @@ img_n = poisson(img_b, 300)
 
 img_n ./= maximum(img_n)
 
-# define a Good's Roughness regularizer
-reg = DeconvOptim.GR(sum_dims=[1, 2], weights=[1, 1], λ=0.05, mode="central", step=1)
-# deconvolve
-@time res, o = deconvolution(img_n, psf, iterations=10,
-        lossf=Poisson(), mappingf=Non_negative(), regularizerf=reg)
+# deconvolve 2D with default options
+@time res, o = deconvolution(img_n, psf)
+
+# show final results next to original and blurred version
+colorview(Gray, [img img_n res])
 ```
 
-
-| Gray image with noise and blur |Restored image via deconvolution |
-|:-------------------------------|---------------------------------|
-|![](assets/img_noisy_index.png) |![](assets/img_rec_index.png)    |
-
+Left the original image. In the middle the noisy and blurred version. The right images is the deconvolved image with default options.
+![](assets/quick_example_results.png)
 
