@@ -28,23 +28,18 @@ To get the latest stable release of DevonOptim.jl type `]` in the Julia REPL:
 Below is a quick example how to deconvolve a image which is blurred with a Gaussian Kernel.
 
 ```@jldoctest
+using Revise # for development useful
 using DeconvOptim, TestImages, Images, FFTW, Noise
 
-# load test images
+# load test image
 img = channelview(testimage("resolution_test_512"))
 
-# create a Gaussian blur kernel (not very sophisticated for a real lens)
-dist = [sqrt((i - size(img)[1] / 2)^2 + (j - size(img)[2] / 2)^2)
-            for i = 1:size(img)[1],  j = 1:size(img)[2]]
-psf = ifftshift(exp.(-dist .^2 ./ 4.0 .^2))
-# normalize the sum of the PSF 
-psf ./= sum(psf)
+# generate simple Point Spread Function of aperture radius 30
+psf = generate_psf(size(img), 30)
 
 # create a blurred, noisy version of that image
-img_b = conv_psf(img, psf, [1, 2])
+img_b = conv_psf(img, psf)
 img_n = poisson(img_b, 300)
-
-img_n ./= maximum(img_n)
 
 # deconvolve 2D with default options
 @time res, o = deconvolution(img_n, psf)

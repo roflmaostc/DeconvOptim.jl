@@ -11,11 +11,38 @@ This Package is in an early stage of development. First release until mid of nov
 
 
 ## Documentation
-
+The documentation of the latest release is [here](docs-stable-url)
+The documentation of current master is [here](docs-dev-url)
 
 ## Installation
-    
+Type `]`in the REPL to get to the package manager:
+```julia
+] add DeconvOptim
+```
+
 ## Usage
+A quick example is shown below.
+```julia
+using Revise # for development useful
+using DeconvOptim, TestImages, Images, FFTW, Noise
+
+# load test image
+img = channelview(testimage("resolution_test_512"))
+
+# generate simple Point Spread Function of aperture radius 30
+psf = generate_psf(size(img), 30)
+
+# create a blurred, noisy version of that image
+img_b = conv_psf(img, psf)
+img_n = poisson(img_b, 300)
+
+# deconvolve 2D with default options
+@time res, o = deconvolution(img_n, psf)
+
+# show final results next to original and blurred version
+colorview(Gray, [img img_n res])
+```
+
 
 ## Development
 
@@ -23,12 +50,13 @@ The package is developed at [GitHub](https://www.github.com/roflmaostc/DeconvOpt
 you can submit bug reports and make suggestions. 
 
 
+# Contributions
+I would like to thank the thank Rainer Heintzmann (@RainerHeintzmann) for the great support and discussions during development.
+Furthermore without [Tullio.jl](https://github.com/mcabbott/Tullio.jl) and @mcabbott this package wouldn't be as fast as it is. His package and ideas are the basis of the regularizers.
+
+
 # To-Dos
-* [ ] improve Speed of regularizer with derivative in fourier space
 * [ ] GPU support for improved version -> check Tullio for that. But won't be tackled soon
-* [ ] normalization properly implemented
-* [ ] include scaled Gaussian as loss
-* [ ] documentation 
 
 
 [docs-dev-img]: https://img.shields.io/badge/docs-dev-pink.svg 
