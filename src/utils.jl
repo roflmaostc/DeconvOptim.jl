@@ -1,6 +1,6 @@
 export generate_psf
 export generate_downsample, my_interpolate 
-export center_extract, center_set!, get_indices_around_center
+export center_extract, center_set!, get_indices_around_center, center_pos
 export conv_psf, conv_otf, conv_otf_r, plan_conv_r
 
 
@@ -11,7 +11,7 @@ export conv_psf, conv_otf, conv_otf_r, plan_conv_r
 Convolve `obj` with `psf` over `dims` dimensions.
 Based on FFT convolution.
 """
-function conv_psf(obj, psf, dims=[1, 2, 3])
+function conv_psf(obj, psf, dims=[1, 2])
     return real.(ifft(fft(obj, dims) .* fft(psf, dims), dims))
 end
 
@@ -24,9 +24,9 @@ with an `otf`. `otf = fft(psf)`. The 0 frequency of the `otf` must be located
 at position [1, 1, 1].
 The `obj` can be of arbitrary dimension but `ndims(psf) ≥ ndims(otf)`.
 The convolution happens over the `dims` array. Any further dimensions are broadcasted.
-Per default `dims = [1, 2, 3]`.
+Per default `dims = [1, 2]`.
 """
-function conv_otf(obj, otf, dims=[1, 2, 3])
+function conv_otf(obj, otf, dims=[1, 2])
     return real.(ifft(fft(obj, dims) .* otf, dims))
 end
 
@@ -38,8 +38,8 @@ Performs a FFT-based convolution of an `obj`
 with an `otf`.
 Same arguments as `conv_otf` but with `obj` being real and `otf=rfft(psf)`.
 """
-function conv_otf_r(obj, otf, dims=[1, 2, 3])
-    return real.(irfft(rfft(obj, dims) .* otf, size(obj)[1], dims))
+function conv_otf_r(obj, otf, dims=[1, 2])
+    return real.(irfft(rfft(obj, dims) .* otf, size(obj)[dims[1]], dims))
 end
 
 
@@ -48,7 +48,7 @@ end
 
 Pre-plan an optimized convolution for array shaped like `psf` (based on pre-plan FFT) 
 along the given dimenions `dims`.
-`dims = [1, 2, 3]` per default.
+`dims = [1, 2]` per default.
 The 0 frequency of `psf` must be located at [1, 1, 1].
 We return first the `otf` (obtained by `rfft(psf))`.
 The second return is the convolution function `conv`.
@@ -56,11 +56,11 @@ The second return is the convolution function `conv`.
 
 This function achieves faster convolution than `conv_psf(obj, psf)`.
 """
-function plan_conv_r(psf, rec0, dims=[1, 2, 3])
+function plan_conv_r(psf, rec0, dims=[1, 2])
     # do the preplanning step
     P = plan_rfft(rec0, dims)
     rec0_fft = P * rec0 
-    P_inv = plan_irfft(rec0_fft, size(psf)[1], dims)
+    P_inv = plan_irfft(rec0_fft, size(psf)[dims[1]], dims)
     
     # obtain the otf by real based fft
     otf = rfft(psf, dims)
@@ -274,44 +274,89 @@ function center_set!(arr_large, arr_small)
 end
 
 
+"""
+    center_pos(x)
+
+Calculate the position of the center frequency.
+Size of the array is `x`
+
+# Examples
+```julia-repl
+julia> center_pos(3)
+2
+julia> center_pos(4)
+4
+```
+"""
+function center_pos(x::Integer)
+    # integer division
+    return div(x, 2) + 1
+end
 
 
-# untested functions which will be probably removed in future version
-function rr(img)
-    s = size(img)
-    rarr = similar(img)
-    for i = 1:s[1]
+"""
+    generate_psf(psf_size, radius)
+
+Generation of an approximate 2D PSF.
+`psf_size` is the output size of the PSF. The PSF will be centered
+around the point [1, 1],
+`radius` indicates the pupil diameter in pixel from which the PSF is generated.
+
+# Examples
+```julia-repl
+julia> generate_psf([5, 5], 2)
+5×5 Array{Float64,2}:
+ 0.36       0.104721    0.0152786    0.0152786    0.104721
+ 0.104721   0.0304627   0.00444444   0.00444444   0.0304627
+ 0.0152786  0.00444444  0.000648436  0.000648436  0.00444444
+ 0.0152786  0.00444444  0.000648436  0.000648436  0.00444444
+ 0.104721   0.0304627   0.00444444   0.00444444   0.0304627
+```
+"""
+function generate_psf(psf_size, radius)
+    mask = rr_2D(psf_size) .<= radius
+    mask_ft = fft(mask)
+    psf = abs2.(mask_ft)
+    return psf ./ sum(psf)
+end
+
+
+function rr_3D(s)
+    rarr = zeros((s...))
+    for k = 1:s[3]
         for j = 1:s[2]
-            for k = 1:s[3]
-                rarr[i, j, k] = sqrt( (i-s[1] / 2)^2 + (j-s[2] / 2)^2 + (k- s[3] / 2)^2)
+            for i = 1:s[1]
+                rarr[i, j, k] = sqrt( (i-center_pos(s[1]))^2 + (j-center_pos(s[2]))^2 + (k-center_pos(s[3]))^2)
             end
         end
     end
     return rarr
 end
 
-function rr2D(img)
-    s = size(img)
-    rarr = similar(img)
-    for i = 1:s[1]
-        for j = 1:s[2]
-               rarr[i, j] = sqrt( (i-s[1] / 2)^2 + (j-s[2] / 2)^2)
+"""
+    rr_2D(s)
+
+Generate a image with values being the distance to the center pixel.
+`s` specifies the output size of the 2D array.
+
+# Examples
+```julia-repl
+julia> DeconvOptim.rr_2D((6, 6))
+6×6 Array{Float64,2}:
+ 4.24264  3.60555  3.16228  3.0  3.16228  3.60555
+ 3.60555  2.82843  2.23607  2.0  2.23607  2.82843
+ 3.16228  2.23607  1.41421  1.0  1.41421  2.23607
+ 3.0      2.0      1.0      0.0  1.0      2.0
+ 3.16228  2.23607  1.41421  1.0  1.41421  2.23607
+ 3.60555  2.82843  2.23607  2.0  2.23607  2.82843
+```
+"""
+function rr_2D(s)
+    rarr = zeros((s...)) 
+    for j = 1:s[2]
+        for i = 1:s[1]
+               rarr[i, j] = sqrt( (i - center_pos(s[1]))^2 + (j - center_pos(s[2]))^2)
         end
     end
     return rarr
-end
-
-function generate_psf2D(img, r)
-    mask = rr2D(img) .< r
-    mask_ft = ifft(ifftshift(mask))
-    psf = abs2.(mask_ft)
-    return psf ./ sum(psf)
-end
-
-
-function generate_psf(img, r)
-    mask = rr(img) .< r
-    mask_ft = ifft(ifftshift(mask))
-    psf = abs2.(mask_ft)
-    return psf ./ sum(psf)
 end
