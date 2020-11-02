@@ -1,7 +1,7 @@
 <a name="logo"/>
 <div align="center">
 <a href="https://roflmaostc.github.io/DeconvOptim.jl/stable/" target="_blank">
-<img src="doc/src/assets/logo.svg" alt="DeconvOptim Logo" width="210" height="142"></img>
+<img src="docs/src/assets/logo.svg" alt="DeconvOptim Logo" width="250"></img>
 </a>
 </div>
 
