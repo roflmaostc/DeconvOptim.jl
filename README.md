@@ -5,7 +5,7 @@ A package for microscopy image based deconvolution via Optim.jl. This package wo
 
 
 <a name="logo"/>
-<div align="right">
+<div align="center">
 <a href="https://roflmaostc.github.io/DeconvOptim.jl/stable/" target="_blank">
 <img src="docs/src/assets/logo.svg" alt="DeconvOptim Logo" width="150"></img>
 </a>
