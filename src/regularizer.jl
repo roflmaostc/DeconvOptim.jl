@@ -72,7 +72,8 @@ function generate_laplace(num_dim, sum_dims_arr, weights)
         i = Symbol(:i, di)
     end
     # subtract this final term
-    push!(add, :(-$(2 * length(sum_dims_arr)) * arr[$(inds...)]))
+    pre_factor = 2 ^ num_dim
+    push!(add, :(-$:($pre_factor * arr[$(inds...)])))
     # create final expressions by adding all elements of the add list
     push!(out, :(@tullio threads=false res = abs2(+$(add...))))
     return out
@@ -128,11 +129,11 @@ of a n-dimensional array.
 - `weights=[1, 1]`: A array containing weights to weight the contribution of 
     different dimensions
 - `step=1`: A integer indicating the step width for the array indexing
-- `mode="laplace"`: Either `"laplace"` or `"spatial_grad_square"` accounting for different
+- `mode="laplace"`: Either `"laplace"`, `"spatial_grad_square"`, `"identity"` accounting for different
     modes of the Tikhonov regularizer. Default is `"laplace"`.
 # Examples
 To create a regularizer for a 3D dataset where the third dimension
-has a different sampling (factor 4 larger) than the first two dimensions.
+has different contribution.
 ```julia-repl
 julia> Tikhonov(sum_dims=[1, 2, 3], weights=[1, 1, 0.25])
 ```
@@ -144,9 +145,13 @@ function Tikhonov(;num_dim=2, sum_dims=[1, 2], weights=[1, 1], step=1, mode="lap
         expr(inds1, inds2, w) = :($w * abs2(arr[$(inds1...)] - arr[$(inds2...)]))
         Γ = @eval arr -> ($(create_Ndim_regularizer(expr, num_dim, sum_dims, 
                             weights, step, (-1) * step)...))
+    elseif mode == "identity"
+        Γ = arr -> sum(abs2.(arr))
+    else
+        throw(ArgumentError("The provided mode is not valid."))
     end
 
-    return rec -> Γ(rec) / length(rec)
+    return Γ
 end
 
 
@@ -158,19 +163,21 @@ Generate the Tullio statement for computing the Good's roughness.
 indicating over which dimensions we must sum over.
 `weights` is a array of a weight for the different dimension.
 `ind1` and `ind2` are the offsets for the difference.
-`ϵ` is a numerical constant to prevent division by zero.
 """
-function generate_GR(num_dim, sum_dims_arr, weights, ind1, ind2, ϵ)
+function generate_GR(num_dim, sum_dims_arr, weights, ind1, ind2)
     out, add = [], []
-    for (d, w) in zip(sum_dims_arr, weights)
-        inds1, inds2 = generate_indices(num_dim, d, ind1, ind2) 
-        push!(add, :(abs2($w * arr[$(inds1...)] - $w * arr[$(inds2...)])))
-    end
     inds = map(1:num_dim) do di
         i = Symbol(:i, di)
     end
-    denom = :(sqrt(abs2(arr[$(inds...)])) + $ϵ)
-    push!(out, :(@tullio threads=false res = +($(add...)) / $denom))
+    
+    for (d, w) in zip(sum_dims_arr, weights)
+        inds1, inds2 = generate_indices(num_dim, d, ind1, ind2) 
+        push!(add, :($w * (arr[$(inds1...)] + arr[$(inds2...)])))
+    end
+    prefactor = - 4 / (abs(ind1) + abs(ind2))
+    diff_factor = - sum(weights) * 2
+    push!(add, :($prefactor * arr[$(inds...)]))
+    push!(out, :(@tullio threads=false res = $prefactor * arr[$(inds...)] * +($(add...))))
     return out
 end
 
@@ -189,24 +196,25 @@ of a n-dimensional array.
     modes of the spatial gradient. Default is "central".
 # Examples
 To create a regularizer for a 3D dataset where the third dimension
-has a different sampling (factor 4 larger) than the first two dimensions.
-For the spatial gradient `"forward"` is used.
+has different contribution. For the derivative we use forward mode.
 ```julia-repl
 julia> GR(sum_dims=[1, 2, 3], weights=[1, 1, 0.25], mode="forward")
 ```
 """
 function GR(; num_dim=2, sum_dims=[1, 2], weights=[1, 1], step=1,
-              mode="central", ϵ=1f-14)
+              mode="central", ϵ=1f-6)
     if mode == "central"
         GRf = @eval arr -> ($(generate_GR(num_dim, sum_dims, weights,
-                                        step, (-1) * step, ϵ)...))
+                                        step, (-1) * step)...))
     elseif mode == "forward"
         GRf = @eval arr -> ($(generate_GR(num_dim, sum_dims, weights,
-                                        step, 0, ϵ)...))
+                                        step, 0)...))
+    else
+        throw(ArgumentError("The provided mode is not valid."))
     end
     
-
-    return rec -> GRf(rec) / 4 / length(rec)
+    # we need to add a ϵ to prevent NaN in the derivative of it
+    return arr -> GRf(sqrt.(arr) .+ ϵ)
 end
 
 
@@ -225,7 +233,7 @@ function generate_TV(num_dim, sum_dims_arr, weights, ind1, ind2, ϵ=1f-8)
     out, add = [], []
     for (d, w) in zip(sum_dims_arr, weights)
         inds1, inds2 = generate_indices(num_dim, d, ind1, ind2) 
-        push!(add, :(abs2($w * arr[$(inds1...)] - $w * arr[$(inds2...)])))
+        push!(add, :($w * abs2(arr[$(inds1...)] - arr[$(inds2...)])))
     end
     push!(add, ϵ)
     push!(out, :(@tullio threads=false res = sqrt(+($(add...)))))
@@ -246,11 +254,8 @@ of a n-dimensional array.
 - `mode="central"`: Either `"central"` or `"forward"` accounting for different
     modes of the spatial gradient. Default is "central".
 # Examples
-To create a regularizer for a 4D dataset where the third dimension
-has a different sampling (factor 4 larger) than the first two dimensions.
-For the spatial gradient `"forward"` is used. The fourth dimensions is not
-considered in the regularizing process itself 
-but just acts as a summation of all 3D regularizers.
+To create a regularizer for a 3D dataset where the third dimension
+has different contribution. For the derivative we use forward mode.
 ```julia-repl
 julia> TV(num_dim=3, sum_dims=[1, 2, 3], weights=[1, 1, 0.25], mode="forward")
 ```
@@ -263,6 +268,8 @@ function TV(; num_dim=2, sum_dims=[1, 2], weights=[1, 1], step=1, mode="central"
     elseif mode == "forward"
         total_var = @eval arr -> ($(generate_TV(num_dim, sum_dims, weights,
                                         step, 0)...))
+    else
+        throw(ArgumentError("The provided mode is not valid."))
     end
-    return rec -> total_var(rec) / length(rec)
+    return total_var
 end
