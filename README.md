@@ -1,16 +1,16 @@
 
 
 # DeconvOptim.jl
+A package for microscopy image based deconvolution via Optim.jl. This package works with N dimensional Point Spread Functions and images.
+
+
 <a name="logo"/>
-<div align="left">
+<div align="right">
 <a href="https://roflmaostc.github.io/DeconvOptim.jl/stable/" target="_blank">
 <img src="docs/src/assets/logo.svg" alt="DeconvOptim Logo" width="150"></img>
 </a>
 </div>
 
-
-
-A package for microscopy image based deconvolution via Optim.jl. This package works with N dimensional Point Spread Functions and images.
 
 
 | **Documentation**                       | **Build Status**                          | **Code Coverage**               |
