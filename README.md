@@ -1,7 +1,7 @@
 # DeconvOptim.jl
 
 A package for image based deconvolution via Optim.jl.
-This Package is in an early stage of development.
+This Package is in an early stage of development. First release until mid of november 2020.
 
 
 | **Documentation**                       | **Build Status**                          | **Code Coverage**               |
@@ -22,6 +22,13 @@ This Package is in an early stage of development.
 The package is developed at [GitHub](https://www.github.com/roflmaostc/DeconvOptim.jl).  There
 you can submit bug reports and make suggestions. 
 
+
+# To-Dos
+* [ ] improve Speed of regularizer with derivative in fourier space
+* [ ] GPU support for improved version -> check Tullio for that. But won't be tackled soon
+* [ ] normalization properly implemented
+* [ ] include scaled Gaussian as loss
+* [ ] documentation 
 
 
 [docs-dev-img]: https://img.shields.io/badge/docs-dev-pink.svg 
