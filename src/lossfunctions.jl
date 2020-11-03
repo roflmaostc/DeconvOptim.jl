@@ -1,6 +1,6 @@
 export Poisson, poisson_aux
 export Gauss, gauss_aux
-export ScaledGauss, scaled_gauss
+export ScaledGauss, scaled_gauss_aux
 
 
 """
