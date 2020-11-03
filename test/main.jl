@@ -37,5 +37,14 @@
     res = deconvolution(img, psf, regularizer=GR(num_dims=3, sum_dims=[1,2]))[1]
     @test all(res[:, :, 1] .≈ res[:, :, 2]) 
 
+    img = zeros((3, 3, 2, 1))
+    imgc = randn((3, 3, 1, 1))
+    img[:, :, 1, 1] = imgc
+    img[:, :, 2, 1] = imgc
+    psf = zeros((3, 3))
+    psf[1,1] = 1
+   
+    res = deconvolution(img, psf, regularizer=GR(num_dims=4, sum_dims=[1,2]))[1]
+    @test all(res[:, :, 1, :] .≈ res[:, :, 2, :]) 
 
 end
