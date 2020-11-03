@@ -135,7 +135,11 @@ of a n-dimensional array.
 To create a regularizer for a 3D dataset where the third dimension
 has different contribution.
 ```julia-repl
-julia> Tikhonov(sum_dims=[1, 2, 3], weights=[1, 1, 0.25])
+julia> reg = Tikhonov(num_dim=2, sum_dims=[1, 2], weights=[1, 1], mode="identity")
+#97 (generic function with 1 method)
+
+julia> reg([1 2 3; 4 5 6; 7 8 9])
+285
 ```
 """
 function Tikhonov(;num_dim=2, sum_dims=[1, 2], weights=[1, 1], step=1, mode="laplace")
@@ -198,11 +202,15 @@ of a n-dimensional array.
 To create a regularizer for a 3D dataset where the third dimension
 has different contribution. For the derivative we use forward mode.
 ```julia-repl
-julia> GR(sum_dims=[1, 2, 3], weights=[1, 1, 0.25], mode="forward")
+julia> reg = GR(num_dim=2, sum_dims=[1, 2], weights=[1, 1], mode="forward")
+... (generic function with 1 method)
+
+julia> reg([1 2 3; 4 5 6; 7 8 9])
+-26.36561871738898
 ```
 """
 function GR(; num_dim=2, sum_dims=[1, 2], weights=[1, 1], step=1,
-              mode="central", ϵ=1f-6)
+              mode="central", ϵ=1f-8)
     if mode == "central"
         GRf = @eval arr -> ($(generate_GR(num_dim, sum_dims, weights,
                                         step, (-1) * step)...))
@@ -247,8 +255,8 @@ This function returns a function to calculate the Total Variation regularizer
 of a n-dimensional array. 
 # Arguments
 - `num_dim=2`: 
-- `sum_dims=[1, 2, 3]`: A array containing the dimensions we want to sum over
-- `weights=[1, 1, 0.25]`: A array containing weights to weight the contribution of 
+- `sum_dims=[1, 2]`: A array containing the dimensions we want to sum over
+- `weights=[1, 1]`: A array containing weights to weight the contribution of 
     different dimensions
 - `step=1`: A integer indicating the step width for the array indexing
 - `mode="central"`: Either `"central"` or `"forward"` accounting for different
@@ -257,7 +265,11 @@ of a n-dimensional array.
 To create a regularizer for a 3D dataset where the third dimension
 has different contribution. For the derivative we use forward mode.
 ```julia-repl
-julia> TV(num_dim=3, sum_dims=[1, 2, 3], weights=[1, 1, 0.25], mode="forward")
+julia> reg = TV(num_dim=2, sum_dims=[1, 2], weights=[1, 1], mode="forward")
+... (generic function with 1 method)
+
+julia> reg([1 2 3; 4 5 6; 7 8 9])
+12.649111f0
 ```
 """
 function TV(; num_dim=2, sum_dims=[1, 2], weights=[1, 1], step=1, mode="central")
