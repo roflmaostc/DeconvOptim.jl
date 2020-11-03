@@ -119,10 +119,19 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     # the dimensions we do the Fourier Transform over
     fft_dims = collect(1:ndims(psf)) 
 
-    # psf_n is the psf with the same size as rec0
+    # psf_n is the psf with the same size as rec0 but only in that dimensions
+    # that were supported by the initial psf. Broadcasting of psf with less 
+    # dimensions is still supported
     # we put the small psf into the new one
     # it is important to pad the PSF instead of the OTF
-    psf_n = zeros(eltype(rec0), size(rec0))
+    
+    psf_new_size = Array{Int}(undef, 0)
+    for i = 1:ndims(psf)
+        push!(psf_new_size, size(rec0)[i])
+    end
+    
+    psf_new_size = tuple(psf_new_size...)
+    psf_n = zeros(eltype(rec0), psf_new_size)
     psf_n = center_set!(psf_n, fftshift(psf))
     psf = ifftshift(psf_n)
 
