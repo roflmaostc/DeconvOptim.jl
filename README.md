@@ -80,7 +80,7 @@ Furthermore without [Tullio.jl](https://github.com/mcabbott/Tullio.jl) and [@mca
 [appvey-img]: https://ci.appveyor.com/api/projects/status/i389imi077mcj0tc/branch/master?svg=true 
 [appvey-url]: https://ci.appveyor.com/project/roflmaostc/deconvoptim-jl 
 
-[coveral-img]: https://coveralls.io/repos/github/roflmaostc/DeconvOptim.jl/badge.svg
+[coveral-img]: https://coveralls.io/repos/github/roflmaostc/DeconvOptim.jl/badge.svg?branch=master
 [coveral-url]: https://coveralls.io/github/roflmaostc/DeconvOptim.jl
 
 [codecov-img]: https://codecov.io/gh/roflmaostc/DeconvOptim.jl/branch/master/graph/badge.svg
