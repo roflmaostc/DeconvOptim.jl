@@ -1,62 +1,57 @@
 export Non_negative
-export Non_negative2
-export Non_negative3
 export Map_0_1
-export Exp
  
 
  # All these functions return a mapping function and 
  # the inverse of it 
  # they are used to map the real numbers to non-negative real numbers
+
+
+"""
+    Non_negative()
+
+Returns a function and a inverse function inverse function
+to map numbers to non-negative numbers.
+We use a parabola.
+
+# Examples
+```julia-repl
+julia> p, p_inv = Non_negative()
+(DeconvOptim.var"#5#7"(), DeconvOptim.var"#6#8"())
+
+julia> x = [-1, 2, -3]
+3-element Array{Int64,1}:
+ -1
+  2
+ -3
+
+julia> p(x)
+3-element Array{Int64,1}:
+ 1
+ 4
+ 9
+
+julia> p_inv(p(x))
+3-element Array{Float64,1}:
+ 1.0
+ 2.0
+ 3.0
+```
+"""
 function Non_negative()
     return x -> map(abs2, x) , (x -> sqrt.(x))
 end
 
 
+"""
+    Map_0_1()
 
+Returns a function and a inverse function inverse function
+to map numbers to an interval between 0 and 1. 
 
- # old functions with old semantics
- # leave them here unused. Will be replaced in future
+"""
 function Map_0_1()
     f(x) = 1 .- exp.(.- x.^2)
-    ∇f(x) = 2 .* x .* exp.(.- x.^2)
-    f_inv(x) = sqrt.(.- log.(1 .- min.(1, x)))
-    return f, ∇f, f_inv
-end
-
-
-function Exp()
-    return (x -> exp.(x)), (x -> exp.(x)) , (x -> log.(x))
-end
-
-
-function Non_negative3()
-    function ∇f(x)
-        if x > 0
-            return 1
-        elseif x < 0 
-            return -1
-        else
-            return 0
-        end
-    end
-    return (x -> abs.(x)), (x -> ∇f.(x)),  (x -> abs.(x))
-end
-
-
-function Non_negative2()
-    f1(x) = 1 / (1 - x)
-    ∇f1(x) = 1 / (1 - x) ^ 2
-    f1_inv(y) = 1 - 1 / y
-
-
-    f2(x) = (x + 0.5) ^ 2 + 0.75
-    ∇f2(x) = 2 * (x + 0.5)
-    f2_inv(y) = sqrt(y - 0.75)  - 0.5
-    
-    f(x) = x < 0 ? f1(x) : f2(x) 
-    ∇f(x) = x < 0 ? ∇f1(x) : ∇f2(x) 
-    f_inv(y) = y < 1.0 ? f1_inv(y) : f2_inv(y)
-
-    return (x -> f.(x)), (x -> ∇f.(x)), (y -> f_inv.(y))
+    f_inv(y) = sqrt.(.- log.(1 .- y))
+    return f, f_inv
 end
