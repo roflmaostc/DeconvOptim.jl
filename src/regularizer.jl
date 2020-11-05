@@ -126,8 +126,8 @@ of a n-dimensional array.
 # Arguments
 - `num_dims=2`: 
 - `sum_dims=[1, 2]`: A array containing the dimensions we want to sum over
-- `weights=[1, 1]`: A array containing weights to weight the contribution of 
-    different dimensions
+- `weights=nothing`: A array containing weights to weight the contribution of 
+    different dimensions. If `weights=nothing` all dimensions are weighted equally.
 - `step=1`: A integer indicating the step width for the array indexing
 - `mode="laplace"`: Either `"laplace"`, `"spatial_grad_square"`, `"identity"` accounting for different
     modes of the Tikhonov regularizer. Default is `"laplace"`.
@@ -135,14 +135,16 @@ of a n-dimensional array.
 To create a regularizer for a 3D dataset where the third dimension
 has different contribution.
 ```julia-repl
-julia> reg = Tikhonov(num_dims=2, sum_dims=[1, 2], weights=[1, 1], mode="identity")
-#97 (generic function with 1 method)
+julia> reg = Tikhonov(num_dims=2, sum_dims=[1, 2], weights=[1, 1], mode="identity");
 
 julia> reg([1 2 3; 4 5 6; 7 8 9])
 285
 ```
 """
 function Tikhonov(;num_dims=2, sum_dims=[1, 2], weights=[1, 1], step=1, mode="laplace")
+    if weights == nothing
+        weights = ones(num_dims)
+    end
     if mode == "laplace"
         Γ = @eval arr -> ($(generate_laplace(num_dims, sum_dims, weights)...))
     elseif mode == "spatial_grad_square"
@@ -193,8 +195,8 @@ of a n-dimensional array.
 # Arguments
 - `num_dims=2`: Dimension of the array that should be regularized 
 - `sum_dims=[1, 2]`: A array containing the dimensions we want to sum over
-- `weights=[1, 1]`: A array containing weights to weight the contribution of 
-    different dimensions
+- `weights=nothing`: A array containing weights to weight the contribution of 
+    different dimensions. If `weights=nothing` all dimensions are weighted equally.
 - `step=1`: A integer indicating the step width for the array indexing
 - `mode="forward"`: Either `"central"` or `"forward"` accounting for different
     modes of the spatial gradient. Default is "central".
@@ -202,8 +204,7 @@ of a n-dimensional array.
 To create a regularizer for a 3D dataset where the third dimension
 has different contribution. For the derivative we use forward mode.
 ```julia-repl
-julia> reg = GR(num_dims=2, sum_dims=[1, 2], weights=[1, 1], mode="forward")
-... (generic function with 1 method)
+julia> reg = GR(num_dims=2, sum_dims=[1, 2], weights=[1, 1], mode="forward");
 
 julia> reg([1 2 3; 4 5 6; 7 8 9])
 -26.36561871738898
@@ -211,6 +212,9 @@ julia> reg([1 2 3; 4 5 6; 7 8 9])
 """
 function GR(; num_dims=2, sum_dims=[1, 2], weights=[1, 1], step=1,
               mode="central", ϵ=1f-8)
+    if weights == nothing
+        weights = ones(num_dims)
+    end
     if mode == "central"
         GRf = @eval arr -> ($(generate_GR(num_dims, sum_dims, weights,
                                         step, (-1) * step)...))
@@ -222,7 +226,7 @@ function GR(; num_dims=2, sum_dims=[1, 2], weights=[1, 1], step=1,
     end
     
     # we need to add a ϵ to prevent NaN in the derivative of it
-    return arr -> GRf(sqrt.(arr) .+ ϵ)
+    return arr -> GRf(sqrt.(arr .+ ϵ))
 end
 
 
@@ -256,8 +260,8 @@ of a n-dimensional array.
 # Arguments
 - `num_dims=2`: 
 - `sum_dims=[1, 2]`: A array containing the dimensions we want to sum over
-- `weights=[1, 1]`: A array containing weights to weight the contribution of 
-    different dimensions
+- `weights=nothing`: A array containing weights to weight the contribution of 
+    different dimensions. If `weights=nothing` all dimensions are weighted equally.
 - `step=1`: A integer indicating the step width for the array indexing
 - `mode="central"`: Either `"central"` or `"forward"` accounting for different
     modes of the spatial gradient. Default is "central".
@@ -265,14 +269,17 @@ of a n-dimensional array.
 To create a regularizer for a 3D dataset where the third dimension
 has different contribution. For the derivative we use forward mode.
 ```julia-repl
-julia> reg = TV(num_dims=2, sum_dims=[1, 2], weights=[1, 1], mode="forward")
-... (generic function with 1 method)
+julia> reg = TV(num_dims=2, sum_dims=[1, 2], weights=[1, 1], mode="forward");
 
 julia> reg([1 2 3; 4 5 6; 7 8 9])
 12.649111f0
 ```
 """
-function TV(; num_dims=2, sum_dims=[1, 2], weights=[1, 1], step=1, mode="central")
+function TV(; num_dims=2, sum_dims=[1, 2], weights=nothing, step=1, mode="central")
+    
+    if weights == nothing
+        weights = ones(num_dims)
+    end
 
     if mode == "central"
         total_var = @eval arr -> ($(generate_TV(num_dims, sum_dims, weights,
