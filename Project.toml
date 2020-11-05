@@ -1,7 +1,7 @@
 name = "DeconvOptim"
 uuid = "03e7cd2f-1a03-4ea9-b59b-760a446df67f"
 authors = ["Felix Wechsler <fxw+github@mailbox.org>"]
-version = "0.1.0"
+version = "0.1.1"
 
 [deps]
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
