@@ -1,44 +1,6 @@
 using DeconvOptim, TestImages, Images, FFTW, Noise, ImageView
 using Plots
 
-function generate_overview()
-    
-    img = channelview(testimage("resolution_test_512"))
-    img ./= maximum(img)
-    
-    dist = [sqrt((-1 + i - size(img)[1] / 2)^2 + (-1 + j - size(img)[2] / 2)^2)
-                for i = 1:size(img)[1],  j = 1:size(img)[2]]
-    psf = ifftshift(exp.(-dist .^2 ./ 4.0 .^2))
-    psf ./= sum(psf)
-    
-    img_b = conv_psf(img, psf, [1, 2])
-    img_n = poisson(img_b .* 300, 300)
-    
-   
-    reg = DeconvOptim.GR()
-    
-    @time res, o = deconvolution(img_n, psf, iterations=10,
-                                 λ=0.001, lossf=Poisson(), regularizerf=reg)
-    @show o
-    # simple example of deconvolution
-    save("src/assets/img.png", clamp01!(img))
-    save("src/assets/img_noisy_index.png", clamp01!(img_n ./ 300))
-    save("src/assets/img_rec_index.png", clamp01!(res ./ 300))
-    
-    
-    
-    
-    img_ft = abs.(fft(img))
-    img_ft ./= maximum(img_ft)
-    
-    img_n_ft = abs.(fft(img_n))
-    img_n_ft ./= maximum(img_n_ft)
-    
-    res_ft = real(fft(res))
-    res_ft ./= maximum(res_ft)
-    return
-end
-
 function norm_fft(x)
     x = fftshift(abs.(fft(x)))
     n = div(size(x)[1], 2)
@@ -66,9 +28,9 @@ function ideal_freq()
     img_b = conv_psf(img, psf, [1, 2])
     img_n = poisson(img_b, N_phot)
     
-    reg = DeconvOptim.TV(num_dim=2, sum_dims=[1, 2])
-    @time res, o = deconvolution(img_n, psf, iterations=60, λ=0.001f0,
-            lossf=Poisson(), regularizerf=reg, padding=0.00, plan_fft=true)
+    reg = DeconvOptim.TV(num_dims=2, sum_dims=[1, 2])
+    @time res, o = deconvolution(img_n, psf, iterations=10, λ=0.001f0,
+            loss=Poisson(), regularizer=reg, padding=0.00, plan_fft=true)
     img_ft = norm_fft(img)[:, 257]
     img_n_ft = norm_fft(img_n)[:, 257]
     res_ft = norm_fft(res)[:, 257]
@@ -82,5 +44,4 @@ function ideal_freq()
     savefig("src/assets/ideal_frequencies.png")
 end
 
-generate_overview()
 ideal_freq()
