@@ -1,4 +1,12 @@
-# Changing Regularizers 
+# Changing Regularizers: 2D Example 
+In this section we show how to change the regularizer and what are the different effects of it.
+The main parts arguments of `deconvolution` are `regularizer` and $\lambda$. `regularizer` specifies which regularizer is used.
+$\lambda$ specifies how strong the regularizer is weighted. The larger $\lambda$ the more you see the typical styles introduced by the regularizers.
+
+
+## Initializing
+This example is also hosted in a notebook on [GitHub](https://github.com/roflmaostc/DeconvOptim.jl/blob/master/examples/changing_regularizers.ipynb).
+
 Load the required modules for these examples:
 ```@jldoctest
 using DeconvOptim, TestImages, Images, FFTW, Noise, ImageView
@@ -14,7 +22,7 @@ end
 
 As the next step we can prepare a noisy, blurred image. The scaling of `img_n` is chosen in such a way,  that the highest pixel corresponds to the number of photons measured.
 The algorithm does not depend critically on that number.
-However, choosing maximum intensity values of 10 usually introduces some artifacts.
+However, choosing maximum intensity values of smaller than 10 usually introduces some artifacts.
 
 ```@jldoctest
 # load test images
@@ -33,7 +41,8 @@ h_view(img, img_b, img_n)
 
 ## Let's test Good's roughness (GR)
 In this part we can look at the results produced with a GR regularizer. After inspecting the results, it becomes clear, that the benefit of 100 iterations is not really visible.
-In most cases $\approx 15$ produce good results. By executing `GR()` we in fact create
+In most cases $\approx 15$ iterations produce good results. By executing `GR()` we in fact create a function which takes a array and returns
+a single value. 
 ```jldoctest
 @time resGR100, optim_res = deconvolution(img_n, psf, regularizer=GR(), iterations=100)
 @show optim_res
@@ -67,7 +76,7 @@ h_view(img_n, resTV50, resTV15, resTV15_2)
 
 
 ## Let's test Tikhonov
-
+Tikhonov is not defined as precisely as the other two regularizer. Therefore we offer three different modes which differ quite a lot from each other. However, the results look all very similar
 ```@jldoctest
 @time resTik1, optim_res = deconvolution(img_n, psf, λ=0.001, regularizer=Tikhonov(), iterations=15)
 @show optim_res
@@ -89,7 +98,8 @@ h_view(img_n, resTik1, resTik2, resTik3)
 
 
 ## Let's test without regularizers
-
+Usually optimizing without a regularizer is does not produce good results. The reason is, that the deconvolution tries to enhance high frequencies more and more with increasing iteration number. 
+However, high frequencies have low contrast and therefore the algorithm mostly enhances noise content (which is present in all frequency regions).
 ```
 @jldoctest
 @time res100, optim_res = deconvolution(img_n, psf, regularizer=nothing, iterations=50)

@@ -58,7 +58,7 @@ $\nabla L = \frac{\mu(r) + \mu(r)^2 - Y(r)^2}{2 \mu^2}$
 
 
 ## Gaussian Loss
-A very common loss in optimization (and Deep Learning) is a simple Gaussian loss. However, this loss is not recommended for low intensity microscopy since it doesn't considers Poisson noise.
+A very common loss in optimization (and Deep Learning) is a simple Gaussian loss. However, this loss is not recommended for low intensity microscopy since it doesn't consider Poisson noise.
 However, still combined with suitable regularizer reasonable results can be achieved.
 The probability is defined as 
 

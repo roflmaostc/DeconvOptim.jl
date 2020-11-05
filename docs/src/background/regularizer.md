@@ -15,7 +15,7 @@ $\text{Reg}(S(r)) = \sum_r \sqrt{S(r)} (\Delta_N \sqrt{S})(r)$
 where $N$ is the dimension of $S(r)$. $\sqrt S$ is applied elementwise.
 $\Delta_d S(r)$ is the n-dimensional discrete Laplace operator. As 2D example where $r = (x,y)$:
 
-$(\Delta_N \sqrt{S})(r) = \frac{\sqrt{S(x + s_x, y)} + \sqrt{S(x - s_x, y)} + \sqrt{S(x, y+s_y) + S(x, y-s_y)} - 4 \cdot \sqrt{S(x, y)}}{s_x \cdot s_y}$
+$(\Delta_N \sqrt{S})(r) = \frac{\sqrt{S(x + s_x, y)} + \sqrt{S(x - s_x, y)} + \sqrt{S(x, y+s_y)} + \sqrt{S(x, y-s_y)} - 4 \cdot \sqrt{S(x, y)}}{s_x \cdot s_y}$
 
 where $s_x$ and $s_y$ are the stencil width in the respective dimension. The Laplace operator can be straightforwardly generalized to $n$ dimensions. 
 

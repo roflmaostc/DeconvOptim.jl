@@ -1,15 +1,15 @@
 # DeconvOptim.jl
 
-An framework for fast deconvolution of images convolved with a Point Spread Function (PSF).
+An framework for deconvolution of images convolved with a Point Spread Function (PSF).
 
 
 ## Overview
 In optics, especially in microscopy, measurements are performed with lenses. These lenses support only certain frequencies
-and weaken the contrast of high frequency content. Furthermore in many cases Poisson or Gaussian noise is introduced by the 
+and weaken the contrast of high frequency content. Furthermore, in many cases Poisson or Gaussian noise is introduced by the 
 quantum nature of light (Poisson shot noise) or sensors (readout noise).
-[DeconvOptim.jl](https://github.com/roflmaostc/DeconvOptim.jl) is a Julia solution to that deconvolution process.
+[DeconvOptim.jl](https://github.com/roflmaostc/DeconvOptim.jl) is a Julia solution to the deconvolution process reducing the blur of lenses and denoising the image.
 Our framework relies on several other tools:
-The deconvolution problem is stated as a convex optimization problem (loss function). Hence we make use of [Optim.jl](https://github.com/JuliaNLSolvers/Optim.jl/) and especially fast solvers like [L-BFGS](https://julianlsolvers.github.io/Optim.jl/stable/#algo/lbfgs/).
+The deconvolution problem is stated as a convex optimization problem via a loss function. Hence we make use of [Optim.jl](https://github.com/JuliaNLSolvers/Optim.jl/) and especially fast solvers like [L-BFGS](https://julianlsolvers.github.io/Optim.jl/stable/#algo/lbfgs/).
 Since such solvers require gradients (of the loss function) we use the automatic differentiation (AD) of [Zygote.jl](https://github.com/FluxML/Zygote.jl) for that.
 Of course, one could derive the gradient by hand, however that's error-prone and for some regularizers hard to do by hand.
 Furthermore, fast AD of the regularizers are hard to achieve if the gradients are written with for loops.
@@ -28,7 +28,6 @@ To get the latest stable release of DevonOptim.jl type `]` in the Julia REPL:
 Below is a quick example how to deconvolve a image which is blurred with a Gaussian Kernel.
 
 ```@jldoctest
-using Revise # for development useful
 using DeconvOptim, TestImages, Images, FFTW, Noise
 
 # load test image
@@ -48,6 +47,6 @@ img_n = poisson(img_b, 300)
 colorview(Gray, [img img_n res])
 ```
 
-Left the original image. In the middle the noisy and blurred version. The right images is the deconvolved image with default options.
+Left image is the sample. In the middle we display the the noisy and blurred version captured with an optical system. The right image is the deconvolved image with default options.
 ![](assets/quick_example_results.png)
 
