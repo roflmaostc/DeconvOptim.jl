@@ -45,7 +45,9 @@ using Zygote: @adjoint, gradient
 
 """
     deconvolution(measured, psf; <keyword arguments>)
-Computes the deconvolution of `measured` and `psf`.
+Computes the deconvolution of `measured` and `psf`. Return parameter is a tuple with
+two elements. The first entry is the deconvolved image. The second return parameter 
+is the output of the optimization of Optim.jl
 
 Multiple keyword arguments can be specified for different loss functions,
 regularizers and mappings.
@@ -60,14 +62,33 @@ regularizers and mappings.
               parabola which achieves a non-negativity constraint.
 - `iterations=20`: Specifies a number of iterations after the optimization.
     definitely should stop.
-- `plan_fft=true`: Boolean whether plan_fft is used
+- `plan_fft=true`: Boolean whether plan_fft is used. Gives a slight speed improvement.
 - `padding=0`: an float indicating the amount (fraction of the size in that dimension) 
         of padded regions around the reconstruction. Prevents wrap around effects of the FFT.
         A array with `size(arr)=(400, 400)` with `padding=0.05` would result in reconstruction size of 
         `(440, 440)`. However, we only return the reconstruction cropped to the original size.
         `padding=0` disables any padding.
 - `optim_options=nothing`: Can be a options file required by Optim.jl. Will overwrite iterations.
-- `optim_optimizer=LBFGS()`: The choosen Optim.jl optimizer. 
+- `optim_optimizer=LBFGS()`: The chosen Optim.jl optimizer. 
+
+
+# Example
+```julia-repl
+julia> using DeconvOptim, TestImages, Images, FFTW, Noise, ImageView;
+
+julia> img = 300 .* channelview(testimage("resolution_test_512"));
+
+julia> psf = generate_psf(size(img), 30);
+
+julia> img_b = conv_psf(img, psf);
+
+julia> img_n = poisson(img_b, 300);
+
+julia> @time res, o = deconvolution(img_n, psf);
+
+julia> colorview(Gray, [img img_n res]) |> imshow
+[...]
+```
 """
 function deconvolution(measured::AbstractArray{T, N}, psf;
         loss=Poisson(),
