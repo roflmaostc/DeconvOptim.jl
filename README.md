@@ -33,7 +33,7 @@ julia> ] add DeconvOptim
 A quick example is shown below.
 ```julia
 using Revise # for development useful
-using DeconvOptim, TestImages, Images, FFTW, Noise
+using DeconvOptim, TestImages, Images, FFTW, Noise, ImageView
 
 # load test image
 img = channelview(testimage("resolution_test_512"))
@@ -49,7 +49,7 @@ img_n = poisson(img_b, 300)
 @time res, o = deconvolution(img_n, psf)
 
 # show final results next to original and blurred version
-colorview(Gray, [img img_n res])
+imshow([img img_n res])
 ```
 
 
