@@ -36,7 +36,7 @@ using Revise # for development useful
 using DeconvOptim, TestImages, Images, FFTW, Noise, ImageView
 
 # load test image
-img = channelview(testimage("resolution_test_512"))
+img = 300 .* channelview(testimage("resolution_test_512"))
 
 # generate simple Point Spread Function of aperture radius 30
 psf = generate_psf(size(img), 30)
@@ -51,6 +51,7 @@ img_n = poisson(img_b, 300)
 # show final results next to original and blurred version
 imshow([img img_n res])
 ```
+![Results Quick Example](docs/src/assets/quick_example_results.png)
 
 
 ## Development
@@ -59,12 +60,12 @@ The package is developed at [GitHub](https://www.github.com/roflmaostc/DeconvOpt
 you can submit bug reports and make suggestions. 
 
 
-# Contributions
+## Contributions
 I would like to thank Rainer Heintzmann for the great support and discussions during development.
 Furthermore without [Tullio.jl](https://github.com/mcabbott/Tullio.jl) and [@mcabbott](https://github.com/mcabbott/) this package wouldn't be as fast as it is. His package and ideas are the basis for the implementations of the regularizers.
 
 
-# To-Dos
+## To-Dos
 * [ ] GPU support for improved version -> check Tullio for that. But won't be tackled soon.
 
 
