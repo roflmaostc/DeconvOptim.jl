@@ -27,6 +27,7 @@ function ChainRulesCore.rrule(::typeof(poisson_aux), μ, meas)
     function poisson_aux_pullback(xbar)
         meas_new = copy(μ)
         meas_new = center_set!(meas_new, meas)
+
         ∇ = xbar .* (one(eltype(μ)) .- meas_new ./ μ)
         ∇[μ .< 1f-8] .= 0
         return zero(eltype(μ)), ∇, zero(eltype(μ)) 

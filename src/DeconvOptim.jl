@@ -15,7 +15,6 @@ using Requires
 using ChainRulesCore
 
 
-
 export deconvolution
 
 
@@ -109,6 +108,16 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     psf = convert(Array{eltype(measured)}, psf)
     background = convert(eltype(measured), background) 
 
+
+    # Get the mapping functions to achieve constraints
+    # like non negativity
+    if mapping != nothing
+        mf, m_invf = mapping
+    else
+        m_invf = identity
+    end
+
+
     # rec0 will be an array storing the final reconstruction
     # we choose it larger than the measured array to reduce
     # wrap around artifacts of the Fourier Transform
@@ -134,8 +143,15 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
             push!(size_padded, size(measured)[i] + x)
         end
     end
+    rescaling = maximum(measured) 
+    measured = measured ./ rescaling
     # create rec0 which will be the initial guess for the reconstruction
-    rec0 = ones(T, (size_padded...))
+    rec0 = zeros(T, (size_padded...))
+    # convolve the measured one with the psf
+    # that will be our initial guess
+    rec0_center = m_invf(conv_psf(measured, psf)) 
+    center_set!(rec0, rec0_center)
+
 
     # the dimensions we do the Fourier Transform over
     fft_dims = collect(1:ndims(psf)) 
@@ -171,11 +187,6 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     end
     
 
-    # Get the mapping functions to achieve constraints
-    # like non negativity
-    if mapping != nothing
-        mf, m_invf = mapping
-    end
 
 
     # forward model is a convolution
@@ -205,10 +216,10 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
 
     
     # this is the function which will be provided to Optimize
-    # check Optims documentation for the purpose of F and Get
+    # check Optim's documentation for the purpose of F and Get
     # but simply speaking F is the loss value and G it's gradient
     # depending whether one of them is nothing, we skip some computations
-    # we need to call Base.invokelatest becauser regualarizer is f function
+    # we need to call Base.invokelatest because the regularizer is a function
     # generated at runtime with eval.
     # This leads to the common "world age problem" in Julia
     # for more details on that check:
@@ -237,6 +248,8 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
         res_out = Optim.minimizer(res)
     end
 
+
+    res_out .*= rescaling
     # since we do some padding we need to extract the center part
     res_out = center_extract(res_out, size(measured))    
     return res_out, res
