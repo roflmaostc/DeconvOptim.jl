@@ -1,5 +1,3 @@
-
-
 # DeconvOptim.jl
 
 <br>
@@ -68,10 +66,10 @@ Furthermore without [Tullio.jl](https://github.com/mcabbott/Tullio.jl) and [@mca
 * [ ] GPU support for improved version -> check Tullio for that. But won't be tackled soon.
 
 
-[docs-dev-img]: https://img.shields.io/badge/docs-dev-pink.svg 
+[docs-dev-img]: https://img.shields.io/badge/docs-dev-orange.svg 
 [docs-dev-url]: https://roflmaostc.github.io/DeconvOptim.jl/dev/ 
 
-[docs-stable-img]: https://img.shields.io/badge/docs-stable-darkgreen.svg 
+[docs-stable-img]: https://img.shields.io/badge/docs-stable-blue.svg 
 [docs-stable-url]: https://roflmaostc.github.io/DeconvOptim.jl/stable/
 
 [travis-img]: https://travis-ci.com/roflmaostc/DeconvOptim.jl.svg?branch=master 
