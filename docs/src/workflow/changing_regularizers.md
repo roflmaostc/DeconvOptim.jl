@@ -20,9 +20,7 @@ h_view(args...) = begin
 end
 ```
 
-As the next step we can prepare a noisy, blurred image. The scaling of `img_n` is chosen in such a way,  that the highest pixel corresponds to the number of photons measured.
-The algorithm does not depend critically on that number.
-However, choosing maximum intensity values of smaller than 10 usually introduces some artifacts.
+As the next step we can prepare a noisy, blurred image.
 
 ```@jldoctest
 # load test images

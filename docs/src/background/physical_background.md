@@ -1,7 +1,7 @@
 # Physical Background
 We want to provide some physical background to the process of (de)convolution in optics.
-Optical systems like brightfield microscopes can only collect a certain amount of light emitted by a specimen. This effects (diffraction) leads to a blurred image of that specimen.
-Mathematically the lens has a certain frequency support. Within that frequency transmission of light is supported.
+Optical systems like brightfield microscopes can only collect a certain amount of light emitted by a specimen. This effect (diffraction) leads to a blurred image of that specimen.
+Mathematically the lens has a certain frequency support. Within that frequency, transmission of light is supported.
 Information (light) outside of this frequency support (equivalent to high frequency information) is lost.
 In the following picture we can see several curves in the frequency domain. 
 The orange line is a artificial object with a constant frequency spectrum (delta peak).

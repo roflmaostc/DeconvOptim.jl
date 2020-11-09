@@ -3,7 +3,7 @@ Deconvolution was already described as an optimization problem in the 1970s by [
 Since then, many variants and different kinds of deconvolution algorithms were presented, but mainly based on the concept of Lucy-Richardson.
 We try to formulate convolution as an inverse physical problem and solve it using a convex optimization loss function so that we can use
 fast optimizers to find the optimum. The variables we want to optimize for, are the pixels of the reconstruction $S(r)$. Therefore our reconstruction problem consists of several thousands to billion variables.
-Mathematical the optimization can be written as:
+Mathematically the optimization can be written as:
 
 $\underset{S(r)}{\arg \min}\, L(\text{Fwd}(S(r))) + \text{Reg}(S(r))$
 
