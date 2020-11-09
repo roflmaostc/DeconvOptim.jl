@@ -152,9 +152,15 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     measured = measured ./ rescaling
     # create rec0 which will be the initial guess for the reconstruction
     rec0 = zeros(T, (size_padded...))
+    
     # convolve the measured one with the psf
     # that will be our initial guess
-    rec0_center = m_invf(abs.(conv_psf(measured, psf, fft_dims)))
+    #rec0_center = m_invf(abs.(conv_psf(measured, psf, fft_dims)))
+    #
+    # take the mean as the initial guess
+    # therefore has the same total energy at the initial guess as
+    # measured
+    rec0_center = mean(measured) .* ones(T, size(measured))
     center_set!(rec0, rec0_center)
 
 
