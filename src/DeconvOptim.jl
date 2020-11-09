@@ -143,18 +143,20 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
             push!(size_padded, size(measured)[i] + x)
         end
     end
+
+
+    # the dimensions we do the Fourier Transform over
+    fft_dims = collect(1:ndims(psf)) 
+
     rescaling = maximum(measured) 
     measured = measured ./ rescaling
     # create rec0 which will be the initial guess for the reconstruction
     rec0 = zeros(T, (size_padded...))
     # convolve the measured one with the psf
     # that will be our initial guess
-    rec0_center = m_invf(abs.(conv_psf(measured, psf)))
+    rec0_center = m_invf(abs.(conv_psf(measured, psf, fft_dims)))
     center_set!(rec0, rec0_center)
 
-
-    # the dimensions we do the Fourier Transform over
-    fft_dims = collect(1:ndims(psf)) 
 
     # psf_n is the psf with the same size as rec0 but only in that dimensions
     # that were supported by the initial psf. Broadcasting of psf with less 
