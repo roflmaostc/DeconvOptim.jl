@@ -149,7 +149,7 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     rec0 = zeros(T, (size_padded...))
     # convolve the measured one with the psf
     # that will be our initial guess
-    rec0_center = m_invf(conv_psf(measured, psf)) 
+    rec0_center = m_invf(abs.(conv_psf(measured, psf)))
     center_set!(rec0, rec0_center)
 
 
