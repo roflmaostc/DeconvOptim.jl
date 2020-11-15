@@ -49,12 +49,12 @@ end
 
 """
     generate_laplace(num_dims, sum_dims_arr, weights)
-Generate the Tullio statement for computing the Laplacian.
+Generate the Tullio statement for computing the abs2 of Laplacian.
 `num_dims` is the dimension of the array. 
 `sum_dims_arr` is a array indicating over which dimensions we must sum over.
 `weights` is a array of a weight for the different dimension.
 """
-function generate_laplace(num_dims, sum_dims_arr, weights)
+function generate_laplace(num_dims, sum_dims_arr, weights; debug=false)
     # create out list for the final expression
     # add accumulates the different add expressions
     out, add = [], []
@@ -72,10 +72,14 @@ function generate_laplace(num_dims, sum_dims_arr, weights)
         i = Symbol(:i, di)
     end
     # subtract this final term
-    pre_factor = 2 ^ num_dims
+    pre_factor = 2 ^ num_dims * sum(weights)
     push!(add, :(-$:($pre_factor * arr[$(inds...)])))
     # create final expressions by adding all elements of the add list
-    push!(out, :(@tullio threads=false res = abs2(+$(add...))))
+    if debug
+        push!(out, :(res = abs2(+$(add...))))
+    else
+        push!(out, :(@tullio threads=false res = abs2(+$(add...))))
+    end
     return out
 end
 
@@ -170,7 +174,7 @@ indicating over which dimensions we must sum over.
 `weights` is a array of a weight for the different dimension.
 `ind1` and `ind2` are the offsets for the difference.
 """
-function generate_GR(num_dims, sum_dims_arr, weights, ind1, ind2)
+function generate_GR(num_dims, sum_dims_arr, weights, ind1, ind2; debug=false)
     out, add = [], []
     inds = map(1:num_dims) do di
         i = Symbol(:i, di)
@@ -181,9 +185,13 @@ function generate_GR(num_dims, sum_dims_arr, weights, ind1, ind2)
         push!(add, :($w * (arr[$(inds1...)] + arr[$(inds2...)])))
     end
     prefactor = - 4 / (abs(ind1) + abs(ind2))
-    diff_factor = - sum(weights) * 2
-    push!(add, :($prefactor * arr[$(inds...)]))
-    push!(out, :(@tullio threads=false res = $prefactor * arr[$(inds...)] * +($(add...))))
+    diff_factor = -sum(weights) * 2
+    push!(add, :($diff_factor *arr[$(inds...)]))
+    if debug
+        push!(out, :(res = $prefactor * arr[$(inds...)] * +($(add...))))
+    else
+        push!(out, :(@tullio threads=false res = $prefactor * arr[$(inds...)] * +($(add...))))
+    end
     return out
 end
 
@@ -241,14 +249,18 @@ indicating over which dimensions we must sum over.
 `ϵ` is a numerical constant to prevent division by zero. 
     this is important for the gradient 
 """
-function generate_TV(num_dims, sum_dims_arr, weights, ind1, ind2, ϵ=1f-8)
+function generate_TV(num_dims, sum_dims_arr, weights, ind1, ind2, ϵ=1f-8; debug=false)
     out, add = [], []
     for (d, w) in zip(sum_dims_arr, weights)
         inds1, inds2 = generate_indices(num_dims, d, ind1, ind2) 
         push!(add, :($w * abs2(arr[$(inds1...)] - arr[$(inds2...)])))
     end
     push!(add, ϵ)
-    push!(out, :(@tullio threads=false res = sqrt(+($(add...)))))
+    if debug
+        push!(out, :(res = sqrt(+($(add...)))))
+    else
+        push!(out, :(@tullio threads=false res = sqrt(+($(add...)))))
+    end
     return out
 end
 
