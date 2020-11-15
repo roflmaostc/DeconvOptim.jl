@@ -34,7 +34,7 @@ using Revise # for development useful
 using DeconvOptim, TestImages, Images, FFTW, Noise, ImageView
 
 # load test image
-img = 300 .* channelview(testimage("resolution_test_512"))
+img = channelview(testimage("resolution_test_512"))
 
 # generate simple Point Spread Function of aperture radius 30
 psf = generate_psf(size(img), 30)
@@ -65,6 +65,7 @@ Furthermore without [Tullio.jl](https://github.com/mcabbott/Tullio.jl) and [@mca
 
 ## To-Dos
 * [ ] GPU support for improved version -> check Tullio for that. But won't be tackled soon.
+* [ ] Enable Threaded Tullio again -> Currently disabled because of [this issue](https://github.com/mcabbott/Tullio.jl/issues/45)
 
 
 [docs-dev-img]: https://img.shields.io/badge/docs-dev-orange.svg 
