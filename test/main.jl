@@ -6,9 +6,9 @@
     
     res = [4.635723234474804 0.0007095372168799266 5.754390170845983e-14; 0.012691042798718619 1.086315317302081 0.0042021675793670376; 7.328043021151072e-17 0.0023139400413202177 1.7364022862411281] 
 
-    @test all(≈(res, deconvolution(img, psf)[1], rtol=0.1))
-    @test all(≈(res, deconvolution(img, psf, plan_fft=false)[1], rtol=0.1))
-    @test all(≈(res, deconvolution(img, psf, plan_fft=false, iterations=20)[1], rtol=0.1))
+    @test all(≈(res, deconvolution(img, psf, λ=0.01)[1], rtol=0.1))
+    @test all(≈(res, deconvolution(img, psf, plan_fft=false, λ=0.01)[1], rtol=0.1))
+    @test all(≈(res, deconvolution(img, psf, plan_fft=false, λ=0.01, iterations=20)[1], rtol=0.1))
 
     # testing regularizer
     res2 = [4.188270526990536 5.999388400251461e-10 2.8299849680327642e-8; 1.725273124171714e-7 2.54195544512864 2.0216187854619135e-9; 9.594324085846738e-10 1.2000166997002865e-8 0.7863126081711094] 
