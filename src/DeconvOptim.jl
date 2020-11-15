@@ -1,4 +1,6 @@
 module DeconvOptim
+    
+export deconvolution
 
  # for optimization
 using Optim
@@ -15,7 +17,6 @@ using Requires
 using ChainRulesCore
 
 
-export deconvolution
 
 
 # via require we can check whether CUDA is loaded
@@ -75,7 +76,7 @@ regularizers and mappings.
 ```julia-repl
 julia> using DeconvOptim, TestImages, Images, FFTW, Noise, ImageView;
 
-julia> img = 300 .* channelview(testimage("resolution_test_512"));
+julia> img = channelview(testimage("resolution_test_512"));
 
 julia> psf = generate_psf(size(img), 30);
 
@@ -92,7 +93,7 @@ julia> colorview(Gray, [img img_n res]) |> imshow
 function deconvolution(measured::AbstractArray{T, N}, psf;
         loss=Poisson(),
         regularizer=GR(),
-        λ=0.01,
+        λ=0.05,
         background=0,
         mapping=Non_negative(),
         iterations=20,
@@ -133,7 +134,7 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
             push!(size_padded, 1)
         else
             # only pad, if padding is true
-            if ~(padding ≈ 0)
+            if ~iszero(padding)
                 # 2 * ensures symmetric padding
                 # minimum padding is 2 (4 in total) on each side
                 x = max(4, 2 * round(Int, size(measured)[i] * padding))
@@ -148,13 +149,13 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     # the dimensions we do the Fourier Transform over
     fft_dims = collect(1:ndims(psf)) 
 
+    # we divide by the maximum to normalize
     rescaling = maximum(measured) 
     measured = measured ./ rescaling
     # create rec0 which will be the initial guess for the reconstruction
     rec0 = zeros(T, (size_padded...))
     
-    # convolve the measured one with the psf
-    # that will be our initial guess
+    # alternative rec0_center, unused at the moment
     #rec0_center = m_invf(abs.(conv_psf(measured, psf, fft_dims)))
     #
     # take the mean as the initial guess
