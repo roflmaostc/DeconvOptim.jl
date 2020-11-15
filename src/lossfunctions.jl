@@ -105,8 +105,9 @@ function ChainRulesCore.rrule(::typeof(scaled_gauss_aux), μ, meas)
     function scaled_gauss_aux_pullback(xbar)
         meas_new = copy(μ)
         meas_new = center_set!(meas_new, meas)
-        μ[μ .<= 1f-8] .= 1f-8
-        return zero(eltype(μ)), (μ + μ.^2 - meas_new.^2)./(2 .* μ.^2), zero(eltype(μ)) 
+        ∇ = (μ + μ.^2 - meas_new.^2)./(2 .* μ.^2)
+        ∇[μ .<= 1f-8] .= 0 
+        return zero(eltype(μ)), ∇, zero(eltype(μ)) 
     end
     return Y, scaled_gauss_aux_pullback
 end
@@ -121,4 +122,3 @@ Check the help of `scaled_gauss_aux`.
 function ScaledGauss()
     return scaled_gauss_aux
 end
-
