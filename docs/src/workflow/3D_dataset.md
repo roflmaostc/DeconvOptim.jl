@@ -9,21 +9,21 @@ This example is also hosted in a notebook on [GitHub](https://github.com/roflmao
 First, load the 3D PSF and image.
 ```@jldoctest
 using Revise, DeconvOptim, TestImages, Images, FFTW, Noise, ImageView
-img = 300 .* convert(Array{Float32}, channelview(load("obj.tif")))
+img = convert(Array{Float32}, channelview(load("obj.tif")))
 psf = ifftshift(convert(Array{Float32}, channelview(load("psf.tif"))))
 psf ./= sum(psf)
 # create a blurred, noisy version of that image
 img_b = conv_psf(img, psf, [1, 2, 3])
 img_n = poisson(img_b, 300);
 ```
-As the next step we need to create the regularizers. With `num_dims` we define how many dimensions are reconstruction image has. 
+As the next step we need to create the regularizers. With `num_dims` we define how many dimensions our reconstruction image has. 
 With `sum_dims` we specify which dimensions of those should be included in the regularizing process.
 ```@jldoctest
 reg1 = TV(num_dims=3, sum_dims=[1, 2, 3])
 reg2 = Tikhonov(num_dims=3, sum_dims=[1, 2, 3], mode="identity")
 ```
 
-We can then invoke the deconvolution. For `Tikhonov` in the `identity` mode a smaller $\lambda$ produces better results. In the first reconstruction we also specified the `padding`. This parameters adds some spacing around the reconstruction image to prevent wrap around effects of the FFT based deconvolution. However, since we don't have bright objects at the boundary of the image we don't see an impact of that parameter.
+We can then invoke the deconvolution. For `Tikhonov` using `identity` mode a smaller $\lambda$ produces better results. In the first reconstruction we also specified the `padding`. This parameters adds some spacing around the reconstruction image to prevent wrap around effects of the FFT based deconvolution. However, since we don't have bright objects at the boundary of the image we don't see an impact of that parameter.
 ```@jldoctest
 @time res, ores = deconvolution(img, psf, regularizer=reg1, loss=Poisson(),
                           λ=0.05, padding=0.2, iterations=10);

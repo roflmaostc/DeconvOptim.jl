@@ -5,8 +5,8 @@ From these examples one can also understand the different effects of the regular
 
 The picture below shows the general principle of DeconvOptim.jl.
 Since we interprete deconvolution as an optimization we initialize the reconstruction variables *rec*. 
-*rec* is a array of pixel which are the variables we are optimizing for.
-Then we can apply some mapping eg to reconstruct only pixels having non-negative intensity values.
+*rec* is a array of pixels which are the variables we are optimizing for.
+Then we can apply some mapping eg. to reconstruct only pixels having non-negative intensity values.
 Afterwards we compose the *total loss* functions. It consists of a regularizing part (weighted with $\lambda$) and a *loss* part.
 The latter one compares the current reconstruction with the measured image.
 *Total loss* adds both values to a single scalar value. Using Zygote.jl we calculate the gradient with respect to all pixel values of *rec*.

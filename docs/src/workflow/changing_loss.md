@@ -6,8 +6,8 @@ We now compare all implemented loss functions of DeconvOptim.jl.
 However, we could also include loss functions of Flux.jl since they have the same interface as our loss functions.
 
 `Poisson()` will most likely produce the best results in presence of Poisson Noise. For Gaussian Noise, `Gauss()` is a suitable option.
-`ScaledGaussian()` is mathematical an approximation of `Poisson()`.
-
+`ScaledGaussian()` is an mathematical approximation of `Poisson()`.
+At the moment `ScaledGaussian()` is not recommended because of artifacts in certain images.
 
 
 ## Code Example
@@ -25,7 +25,7 @@ h_view(args...) = begin
 end
 
 # load test images
-img = 300 .* convert(Array{Float32}, channelview(testimage("resolution_test_512")))
+img = convert(Array{Float32}, channelview(testimage("resolution_test_512")))
 
 psf = generate_psf(size(img), 30)
 

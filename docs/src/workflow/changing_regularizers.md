@@ -1,6 +1,6 @@
 # Changing Regularizers: 2D Example 
 In this section we show how to change the regularizer and what are the different effects of it.
-The main parts arguments of `deconvolution` are `regularizer` and $\lambda$. `regularizer` specifies which regularizer is used.
+The arguments of `deconvolution` we consider here are `regularizer` and $\lambda$. `regularizer` specifies which regularizer is used.
 $\lambda$ specifies how strong the regularizer is weighted. The larger $\lambda$ the more you see the typical styles introduced by the regularizers.
 
 
@@ -24,7 +24,7 @@ As the next step we can prepare a noisy, blurred image.
 
 ```@jldoctest
 # load test images
-img = 300 .* convert(Array{Float32}, channelview(testimage("resolution_test_512")))
+img = convert(Array{Float32}, channelview(testimage("resolution_test_512")))
 
 psf = generate_psf(size(img), 30)
 
@@ -74,7 +74,7 @@ h_view(img_n, resTV50, resTV15, resTV15_2)
 
 
 ## Let's test Tikhonov
-Tikhonov is not defined as precisely as the other two regularizer. Therefore we offer three different modes which differ quite a lot from each other. However, the results look all very similar
+Tikhonov is not defined as precisely as the other two regularizers. Therefore we offer three different modes which differ quite a lot from each other. However, the results look all very similar
 ```@jldoctest
 @time resTik1, optim_res = deconvolution(img_n, psf, λ=0.001, regularizer=Tikhonov(), iterations=15)
 @show optim_res
