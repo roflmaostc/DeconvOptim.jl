@@ -239,7 +239,9 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
             y, back = Base.invokelatest(Zygote._pullback, total_loss, rec)
             # calculate gradient
             G .= Base.invokelatest(back, 1)[2]
-            return y
+            if F != nothing
+                return y
+            end
         end
         if F != nothing
             return Base.invokelatest(total_loss, rec)
