@@ -13,8 +13,7 @@ A package for microscopy image based deconvolution via Optim.jl. This package wo
 
 | **Documentation**                       | **Build Status**                          | **Code Coverage**               |
 |:---------------------------------------:|:-----------------------------------------:|:-------------------------------:|
-| [![][docs-stable-img]][docs-stable-url] [![][docs-dev-img]][docs-dev-url] | ![CI][githubci-url] | [![][codecov-img]][codecov-url]|
-
+| [![][docs-stable-img]][docs-stable-url], [![][docs-dev-img]][docs-dev-url] | [![][CI-img]][CI-url] | [![][codecov-img]][codecov-url] |
 
 ## Documentation
 The documentation of the latest release is [here](docs-stable-url).
@@ -73,13 +72,8 @@ Furthermore without [Tullio.jl](https://github.com/mcabbott/Tullio.jl) and [@mca
 [docs-stable-img]: https://img.shields.io/badge/docs-stable-blue.svg 
 [docs-stable-url]: https://roflmaostc.github.io/DeconvOptim.jl/stable/
 
-[travis-img]: https://travis-ci.com/roflmaostc/DeconvOptim.jl.svg?branch=master 
-[travis-url]: https://travis-ci.com/github/roflmaostc/DeconvOptim.jl 
-
-[githubci-url]: https://github.com/roflmaostc/DeconvOptim.jl/workflows/CI/badge.svg
-
-[coveral-img]: https://coveralls.io/repos/github/roflmaostc/DeconvOptim.jl/badge.svg?branch=master
-[coveral-url]: https://coveralls.io/github/roflmaostc/DeconvOptim.jl
-
 [codecov-img]: https://codecov.io/gh/roflmaostc/DeconvOptim.jl/branch/master/graph/badge.svg
 [codecov-url]: https://codecov.io/gh/roflmaostc/DeconvOptim.jl
+
+[CI-img]: https://github.com/roflmaostc/DeconvOptim.jl/workflows/CI/badge.svg
+[CI-url]: https://github.com/roflmaostc/DeconvOptim.jl/actions?query=workflow%3ACI 
