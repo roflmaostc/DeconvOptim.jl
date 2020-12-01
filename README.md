@@ -13,8 +13,7 @@ A package for microscopy image based deconvolution via Optim.jl. This package wo
 
 | **Documentation**                       | **Build Status**                          | **Code Coverage**               |
 |:---------------------------------------:|:-----------------------------------------:|:-------------------------------:|
-| [![][docs-stable-img]][docs-stable-url] | [![Build Status][travis-img]][travis-url] | [![][codecov-img]][codecov-url]|
-| [![][docs-dev-img]][docs-dev-url]       | ![CI][githubci-url]                       |
+| [![][docs-stable-img]][docs-stable-url] [![][docs-dev-img]][docs-dev-url] | ![CI][githubci-url] | [![][codecov-img]][codecov-url]|
 
 
 ## Documentation
