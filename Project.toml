@@ -17,7 +17,7 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 [compat]
 ChainRulesCore = "0.9.17"
 FFTW = "1.2.4"
-Interpolations = "0.12.10"
+Interpolations = "0.12.10, 0.13"
 Noise = "0.2.0"
 Optim = "0.22.0"
 Requires = "1.1.0"
