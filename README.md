@@ -57,7 +57,7 @@ you can submit bug reports and make suggestions.
 
 
 ## Contributions
-I would like to thank Rainer Heintzmann for the great support and discussions during development.
+I would like to thank Rainer Heintzmann for the great support and discussions during development. Thanks also to Johannes Kager for the constant cheering-up via Instagram memes.
 Furthermore without [Tullio.jl](https://github.com/mcabbott/Tullio.jl) and [@mcabbott](https://github.com/mcabbott/) this package wouldn't be as fast as it is. His package and ideas are the basis for the implementations of the regularizers.
 
 
