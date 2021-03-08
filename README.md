@@ -9,6 +9,8 @@
 </div>
 <br>
 A package for microscopy image based deconvolution via Optim.jl. This package works with N dimensional Point Spread Functions and images.
+
+We would be happy to deconvolve *real* data! File an issue if we can help deconvolving an image/stack. We would be also excited to adapt DeconvOptim.jl to your special needs!
 <br>
 
 | **Documentation**                       | **Build Status**                          | **Code Coverage**               |

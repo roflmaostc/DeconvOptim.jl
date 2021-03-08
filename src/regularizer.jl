@@ -78,7 +78,7 @@ function generate_laplace(num_dims, sum_dims_arr, weights; debug=false)
     if debug
         push!(out, :(res = abs2(+$(add...))))
     else
-        push!(out, :(@tullio threads=false res = abs2(+$(add...))))
+        push!(out, :(@tullio  res = abs2(+$(add...))))
     end
     return out
 end
@@ -101,7 +101,7 @@ function create_Ndim_regularizer(expr, num_dims, sum_dims_arr, weights,
         inds1, inds2 = generate_indices(num_dims, d, ind1, ind2) 
         push!(add, expr(inds1, inds2, w))
     end
-    push!(out, :(@tullio threads=false res = +($(add...))))
+    push!(out, :(@tullio  res = +($(add...))))
     return out
 end
 
@@ -190,7 +190,7 @@ function generate_GR(num_dims, sum_dims_arr, weights, ind1, ind2; debug=false)
     if debug
         push!(out, :(res = $prefactor * arr[$(inds...)] * +($(add...))))
     else
-        push!(out, :(@tullio threads=false res = $prefactor * arr[$(inds...)] * +($(add...))))
+        push!(out, :(@tullio  res = $prefactor * arr[$(inds...)] * +($(add...))))
     end
     return out
 end
@@ -259,7 +259,7 @@ function generate_TV(num_dims, sum_dims_arr, weights, ind1, ind2, ϵ=1f-8; debug
     if debug
         push!(out, :(res = sqrt(+($(add...)))))
     else
-        push!(out, :(@tullio threads=false res = sqrt(+($(add...)))))
+        push!(out, :(@tullio  res = sqrt(+($(add...)))))
     end
     return out
 end
