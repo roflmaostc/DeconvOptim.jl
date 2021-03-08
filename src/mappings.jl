@@ -39,7 +39,7 @@ julia> p_inv(p(x))
 ```
 """
 function Non_negative()
-    return x -> map(abs2, x) , (x -> sqrt.(x))
+    return x -> abs2.(x) , (x -> sqrt.(x))
 end
 
 
