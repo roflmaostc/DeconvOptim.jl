@@ -39,7 +39,20 @@ julia> p_inv(p(x))
 ```
 """
 function Non_negative()
-    return x -> abs2.(x) , (x -> sqrt.(x))
+    #return x -> map(abs2, x), parab_inv 
+    return parab, parab_inv 
+end
+
+parab(x) = abs2.(x)
+parab_inv(x) = sqrt.(x)
+ # define custom adjoint for parab because of 
+ # slow broadcasting
+function ChainRulesCore.rrule(::typeof(parab), x)
+    Y = parab(x)
+    function aux_pullback(barx)
+        return zero(eltype(Y)), (2 .* barx) .* x
+    end
+    return Y, aux_pullback
 end
 
 
@@ -51,7 +64,8 @@ to map numbers to an interval between 0 and 1.
 
 """
 function Map_0_1()
-    f(x) = 1 .- exp.(.- x.^2)
-    f_inv(y) = sqrt.(.- log.(1 .- y))
-    return f, f_inv
+    return f01, f01_inv
 end
+
+f01(x) = 1 .- exp.(.- x.^2)
+f01_inv(y) = sqrt.(.- log.(1 .- y))
