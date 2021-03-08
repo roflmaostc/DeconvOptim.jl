@@ -52,6 +52,12 @@ imshow([img img_n res])
 ![Results Quick Example](docs/src/assets/quick_example_results.png)
 
 
+## Examples
+Have a quick look into the [examples folder](examples).
+We demonstrate the effect of different regularizers. There is also an CUDA example. Using regularizers together 
+with a CUDA GPU is unfortunately not possible.
+
+
 ## Development
 
 The package is developed at [GitHub](https://www.github.com/roflmaostc/DeconvOptim.jl).  There
