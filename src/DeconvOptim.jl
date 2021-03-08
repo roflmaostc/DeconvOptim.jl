@@ -69,20 +69,17 @@ regularizers and mappings.
 
 # Example
 ```julia-repl
-julia> using DeconvOptim, TestImages, Images, FFTW, Noise, ImageView;
+julia> using DeconvOptim, TestImages, Colors, Noise;
 
-julia> img = channelview(testimage("resolution_test_512"));
+julia> img = Float32.(testimage("resolution_test_512"));
 
-julia> psf = generate_psf(size(img), 30);
+julia> psf = Float32.(generate_psf(size(img), 30));
 
 julia> img_b = conv_psf(img, psf);
 
 julia> img_n = poisson(img_b, 300);
 
 julia> @time res, o = deconvolution(img_n, psf);
-
-julia> colorview(Gray, [img img_n res]) |> imshow
-[...]
 ```
 """
 function deconvolution(measured::AbstractArray{T, N}, psf;
