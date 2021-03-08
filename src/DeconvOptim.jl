@@ -1,12 +1,14 @@
 module DeconvOptim
     
 export deconvolution
+export gpu_or_cpu
 
  # for optimization
 using Optim
  #mean
 using Statistics
 using FFTW
+FFTW.set_num_threads(4)
  # for fast array regularizers
 using Tullio
  # possible up_sampling 
@@ -15,21 +17,14 @@ using Interpolations
 using Requires
 # for defining custom derivatives
 using ChainRulesCore
+using LinearAlgebra
+
+# optional CUDA dependency
+include("requires.jl")
+
+gpu_or_cpu(x) = Array
 
 
-
-
-# via require we can check whether CUDA is loaded
-# to enable CUDA support simply load CUDA before load DeconvOptim
- #to_gpu_or_not(x) = x
- #function __init__()
- #    @require CUDA="052768ef-5323-5732-b1bb-66c8b64840ba" begin
- #        print("CUDA support is enabled")
- #        @eval using CUDA
- #        @eval to_gpu_or_not(x) = CuArray(x)
- #    end
- #end
-    
 
 include("forward_models.jl")
 include("lossfunctions.jl")
@@ -106,7 +101,6 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     # do some type conversion to ensure same type everywhere
     # provides speed-up
     λ = convert(eltype(measured), λ)
-    psf = convert(Array{eltype(measured)}, psf)
     background = convert(eltype(measured), background) 
 
 
@@ -153,7 +147,8 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     rescaling = maximum(measured) 
     measured = measured ./ rescaling
     # create rec0 which will be the initial guess for the reconstruction
-    rec0 = zeros(T, (size_padded...))
+    rec0 = similar(measured, (size_padded)...)
+    fill!(rec0, zero(eltype(measured))) 
     
     # alternative rec0_center, unused at the moment
     #rec0_center = m_invf(abs.(conv_psf(measured, psf, fft_dims)))
@@ -161,7 +156,9 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     # take the mean as the initial guess
     # therefore has the same total energy at the initial guess as
     # measured
-    rec0_center = mean(measured) .* ones(T, size(measured))
+    one_arr = similar(measured, size(measured))
+    fill!(one_arr, one(eltype(measured)))
+    rec0_center = mean(measured) .* one_arr
     center_set!(rec0, rec0_center)
 
 
@@ -177,7 +174,8 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     end
     
     psf_new_size = tuple(psf_new_size...)
-    psf_n = zeros(eltype(rec0), psf_new_size)
+    psf_n = similar(rec0, psf_new_size)
+    fill!(psf_n, zero(eltype(rec0)))
     psf_n = center_set!(psf_n, fftshift(psf))
     psf = ifftshift(psf_n)
 
