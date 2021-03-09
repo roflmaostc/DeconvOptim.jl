@@ -147,7 +147,7 @@ julia> reg([1 2 3; 4 5 6; 7 8 9])
 """
 function Tikhonov(;num_dims=2, sum_dims=[1, 2], weights=[1, 1], step=1, mode="laplace")
     if weights == nothing
-        weights = ones(num_dims)
+        weights = ones(Int, num_dims)
     end
     if mode == "laplace"
         Γ = @eval arr -> ($(generate_laplace(num_dims, sum_dims, weights)...))
@@ -221,7 +221,7 @@ julia> reg([1 2 3; 4 5 6; 7 8 9])
 function GR(; num_dims=2, sum_dims=[1, 2], weights=[1, 1], step=1,
               mode="central", ϵ=1f-8)
     if weights == nothing
-        weights = ones(num_dims)
+        weights = ones(Int, num_dims)
     end
     if mode == "central"
         GRf = @eval arr -> ($(generate_GR(num_dims, sum_dims, weights,
@@ -290,7 +290,7 @@ julia> reg([1 2 3; 4 5 6; 7 8 9])
 function TV(; num_dims=2, sum_dims=[1, 2], weights=nothing, step=1, mode="central")
     
     if weights == nothing
-        weights = ones(num_dims)
+        weights = ones(Int, num_dims)
     end
 
     if mode == "central"
@@ -304,3 +304,4 @@ function TV(; num_dims=2, sum_dims=[1, 2], weights=nothing, step=1, mode="centra
     end
     return total_var
 end
+
