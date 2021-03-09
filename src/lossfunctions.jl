@@ -11,8 +11,6 @@ Calculates the Poisson loss for `μ` and `meas`.
 we extract a centered region from `μ` of the same size as `meas`.
 """ 
 function poisson_aux(μ, meas)
-    μ = center_extract(μ, size(meas))
-    
     # due to numerical errors, μ can be negative or 0
     μ2 = μ .+ eps(maximum(μ)) .+ abs.(minimum(μ))
     return sum(μ2 .- meas .* log.(μ2))
@@ -26,10 +24,7 @@ function ChainRulesCore.rrule(::typeof(poisson_aux), μ, meas)
     Y = poisson_aux(μ, meas)
 
     function poisson_aux_pullback(xbar)
-        meas_new = copy(μ)
-        meas_new = center_set!(meas_new, meas)
-
-        ∇ = xbar .* (one(eltype(μ)) .- meas_new ./ μ)
+        ∇ = xbar .* (one(eltype(μ)) .- meas ./ μ)
         return zero(eltype(μ)), ∇, zero(eltype(μ)) 
     end
 
@@ -57,7 +52,6 @@ Calculates the Gauss loss for `μ` and `meas`.
 we extract a centered region from `μ` of the same size as `meas`.
 """ 
 function gauss_aux(μ, meas)
-    μ = center_extract(μ, size(meas))
     return sum(abs2.(μ - meas))
 end
 
@@ -65,9 +59,7 @@ end
 function ChainRulesCore.rrule(::typeof(gauss_aux), μ, meas)
     Y = gauss_aux(μ, meas) 
     function gauss_aux_pullback(xbar)
-        meas_new = copy(μ)
-        meas_new = center_set!(meas_new, meas)
-        return zero(eltype(μ)), 2 .* (μ - meas_new), zero(eltype(μ)) 
+        return zero(eltype(μ)), 2 .* (μ - meas), zero(eltype(μ)) 
     end
     return Y, gauss_aux_pullback
 end
@@ -94,7 +86,6 @@ Calculates the scaled Gauss loss for `μ` and `meas`.
 we extract a centered region from `μ` of the same size as `meas`.
 """
 function scaled_gauss_aux(μ, meas)
-    μ = center_extract(μ, size(meas))
     μ[μ .<= 1f-8] .= 1f-8
     return sum(1/2f0 .* log.(μ) .+ (meas .- μ).^2 ./ (2 .* μ))
 end
@@ -103,9 +94,7 @@ end
 function ChainRulesCore.rrule(::typeof(scaled_gauss_aux), μ, meas)
     Y = scaled_gauss_aux(μ, meas) 
     function scaled_gauss_aux_pullback(xbar)
-        meas_new = copy(μ)
-        meas_new = center_set!(meas_new, meas)
-        ∇ = (μ + μ.^2 - meas_new.^2)./(2 .* μ.^2)
+        ∇ = (μ + μ.^2 - meas.^2)./(2 .* μ.^2)
         ∇[μ .<= 1f-8] .= 0 
         return zero(eltype(μ)), ∇, zero(eltype(μ)) 
     end

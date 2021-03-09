@@ -227,6 +227,10 @@ julia> DeconvOptim.center_extract([1 2 3; 3 4 5; 6 7 8], [2 2])
 ```
 """
 function center_extract(arr::AbstractArray, new_size_array)
+    if size(arr) == new_size_array
+        return arr
+    end
+    
     new_size_array = collect(new_size_array)
 
     # we construct two lists
@@ -240,6 +244,26 @@ function center_extract(arr::AbstractArray, new_size_array)
     # out_indices2 contains just ranges covering the full size of each dimension
     out_indices2 = [1:size(arr)[i] for i = (1 + length(new_size_array)):ndims(arr)]
     return arr[out_indices1..., out_indices2...]
+end
+
+function ChainRulesCore.rrule(::typeof(center_extract), arr, new_size_array)
+    new_arr = center_extract(arr, new_size_array)
+
+    function aux_pullback(xbar)
+        if size(arr) == new_size_array
+            return zero(eltype(arr)), xbar, zero(eltype(arr)) 
+        else
+            ∇ = similar(arr, size(arr))
+            fill!(∇, zero(eltype(arr)))
+            o = similar(arr, new_size_array)
+            fill!(o, one(eltype(arr)))
+            o .*= xbar
+            center_set!(∇, o)
+            return zero(eltype(arr)), ∇, zero(eltype(arr)) 
+        end
+    end
+
+    return new_arr, aux_pullback
 end
 
 
@@ -269,7 +293,7 @@ function center_set!(arr_large, arr_small)
     end
 
     #rest = ones(Int, ndims(arr_large) - 3)
-    arr_large[out_is...] = arr_small
+    arr_large[out_is...] .= arr_small
     
     return arr_large
 end

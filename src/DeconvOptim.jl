@@ -210,7 +210,8 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
             mf_rec = rec
         end
         forward_v = forward(mf_rec)
-        loss_v = loss(forward_v, measured)
+        forward_v_ex = center_extract(forward_v, size(measured))
+        loss_v = loss(forward_v_ex, measured)
         # handle if there is a regularizer
         if regularizer != nothing
             reg_v = regularizer(mf_rec)
