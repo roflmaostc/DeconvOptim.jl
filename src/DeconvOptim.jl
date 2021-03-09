@@ -3,24 +3,27 @@ module DeconvOptim
 export deconvolution
 export gpu_or_cpu
 
+ # to check wether CUDA is enabled
+using Requires
+# for fast array regularizers
+using Tullio
+# optional CUDA dependency
+include("requires.jl")
+
  # for optimization
 using Optim
  #mean
 using Statistics
 using FFTW
 FFTW.set_num_threads(4)
- # for fast array regularizers
-using Tullio
+
  # possible up_sampling 
 using Interpolations
- # to check wether CUDA is enabled
-using Requires
+
 # for defining custom derivatives
 using ChainRulesCore
 using LinearAlgebra
 
-# optional CUDA dependency
-include("requires.jl")
 
 gpu_or_cpu(x) = Array
 
