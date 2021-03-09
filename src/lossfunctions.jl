@@ -13,8 +13,9 @@ we extract a centered region from `μ` of the same size as `meas`.
 function poisson_aux(μ, meas)
     μ = center_extract(μ, size(meas))
     
-    μ[μ .<= 1f-8] .= 1f-8
-    return sum(μ .- meas .* log.(μ))
+    # due to numerical errors, μ can be negative or 0
+    μ2 = μ .+ eps(maximum(μ)) .+ abs.(minimum(μ))
+    return sum(μ2 .- meas .* log.(μ2))
 end
 
 
@@ -29,7 +30,6 @@ function ChainRulesCore.rrule(::typeof(poisson_aux), μ, meas)
         meas_new = center_set!(meas_new, meas)
 
         ∇ = xbar .* (one(eltype(μ)) .- meas_new ./ μ)
-        ∇[μ .< 1f-8] .= 0
         return zero(eltype(μ)), ∇, zero(eltype(μ)) 
     end
 
