@@ -54,9 +54,9 @@ imshow([img img_n res])
 
 ## Examples
 Have a quick look into the [examples folder](examples).
-We demonstrate the effect of different regularizers. There is also an CUDA example. Using regularizers together 
-with a CUDA GPU is unfortunately not possible.
-
+We demonstrate the effect of different regularizers. There is also an [CUDA example](examples/cuda_2D.ipynb). 
+Using regularizers together with a CUDA GPU is faster but unfortunately only a factor of ~5-10.
+For 3D the speed-up is larger.
 
 ## Development
 
