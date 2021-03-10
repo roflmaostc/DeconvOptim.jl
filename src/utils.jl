@@ -10,8 +10,9 @@ export conv_psf, conv_otf, conv_otf_r, plan_conv_r
 
 Convolve `obj` with `psf` over `dims` dimensions.
 Based on FFT convolution.
+Per default `dims = 1:ndims(psf)`.
 """
-function conv_psf(obj, psf, dims=[1, 2])
+function conv_psf(obj, psf, dims=1:ndims(psf))
     return real.(ifft(fft(obj, dims) .* fft(psf, dims), dims))
 end
 
@@ -24,9 +25,9 @@ with an `otf`. `otf = fft(psf)`. The 0 frequency of the `otf` must be located
 at position [1, 1, 1].
 The `obj` can be of arbitrary dimension but `ndims(psf) ≥ ndims(otf)`.
 The convolution happens over the `dims` array. Any further dimensions are broadcasted.
-Per default `dims = [1, 2]`.
+Per default `dims = 1:ndims(psf)`.
 """
-function conv_otf(obj, otf, dims=[1, 2])
+function conv_otf(obj, otf, dims=1:ndims(psf))
     return real.(ifft(fft(obj, dims) .* otf, dims))
 end
 
@@ -38,7 +39,7 @@ Performs a FFT-based convolution of an `obj`
 with an `otf`.
 Same arguments as `conv_otf` but with `obj` being real and `otf=rfft(psf)`.
 """
-function conv_otf_r(obj, otf, dims=[1, 2])
+function conv_otf_r(obj, otf, dims=1:ndims(psf))
     return real.(irfft(rfft(obj, dims) .* otf, size(obj)[dims[1]], dims))
 end
 
@@ -48,7 +49,7 @@ end
 
 Pre-plan an optimized convolution for array shaped like `psf` (based on pre-plan FFT) 
 along the given dimenions `dims`.
-`dims = [1, 2]` per default.
+`dims = 1:ndims(psf)` per default.
 The 0 frequency of `psf` must be located at [1, 1, 1].
 We return first the `otf` (obtained by `rfft(psf))`.
 The second return is the convolution function `conv`.
@@ -56,7 +57,7 @@ The second return is the convolution function `conv`.
 
 This function achieves faster convolution than `conv_psf(obj, psf)`.
 """
-function plan_conv_r(psf, rec0, dims=[1, 2])
+function plan_conv_r(psf, rec0, dims=1:ndims(psf))
     # do the preplanning step
     P = plan_rfft(rec0, dims)
     rec0_fft = P * rec0 
