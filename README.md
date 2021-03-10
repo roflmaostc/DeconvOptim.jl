@@ -9,6 +9,7 @@
 </div>
 <br>
 A package for microscopy image based deconvolution via Optim.jl. This package works with N dimensional Point Spread Functions and images.
+The package was created with microscopy in mind but since the code base is quite general it should be possible to deconvolve different kernels as well. 
 
 We would be happy to deconvolve *real* data! File an issue if we can help deconvolving an image/stack. We would be also excited to adapt DeconvOptim.jl to your special needs!
 <br>
@@ -31,13 +32,13 @@ julia> ] add DeconvOptim
 A quick example is shown below.
 ```julia
 using Revise # for development useful
-using DeconvOptim, TestImages, Images, FFTW, Noise, ImageView
+using DeconvOptim, TestImages, Colors, FFTW, Noise, ImageShow
 
 # load test image
-img = channelview(testimage("resolution_test_512"))
+img = Float32.(testimage("resolution_test_512"))
 
 # generate simple Point Spread Function of aperture radius 30
-psf = generate_psf(size(img), 30)
+psf = Float32.(generate_psf(size(img), 30))
 
 # create a blurred, noisy version of that image
 img_b = conv_psf(img, psf)
@@ -47,20 +48,20 @@ img_n = poisson(img_b, 300)
 @time res, o = deconvolution(img_n, psf)
 
 # show final results next to original and blurred version
-imshow([img img_n res])
+Gray.([img img_n res])
 ```
 ![Results Quick Example](docs/src/assets/quick_example_results.png)
 
 
 ## Examples
 Have a quick look into the [examples folder](examples).
-We demonstrate the effect of different regularizers. There is also an [CUDA example](examples/cuda_2D.ipynb). 
+We demonstrate the effect of different regularizers. There is also a [CUDA example](examples/cuda_2D.ipynb). 
 Using regularizers together with a CUDA GPU is faster but unfortunately only a factor of ~5-10.
-For 3D the speed-up is larger.
+For [3D](examples/cuda_3D.ipynb) the speed-up is larger.
 
 ## Development
 
-The package is developed at [GitHub](https://www.github.com/roflmaostc/DeconvOptim.jl).  There
+The package is developed at [GitHub](https://www.github.com/roflmaostc/DeconvOptim.jl). There
 you can submit bug reports and make suggestions. 
 
 
@@ -69,9 +70,19 @@ I would like to thank Rainer Heintzmann for the great support and discussions du
 Furthermore without [Tullio.jl](https://github.com/mcabbott/Tullio.jl) and [@mcabbott](https://github.com/mcabbott/) this package wouldn't be as fast as it is. His package and ideas are the basis for the implementations of the regularizers.
 
 
+## Performance Tips
+### Regularizers
+The regularizers are generated when `TV()` or similar is called. To prevent compilation every time, define the regularizer once and use it multiple times without newly defining it:
+```julia
+reg = TV()
+```
+And in the new cell then use:
+```julia
+res, o = deconvolution(img_n, psf, regularizer=reg)
+```
+
 ## To-Dos
-* [ ] GPU support for improved version -> check Tullio for that. But won't be tackled soon.
-* [ ] Enable Threaded Tullio again -> Currently disabled because of [this issue](https://github.com/mcabbott/Tullio.jl/issues/45)
+* [ ] Update documentation regarding GPU usage. 
 
 
 [docs-dev-img]: https://img.shields.io/badge/docs-dev-orange.svg 
