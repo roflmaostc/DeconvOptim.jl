@@ -12,8 +12,10 @@ we extract a centered region from `μ` of the same size as `meas`.
 """ 
 function poisson_aux(μ, meas)
     # due to numerical errors, μ can be negative or 0
-    μ2 = μ .+ eps(maximum(μ)) .+ abs.(minimum(μ))
-    return sum(μ2 .- meas .* log.(μ2))
+    if minimum(μ) <= 0
+        μ .+= eps(maximum(μ)) .+ abs.(minimum(μ))
+    end
+    return sum(μ .- meas .* log.(μ))
 end
 
 
