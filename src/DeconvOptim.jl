@@ -1,6 +1,7 @@
 module DeconvOptim
     
 export deconvolution
+export richardson_lucy_iterative
 export gpu_or_cpu
 
  # to check wether CUDA is enabled
@@ -109,7 +110,7 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     if mapping != nothing
         mf, m_invf = mapping
     else
-        m_invf = identity
+        mf, m_invf = identity, identity
     end
 
 
@@ -194,7 +195,7 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     end
     
 
-
+    regularizer = isnothing(regularizer) ? x -> zero(eltype(x)) : regularizer
 
     # forward model is a convolution
     # due to numerics, we need to clip at 0
@@ -204,23 +205,18 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     # create the loss function which depends simply on the current rec  
     function total_loss(rec)
         # handle if there is a provided mapping function
-        if mapping != nothing
-            mf_rec = mf(rec)
-        else
-            mf_rec = rec
-        end
+        mf_rec = mf(rec) 
+        
         forward_v = forward(mf_rec)
         forward_v_ex = center_extract(forward_v, size(measured))
         loss_v = loss(forward_v_ex, measured)
         # handle if there is a regularizer
-        if regularizer != nothing
-            reg_v = regularizer(mf_rec)
-            out = loss_v + λ * reg_v
-        else
-            out = loss_v
-        end
-        return out 
+        
+        loss_v += λ .* regularizer(mf_rec) 
+        return loss_v 
     end
+    # nice precompilation before calling Zygote etc.
+    total_loss(rec0)
 
     
     # this is the function which will be provided to Optimize
@@ -268,6 +264,46 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     res_out = center_extract(res_out, size(measured))    
     return res_out, res
 end
+
+
+"""
+    richardson_lucy_iterative(measured, psf; <keyword arguments)
+
+Classical iterative Richardson-Lucy iteration scheme for deconvolution.
+`measured` is the measured array and `psf` the point spread function.
+Converges slower than the optimization approach of `deconvolution`
+
+# Arguments
+- `regularizer=GR()`: A regularizer function. Can be exchanged
+- `λ=0.05`: A float indicating the total weighting of the regularizer with 
+    respect to the global loss function
+- `iterations=20`: Specifies number of iterations.
+
+"""
+function richardson_lucy_iterative(measured, psf; 
+                                   regularizer=GR(),
+                                   λ=0.005,
+                                   iterations=20,
+                                   fft_dims=1:ndims(psf))
+
+    otf, conv = plan_conv_r(psf, measured, fft_dims) 
+    otf_conj = conj.(otf)
+    
+    ∇reg(x) = gradient(regularizer, x)[1]
+
+    iter_without_reg(rec) = (conv(measured ./ (conv(rec, otf)), otf_conj))
+    iter_with_reg(rec) =  (iter_without_reg(rec) .- λ .* Base.invokelatest(∇reg, rec))
+
+    iter = isnothing(regularizer) ? iter_without_reg : iter_with_reg
+
+    rec = conv_otf_r(measured, otf) 
+    for i in 1:iterations
+        rec = rec .* iter(rec)
+    end
+
+    return rec
+end
+
 
 # end module
 end
