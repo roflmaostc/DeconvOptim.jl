@@ -23,11 +23,11 @@ end
 Performs a FFT-based convolution of an `obj`
 with an `otf`. `otf = fft(psf)`. The 0 frequency of the `otf` must be located
 at position [1, 1, 1].
-The `obj` can be of arbitrary dimension but `ndims(psf) ≥ ndims(otf)`.
+The `obj` can be of arbitrary dimension but `ndims(obj) ≥ ndims(otf)`.
 The convolution happens over the `dims` array. Any further dimensions are broadcasted.
-Per default `dims = 1:ndims(psf)`.
+Per default `dims = 1:ndims(otf)`.
 """
-function conv_otf(obj, otf, dims=1:ndims(psf))
+function conv_otf(obj, otf, dims=1:ndims(otf))
     return real.(ifft(fft(obj, dims) .* otf, dims))
 end
 
@@ -39,7 +39,7 @@ Performs a FFT-based convolution of an `obj`
 with an `otf`.
 Same arguments as `conv_otf` but with `obj` being real and `otf=rfft(psf)`.
 """
-function conv_otf_r(obj, otf, dims=1:ndims(psf))
+function conv_otf_r(obj, otf, dims=1:ndims(otf))
     return real.(irfft(rfft(obj, dims) .* otf, size(obj)[dims[1]], dims))
 end
 
