@@ -216,7 +216,7 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
         return loss_v 
     end
     # nice precompilation before calling Zygote etc.
-    total_loss(rec0)
+    Base.invokelatest(total_loss, rec0)
 
     
     # this is the function which will be provided to Optimize
@@ -298,7 +298,7 @@ function richardson_lucy_iterative(measured, psf;
 
     rec = conv_otf_r(measured, otf) 
     for i in 1:iterations
-        rec = rec .* iter(rec)
+        rec .*= iter(rec)
     end
 
     return rec
