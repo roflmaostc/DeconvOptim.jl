@@ -2,6 +2,7 @@ using DeconvOptim
 using Test
 using FFTW, Noise, Statistics, Zygote
 using Random
+using TestImages, Noise
 
  # fix seed for reproducibility
 Random.seed!(42)

@@ -52,3 +52,31 @@
     @test all(≈(res[:, :, 1, :], res[:, :, 2, :], rtol=0.1))
 
 end
+
+
+
+
+@testset "Compare optimization with iterative lucy richardson scheme" begin
+
+    img = Float32.(testimage("resolution_test_512"));
+    psf = Float32.(generate_psf(size(img), 30));
+    img_b = conv_psf(img, psf);
+    img_n = poisson(img_b, 300);
+
+    reg = GR()
+    res = richardson_lucy_iterative(img_n, psf, regularizer=reg, iterations=200);
+    res2, o = deconvolution(img_n, psf, regularizer=reg, iterations=20);
+    @test res .+ 1 ≈ res2 .+ 1
+    
+    reg = TV()
+    res = richardson_lucy_iterative(img_n, psf, iterations=500, λ=0.005, regularizer=reg);
+    res2, o = deconvolution(img_n, psf, iterations=35, regularizer=reg, λ=0.005);
+    @test ≈(res2 .+1, res .+ 1, rtol=0.02)
+
+    reg = nothing 
+    res = richardson_lucy_iterative(img_n, psf, regularizer=reg, iterations=400);
+    res2, o = deconvolution(img_n, psf, regularizer=reg, iterations=40);
+    @test ≈(res2 .+1, res .+ 1, rtol=0.02)
+
+
+end
