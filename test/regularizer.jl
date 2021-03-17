@@ -4,7 +4,10 @@ end
 
 @testset "generate_laplace" begin
     x = DeconvOptim.generate_laplace(2, [1, 2], [4 , 5], debug=true)
-    @test x==Any[:(res = abs2((4 * arr[i1 + 1, i2] + 4 * arr[i1 + -1, i2]) + (5 * arr[i1, i2 + 1] + 5 * arr[i1, i2 + -1]) + -(36* arr[i1, i2])))]
+    @test x==Any[:(res = abs2((4 * arr[i1 + 1, i2] + 4 * arr[i1 + -1, i2]) + (5 * arr[i1, i2 + 1] + 5 * arr[i1, i2 + -1]) + -(18* arr[i1, i2])))]
+    x = DeconvOptim.generate_laplace(2, [1, 2], [1 , 1], debug=true)
+    @test x==Any[:(res = abs2((1 * arr[i1 + 1, i2] + 1 * arr[i1 + -1, i2]) + (1 * arr[i1, i2 + 1] + 1 * arr[i1, i2 + -1]) + -(4 * arr[i1, i2])))]
+    
 end
 
 @testset "Tikhonov" begin

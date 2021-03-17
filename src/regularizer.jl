@@ -5,6 +5,9 @@ export Tikhonov, GR, TV
 export generate_spatial_grad_square, generate_GR, generate_TV
 
 
+include("hessian_schatten_norm.jl")
+
+
  # General hint
  # for the creation of the regularizers we are using meta programming
  # because the fastest way for automatic differentiation and Zygote
@@ -72,7 +75,7 @@ function generate_laplace(num_dims, sum_dims_arr, weights; debug=false)
         i = Symbol(:i, di)
     end
     # subtract this final term
-    pre_factor = 2 ^ num_dims * sum(weights)
+    pre_factor = 2 .* sum(weights)
     push!(add, :(-$:($pre_factor * arr[$(inds...)])))
     # create final expressions by adding all elements of the add list
     if debug
