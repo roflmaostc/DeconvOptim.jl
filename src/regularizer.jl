@@ -1,7 +1,7 @@
 using Zygote
 using Tullio
 
-export Tikhonov, GR, TV
+export Tikhonov, GR, TV, TH
 export generate_spatial_grad_square, generate_GR, generate_TV
 
 
