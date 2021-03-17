@@ -308,3 +308,31 @@ function TV(; num_dims=2, sum_dims=[1, 2], weights=nothing, step=1, mode="centra
     return total_var
 end
 
+
+"""
+    TH(; <keyword arguments>)
+This function returns a function to calculate the Total Hessian norm
+of a n-dimensional array.
+
+# Arguments
+- `num_dims=2`: 
+
+"""
+function TH(; num_dims=2, ϵ=1f-8)
+    if num_dims == 3
+        reg_HES = x -> @tullio res = sqrt(1f-8 + abs2(x[i+1,j,k] + x[i-1,j,k] - 2* x[i,j,k]) + 
+                                               abs2(x[i,j+1,k] + x[i,j-1,k] - 2* x[i,j,k]) + 
+                                               abs2(x[i,j,k+1] + x[i,j,k-1] - 2* x[i,j,k]) + 
+                                               2 * abs2(x[i+1,j+1,k] - x[i+1,j,k] - x[i,j+1,k]  + x[i, j,k]) +
+                                               2 * abs2(x[i+1,j,k+1] - x[i+1,j,k] - x[i,j,k+1]  + x[i, j,k]) +
+                                               2 * abs2(x[i,j+1,k+1] - x[i,j,k+1] - x[i,j,k+1]  + x[i, j,k]))
+        return reg_HES
+    elseif num_dims == 2 
+        reg_HES = x -> @tullio res = sqrt(1f-8 + abs2(x[i+1, j] + x[i-1, j] - 2* x[i, j]) + 
+                                              abs2(x[i,j+1] + x[i, j-1] - 2* x[i, j]) + 
+                                              2 * abs2(x[i+1, j+1] - x[i+1, j] - x[i, j+1]  + x[i, j]))
+        return reg_HES
+    else
+        throw(ArgumentError("num_dims must be 2 or 3"))
+    end
+end
