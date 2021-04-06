@@ -4,7 +4,7 @@ export invert
 function invert(measured, rec0, forward; 
                 iterations=10, λ=0.05,
                 regularizer=TV(num_dims=3, sum_dims=3),
-                optim_optimizer=LBFGS(linesearch=LineSearches.HagerZhang()),
+                optim_optimizer=LBFGS(linesearch=LineSearches.BackTracking()),
                 optim_options=nothing,
                 mapping=Non_negative(),
                 loss=Poisson())
@@ -15,7 +15,7 @@ function invert(measured, rec0, forward;
     end
 
 
-    λ = oftype(rec0[1], λ)
+    λ = eltype(rec0)(λ)
     
     # Get the mapping functions to achieve constraints
     # like non negativity
