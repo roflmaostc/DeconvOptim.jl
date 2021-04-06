@@ -28,7 +28,9 @@ The convolution happens over the `dims` array. Any further dimensions are broadc
 Per default `dims = 1:ndims(otf)`.
 """
 function conv_otf(obj, otf, dims=1:ndims(otf))
-    return real.(ifft(fft(obj, dims) .* otf, dims))
+    obj_f = fft(obj, dims)
+    obj_f .*= otf
+    return real.(ifft(obj_f, dims))
 end
 
 
@@ -383,4 +385,23 @@ function rr_2D(s)
         end
     end
     return rarr
+end
+
+
+
+function get_mapping(mapping)
+    return mapping[1], mapping[2]
+end
+
+function get_mapping(mapping::Nothing)
+    return identity, identity
+end
+
+
+function get_regularizer(reg, etype)
+    return reg 
+end
+
+function get_regularizer(reg::Nothing, etype)
+    x -> zero(etype)
 end
