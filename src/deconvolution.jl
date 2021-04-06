@@ -54,7 +54,7 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
         plan_fft=true,
         padding=0.00,
         optim_options=nothing,
-        optim_optimizer=LBFGS(),
+        optim_optimizer=LBFGS(linesearch=BackTracking()),
         ) where {T, N}
 
     background = convert(eltype(measured), background) 

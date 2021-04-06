@@ -65,7 +65,7 @@ end
 
     reg = GR()
     res = richardson_lucy_iterative(img_n, psf, regularizer=reg, iterations=200);
-    res2, o = deconvolution(img_n, psf, regularizer=reg, iterations=20);
+    res2, o = deconvolution(img_n, psf, regularizer=reg, iterations=30);
     @test res .+ 1 ≈ res2 .+ 1
     
     reg = TV()
