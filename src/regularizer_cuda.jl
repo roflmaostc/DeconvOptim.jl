@@ -1,5 +1,8 @@
 export TV_cuda
 
+f_inds(rs, b) = ntuple(i -> i == b ? rs[i] .+ 1 : rs[i], length(rs))
+
+
 """
     TV_cuda(; num_dims=2)
 This function returns a function to calculate the Total Variation regularizer 
@@ -17,26 +20,33 @@ julia> reg(CuArray([1 2 3; 4 5 6; 7 8 9]))
 """
 function TV_cuda(; num_dims=2)
     if num_dims == 3
-        reg_TV = x -> begin
-            x2 = x
-            x3 = x
-            x4 = x
-            return sum(@tullio res[i, j, k] := sqrt(1f-8 + 
-                                         abs2(x[i,j,k] - x2[i+1,j,k]) +
-                                         abs2(x[i,j,k] - x3[i,j+1,k]) +
-                                         abs2(x[i,j,k] - x4[i,j,k+1])))
-        end
+        return TV_3D_view
     elseif num_dims == 2
-        reg_TV = x -> begin
-            x2 = x
-            x3 = x
-            return sum(@tullio res[i, j] := sqrt(1f-8 + 
-                                         abs2(x[i,j] - x2[i+1,j]) +
-                                         abs2(x[i,j] - x3[i,j+1])))
-        end
+        return TV_2D_view
     else
         throw(ArgumentError("num_dims must be 2 or 3"))
     end
     
     return reg_TV
+end
+
+function TV_2D_view(arr::AbstractArray{T, N}) where {T, N}
+    as = ntuple(i -> axes(arr, i), Val(N))
+    rs = map(x -> first(x):last(x)-1, as)
+    arr0 = view(arr, f_inds(rs, 0)...)
+    arr1 = view(arr, f_inds(rs, 1)...)
+    arr2 = view(arr, f_inds(rs, 2)...)
+    
+    return @fastmath sum(sqrt.(1f-8 .+ (arr1 .- arr0).^2 .+ (arr0 .- arr2).^2))
+end
+
+function TV_3D_view(arr::AbstractArray{T, N}) where {T, N}
+    as = ntuple(i -> axes(arr, i), Val(N))
+    rs = map(x -> first(x):last(x)-1, as)
+    arr0 = view(arr, f_inds(rs, 0)...)
+    arr1 = view(arr, f_inds(rs, 1)...)
+    arr2 = view(arr, f_inds(rs, 2)...)
+    arr3 = view(arr, f_inds(rs, 3)...)
+    
+    return @fastmath sum(sqrt.(1f-8 .+  (arr3 .- arr0).^2 .+ (arr1 .- arr0).^2 .+ (arr0 .- arr2).^2))
 end

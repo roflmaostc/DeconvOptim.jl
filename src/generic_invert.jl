@@ -42,7 +42,7 @@ function invert(measured, rec0, forward;
     # This leads to the common "world age problem" in Julia
     # for more details on that check:
     # https://discourse.julialang.org/t/dynamically-create-a-function-initial-idea-with-eval-failed-due-to-world-age-issue/49139/17
- function f!(F, G, rec)
+    function f!(F, G, rec)
         # Zygote calculates both derivative and loss, therefore do everything in one step
         if G != nothing
             y, back = Base.invokelatest(Zygote._pullback, total_loss, rec)
