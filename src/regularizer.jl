@@ -320,7 +320,7 @@ of a n-dimensional array.
 """
 function TH(; num_dims=2, ϵ=1f-8)
     if num_dims == 3
-        reg_HES = x -> @tullio res = sqrt(1f-8 + abs2(x[i+1,j,k] + x[i-1,j,k] - 2* x[i,j,k]) + 
+        reg_HES = x -> @tullio res = sqrt(ϵ + abs2(x[i+1,j,k] + x[i-1,j,k] - 2* x[i,j,k]) + 
                                                abs2(x[i,j+1,k] + x[i,j-1,k] - 2* x[i,j,k]) + 
                                                abs2(x[i,j,k+1] + x[i,j,k-1] - 2* x[i,j,k]) + 
                                                2 * abs2(x[i+1,j+1,k] - x[i+1,j,k] - x[i,j+1,k]  + x[i, j,k]) +
@@ -328,7 +328,7 @@ function TH(; num_dims=2, ϵ=1f-8)
                                                2 * abs2(x[i,j+1,k+1] - x[i,j,k+1] - x[i,j,k+1]  + x[i, j,k]))
         return reg_HES
     elseif num_dims == 2 
-        reg_HES = x -> @tullio res = sqrt(1f-8 + abs2(x[i+1, j] + x[i-1, j] - 2* x[i, j]) + 
+        reg_HES = x -> @tullio res = sqrt(ϵ + abs2(x[i+1, j] + x[i-1, j] - 2* x[i, j]) + 
                                               abs2(x[i,j+1] + x[i, j-1] - 2* x[i, j]) + 
                                               2 * abs2(x[i+1, j+1] - x[i+1, j] - x[i, j+1]  + x[i, j]))
         return reg_HES
