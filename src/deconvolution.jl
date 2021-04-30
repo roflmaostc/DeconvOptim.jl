@@ -19,6 +19,8 @@ regularizers and mappings.
               parabola which achieves a non-negativity constraint.
 - `iterations=20`: Specifies a number of iterations after the optimization.
     definitely should stop.
+- `conv_dims`: A tuple indicating over which dimensions the convolution should happen.
+               per default `conv_dims=1:ndims(psf)`
 - `plan_fft=true`: Boolean whether plan_fft is used. Gives a slight speed improvement.
 - `padding=0`: an float indicating the amount (fraction of the size in that dimension) 
         of padded regions around the reconstruction. Prevents wrap around effects of the FFT.
@@ -51,6 +53,7 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
         background=0,
         mapping=Non_negative(),
         iterations=20,
+        conv_dims = ntuple(+, ndims(psf)), 
         plan_fft=true,
         padding=0.00,
         optim_options=nothing,
@@ -87,8 +90,6 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     end
 
 
-    # the dimensions we do the Fourier Transform over
-    fft_dims = collect(1:ndims(psf)) 
 
     # we divide by the maximum to normalize
     rescaling = maximum(measured) 
@@ -98,7 +99,7 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     fill!(rec0, zero(eltype(measured))) 
     
     # alternative rec0_center, unused at the moment
-    #rec0_center = m_invf(abs.(conv_psf(measured, psf, fft_dims)))
+    #rec0_center = m_invf(abs.(conv_psf(measured, psf, conv_dims)))
     #
     # take the mean as the initial guess
     # therefore has the same total energy at the initial guess as
@@ -134,10 +135,10 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     if plan_fft
         # otf is obtained by rfft(psf)
         # therefore size(psf) != size(otf)
-        otf, conv = plan_conv_r(psf, rec0, fft_dims) 
+        otf, conv = plan_conv_r(psf, rec0, conv_dims) 
     else
-        otf = rfft(psf, fft_dims)
-        conv(rec, otf) = conv_otf_r(rec, otf, fft_dims)
+        otf = rfft(psf, conv_dims)
+        conv(rec, otf) = conv_otf_r(rec, otf, conv_dims)
     end
     
 
