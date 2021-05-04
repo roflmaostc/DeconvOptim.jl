@@ -6,7 +6,6 @@ function __init__()
         @info "DeconvOptim.jl: CUDA.jl is loaded, so include GPU functionality. Additionally load KernelAbstractions.jl"
         # need to import it within this package so that Tullio can generate together with KernelAbstractions.jl
         # fast GPU regularizers
-        using CUDA 
         
         gpu_or_cpu(x) = CUDA.CuArray
         isgpu(x::CUDA.CuArray) = true
