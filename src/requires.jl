@@ -3,9 +3,7 @@ isgpu(x) = false
 
 function __init__()
     @require CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba" begin
-        @info "DeconvOptim.jl: CUDA.jl is loaded, so include GPU functionality. Additionally load KernelAbstractions.jl"
-        # need to import it within this package so that Tullio can generate together with KernelAbstractions.jl
-        # fast GPU regularizers
+        @info "DeconvOptim.jl: CUDA.jl is loaded, so include GPU functionality"
         
         gpu_or_cpu(x) = CUDA.CuArray
         isgpu(x::CUDA.CuArray) = true
@@ -20,8 +18,5 @@ function __init__()
 
         # special CUDA regularizers
         include("regularizer_cuda.jl")
-    
     end
-
-
 end
