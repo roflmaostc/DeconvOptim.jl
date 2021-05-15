@@ -32,6 +32,8 @@ gpu_or_cpu(x) = Array
 include("forward_models.jl")
 include("lossfunctions.jl")
 include("mappings.jl")
+# special CUDA regularizers
+include("regularizer_cuda.jl")
 include("regularizer.jl")
 include("utils.jl")
 include("generic_invert.jl")

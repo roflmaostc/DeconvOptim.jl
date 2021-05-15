@@ -16,7 +16,5 @@ function __init__()
         LinearAlgebra.normInf(x::CUDA.CuArray{T,N}) where {T,N} = maximum(abs, x); # specializes the one-norm
         Optim.maxdiff(x::CUDA.CuArray{T,N},y::CUDA.CuArray{T,N}) where {T,N} = maximum(abs.(x-y));
 
-        # special CUDA regularizers
-        include("regularizer_cuda.jl")
     end
 end
