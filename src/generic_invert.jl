@@ -1,9 +1,31 @@
 export invert 
 
+"""
+    invert(measured, rec0, forward; <keyword arguments>)
 
+Tries to invert the `forward` model. `forward` is a function taking 
+an input with the shape of `rec0` and returns an object which has the 
+same shape as `measured`
+
+Multiple keyword arguments can be specified for different loss functions,
+regularizers and mappings.
+
+# Arguments
+- `loss=Poisson()`: the loss function being compatible to compare with `measured`.
+- `regularizer=nothing`: A regularizer function, same form as `loss`.
+- `λ=0.05`: A float indicating the total weighting of the regularizer with 
+    respect to the global loss function
+- `mapping=Non_negative()`: Applies a mapping of the optimizer weight. Default is a 
+              parabola which achieves a non-negativity constraint.
+- `iterations=10`: Specifies a number of iterations after the optimization.
+    definitely should stop. Will be overwritten if `optim_options` is provided.
+- `optim_options=nothing`: Can be a options file required by Optim.jl. Will overwrite iterations.
+- `optim_optimizer=LBFGS()`: The chosen Optim.jl optimizer. 
+
+"""
 function invert(measured, rec0, forward; 
                 iterations=10, λ=0.05,
-                regularizer=TV(num_dims=3, sum_dims=3),
+                regularizer=nothing,
                 optim_optimizer=LBFGS(linesearch=LineSearches.BackTracking()),
                 optim_options=nothing,
                 mapping=Non_negative(),
@@ -35,7 +57,7 @@ function invert(measured, rec0, forward;
     Base.invokelatest(total_loss, rec0)
 
     # see here https://github.com/FluxML/Zygote.jl/issues/342
-    take_real_or_not(g) = real_gradient ? real(g) : g
+    take_real_or_not(g) = real_gradient ? real.(g) : g
 
     # this is the function which will be provided to Optimize
     # check Optim's documentation for the purpose of F and Get
