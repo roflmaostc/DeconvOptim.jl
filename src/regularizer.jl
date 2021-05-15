@@ -156,7 +156,7 @@ julia> reg([1 2 3; 4 5 6; 7 8 9])
 285
 ```
 """
-function Tikhonov(;num_dims=2, sum_dims=[1, 2], weights=[1, 1], step=1, mode="laplace")
+function Tikhonov(;num_dims=2, sum_dims=1:sum_dims, weights=[1, 1], step=1, mode="laplace")
     if weights == nothing
         weights = ones(Int, num_dims)
     end
@@ -233,7 +233,7 @@ julia> reg([1 2 3; 4 5 6; 7 8 9])
 -26.36561871738898
 ```
 """
-function GR(; num_dims=2, sum_dims=[1, 2], weights=[1, 1], step=1,
+function GR(; num_dims=2, sum_dims=1:num_dims, weights=[1, 1], step=1,
               mode="central", ϵ=1f-8)
     if weights == nothing
         weights = ones(Int, num_dims)
@@ -288,7 +288,7 @@ This function returns a function to calculate the Total Variation regularizer
 of a n-dimensional array. 
 # Arguments
 - `num_dims=2`: 
-- `sum_dims=[1, 2]`: A array containing the dimensions we want to sum over
+- `sum_dims=1:num_dims`: A array containing the dimensions we want to sum over
 - `weights=nothing`: A array containing weights to weight the contribution of 
     different dimensions. If `weights=nothing` all dimensions are weighted equally.
 - `step=1`: A integer indicating the step width for the array indexing
@@ -306,7 +306,7 @@ julia> reg([1 2 3; 4 5 6; 7 8 9])
 12.649111f0
 ```
 """
-function TV(; num_dims=2, sum_dims=[1, 2], weights=nothing, step=1, mode="central", ϵ=1f-8)
+function TV(; num_dims=2, sum_dims=1:num_dims, weights=nothing, step=1, mode="central", ϵ=1f-8)
     
     if weights == nothing
         weights = ones(Int, num_dims)

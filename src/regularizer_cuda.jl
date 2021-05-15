@@ -36,7 +36,6 @@ function TV_2D_view(arr::AbstractArray{T, N}, weights, ϵ=1f-8) where {T, N}
     arr0 = view(arr, f_inds(rs, 0)...)
     arr1 = view(arr, f_inds(rs, 1)...)
     arr2 = view(arr, f_inds(rs, 2)...)
-    
     return @fastmath sum(sqrt.(ϵ .+ weights[1] .* (arr1 .- arr0).^2 .+ weights[2] .* (arr0 .- arr2).^2))
 end
 
@@ -47,7 +46,6 @@ function TV_3D_view(arr::AbstractArray{T, N}, weights, ϵ=1f-8) where {T, N}
     arr1 = view(arr, f_inds(rs, 1)...)
     arr2 = view(arr, f_inds(rs, 2)...)
     arr3 = view(arr, f_inds(rs, 3)...)
-    
     return @fastmath sum(sqrt.(ϵ .+ weights[1] .* (arr1 .- arr0).^2 .+ 
-                               weights[2] .* (arr2 .- arr1).^2 .+  weights[3] .* (arr3 .- arr0).^2 ))
+                               weights[2] .* (arr2 .- arr0).^2 .+  weights[3] .* (arr3 .- arr0).^2 ))
 end
