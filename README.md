@@ -59,16 +59,8 @@ We demonstrate the effect of different regularizers. There is also a [CUDA examp
 Using regularizers together with a CUDA GPU is faster but unfortunately only a factor of ~5-10.
 For [3D](examples/cuda_3D.ipynb) the speed-up is larger.
 
-## Development
-
-The package is developed at [GitHub](https://www.github.com/roflmaostc/DeconvOptim.jl). There
-you can submit bug reports and make suggestions. 
-
-
-## Contributions
-I would like to thank [Rainer Heintzmann](https://nanoimaging.de/) for the great support and discussions during development.
-Furthermore without [Tullio.jl](https://github.com/mcabbott/Tullio.jl) and [@mcabbott](https://github.com/mcabbott/) this package wouldn't be as fast as it is. His package and ideas are the basis for the implementations of the regularizers.
-
+## CUDA
+For CUDA we only provide a Total variation regularizer via `TV_cuda`. The reason is that Tullio.jl is currently not very fast with `CuArray`s.
 
 ## Performance Tips
 ### Regularizers
@@ -81,8 +73,11 @@ And in the new cell then use:
 res, o = deconvolution(img_n, psf, regularizer=reg)
 ```
 
-## To-Dos
-* [ ] Update documentation regarding GPU usage. 
+
+## Contributions
+I would like to thank [Rainer Heintzmann](https://nanoimaging.de/) for the great support and discussions during development.
+Furthermore without [Tullio.jl](https://github.com/mcabbott/Tullio.jl) and [@mcabbott](https://github.com/mcabbott/) this package wouldn't be as fast as it is. His package and ideas are the basis for the implementations of the regularizers.
+
 
 
 [docs-dev-img]: https://img.shields.io/badge/docs-dev-orange.svg 
