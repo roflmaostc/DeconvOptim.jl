@@ -40,13 +40,15 @@ psf = generate_psf(size(img), 30)
 img_b = conv_psf(img, psf)
 img_n = poisson(img_b, 300)
 
+# define regularizer before
+regularizer = GR()
+
 # deconvolve 2D with default options
-@time res, o = deconvolution(img_n, psf)
+@time res, o = deconvolution(img_n, psf, regularizer=regularizer)
 
 # show final results next to original and blurred version
-colorview(Gray, [img img_n res])
+Gray.([img img_n res])
 ```
 
 Left image is the sample. In the middle we display the the noisy and blurred version captured with an optical system. The right image is the deconvolved image with default options.
 ![](assets/quick_example_results.png)
-
