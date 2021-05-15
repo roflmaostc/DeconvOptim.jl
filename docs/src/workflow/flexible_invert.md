@@ -1,6 +1,6 @@
-# Flexible Invert
+# More complex Invert
 We also provide functionality to invert problems which are not a straightforward deconvolution
-like multi view convolution or a problem where several measurements with different properties and forward models are available. 
+like multi view deconvolution or a problem where several measurements with different properties and forward models are available. 
 The idea is that a `forward` model, a initial guess and the according measurements are in principle enough to invert the problem.
 
 ## Example
