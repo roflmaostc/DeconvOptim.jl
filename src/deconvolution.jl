@@ -2,6 +2,7 @@ export deconvolution
 
 """
     deconvolution(measured, psf; <keyword arguments>)
+
 Computes the deconvolution of `measured` and `psf`. Return parameter is a tuple with
 two elements. The first entry is the deconvolved image. The second return parameter 
 is the output of the optimization of Optim.jl
