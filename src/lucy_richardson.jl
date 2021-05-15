@@ -28,15 +28,14 @@ julia> img_n = poisson(img_b, 300);
 
 julia> @time res = richardson_lucy_iterative(img_n, psf);
 ```
-
 """
 function richardson_lucy_iterative(measured, psf; 
                                    regularizer=GR(),
                                    λ=0.05,
                                    iterations=100,
-                                   fft_dims=1:ndims(psf))
+                                   conv_dims=1:ndims(psf))
 
-    otf, conv = plan_conv_r(psf, measured, fft_dims) 
+    otf, conv = plan_conv_r(psf, measured, conv_dims) 
     otf_conj = conj.(otf)
    
     ∇reg(x) = gradient(regularizer, x)[1]
