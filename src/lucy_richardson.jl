@@ -35,7 +35,8 @@ function richardson_lucy_iterative(measured, psf;
                                    iterations=100,
                                    conv_dims=1:ndims(psf))
 
-    otf, conv = plan_conv_r(psf, measured, conv_dims) 
+    otf, conv = plan_conv_r(measured, psf, conv_dims) 
+
     otf_conj = conj.(otf)
    
     ∇reg(x) = gradient(regularizer, x)[1]

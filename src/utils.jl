@@ -47,28 +47,38 @@ end
 
 
 """
-    plan_conv_r(psf [, dims])
+    plan_conv_r(rec, psf [, dims])
 
-Pre-plan an optimized convolution for array shaped like `psf` (based on pre-plan FFT) 
+Pre-plan an optimized convolution for array shaped like `rec` (based on pre-plan FFT) 
 along the given dimenions `dims`.
 `dims = 1:ndims(psf)` per default.
 The 0 frequency of `psf` must be located at [1, 1, 1].
 We return first the `otf` (obtained by `rfft(psf))`.
 The second return is the convolution function `conv`.
-`conv` itself has two arguments. `conv(obj, otf)` where `obj` is the object and `otf` the otf.
+`conv` itself has two arguments. `conv(rec, otf)` where `rec` is the object and `otf` the otf.
 
-This function achieves faster convolution than `conv_psf(obj, psf)`.
+This function achieves faster convolution than `conv_psf(rec, psf)`.
+```julia
+julia> rec = ones((10, 10, 10));
+
+julia> psf = randn((10, 10));
+
+julia> otf, conv = plan_conv_r(rec, psf);
+
+julia> conv(rec, otf) ≈ conv_psf(rec, psf)
+true
+```
 """
-function plan_conv_r(psf, rec0, dims=1:ndims(psf))
+function plan_conv_r(rec, psf, dims=1:ndims(psf))
     # do the preplanning step
-    P = plan_rfft(rec0, dims)
-    rec0_fft = P * rec0 
-    P_inv = plan_irfft(rec0_fft, size(psf)[dims[1]], dims)
+    P = plan_rfft(rec, dims)
+    rec_fft = P * rec 
+    P_inv = plan_irfft(rec_fft, size(rec)[dims[1]], dims)
     
     # obtain the otf by real based fft
     otf = rfft(psf, dims)
     # construct the efficient conv function
-    conv(obj, otf) = real.(P_inv * ((P * obj) .* otf))
+    conv(obj, otf) = P_inv.scale .* (P_inv.p * ((P * obj) .* otf))
 
     return otf, conv
 end

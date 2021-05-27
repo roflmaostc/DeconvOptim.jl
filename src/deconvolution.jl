@@ -136,7 +136,7 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     if plan_fft
         # otf is obtained by rfft(psf)
         # therefore size(psf) != size(otf)
-        otf, conv = plan_conv_r(psf, rec0, conv_dims) 
+        otf, conv = plan_conv_r(rec0, psf, conv_dims) 
     else
         otf = rfft(psf, conv_dims)
         conv(rec, otf) = conv_otf_r(rec, otf, conv_dims)

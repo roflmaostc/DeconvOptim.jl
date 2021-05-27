@@ -58,7 +58,7 @@ end
     function conv_test(psf, img, img_out, dims, s)
         otf = fft(psf, dims)
         otf_r = rfft(psf, dims)
-        otf_p, conv_p = plan_conv_r(psf, img, dims)
+        otf_p, conv_p = plan_conv_r(img, psf, dims)
         @testset "$s" begin
             @test img_out ≈ conv_psf(img, psf, dims)
             @test img_out ≈ conv_otf(img, otf, dims)
