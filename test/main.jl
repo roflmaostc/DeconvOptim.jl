@@ -8,8 +8,8 @@
 
     #= @show deconvolution(img, psf, λ=0.01)[1] =#
     @test all(≈(res, deconvolution(img, psf, λ=0.01)[1], rtol=0.1))
-    @test all(≈(res, deconvolution(img, psf, plan_fft=false, λ=0.01)[1], rtol=0.1))
-    @test all(≈(res, deconvolution(img, psf, plan_fft=false, λ=0.01, iterations=20)[1], rtol=0.1))
+    @test all(≈(res, deconvolution(img, psf, λ=0.01)[1], rtol=0.1))
+    @test all(≈(res, deconvolution(img, psf, λ=0.01, iterations=20)[1], rtol=0.1))
 
     # testing regularizer
     res2 = [4.188270526990536 5.999388400251461e-10 2.8299849680327642e-8; 1.725273124171714e-7 2.54195544512864 2.0216187854619135e-9; 9.594324085846738e-10 1.2000166997002865e-8 0.7863126081711094] 
@@ -60,7 +60,7 @@ end
 
     img = Float32.(testimage("resolution_test_512"));
     psf = Float32.(generate_psf(size(img), 30));
-    img_b = conv_psf(img, psf);
+    img_b = conv(img, psf);
     img_n = poisson(img_b, 300);
 
     reg = GR()

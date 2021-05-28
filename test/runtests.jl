@@ -12,6 +12,7 @@ Random.seed!(42)
 end
 
 
+include("conv.jl")
 include("mappings.jl")
 
 include("forward_models.jl")

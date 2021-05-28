@@ -55,7 +55,6 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
         mapping=Non_negative(),
         iterations=20,
         conv_dims = ntuple(+, ndims(psf)), 
-        plan_fft=true,
         padding=0.00,
         optim_options=nothing,
         optim_optimizer=LBFGS(linesearch=BackTracking()),
@@ -131,23 +130,14 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     # the psf should be normalized to 1
     psf ./= sum(psf)
 
-    # use plan_fft (function of the FFTW.jl has the same name)
-    # for speed improvement
-    if plan_fft
-        # otf is obtained by rfft(psf)
-        # therefore size(psf) != size(otf)
-        otf, conv = plan_conv_r(rec0, psf, conv_dims) 
-    else
-        otf = rfft(psf, conv_dims)
-        conv(rec, otf) = conv_otf_r(rec, otf, conv_dims)
-    end
+    otf, conv_temp = plan_conv(rec0, psf, conv_dims) 
     
 
     # forward model is a convolution
     # due to numerics, we need to clip at 0
     # analytically it's a convolution psf ≥ 0 and image ≥ 0
     # so it must be conv(psf, image) ≥ 0
-    forward(x) = center_extract((conv_aux(conv, x, otf)) .+ background, size(measured))
+    forward(x) = center_extract((conv_aux(conv_temp, x, otf)) .+ background, size(measured))
    
     # pass to more general optimization
     res_out, res = invert(measured, rec0, forward;
