@@ -2,10 +2,10 @@
 
 ## Convolution Functions
 ```@docs
+conv
 conv_psf
-conv_otf
-conv_otf_r
-plan_conv_r
+plan_conv
+plan_conv_psf
 ```
 
 
