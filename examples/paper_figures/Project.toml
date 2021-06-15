@@ -1,0 +1,5 @@
+[deps]
+DeconvOptim = "03e7cd2f-1a03-4ea9-b59b-760a446df67f"
+PGFPlotsX = "8314cec4-20b6-5062-9cdb-752b83310925"
+Pluto = "c3e4b0f8-55cb-11ea-2926-15256bba5781"
+Tullio = "bc48ee85-29a4-5162-ae0b-a64e1601d4bc"
