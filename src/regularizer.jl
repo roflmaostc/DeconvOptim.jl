@@ -156,7 +156,7 @@ julia> reg([1 2 3; 4 5 6; 7 8 9])
 285
 ```
 """
-function Tikhonov(;num_dims=2, sum_dims=1:sum_dims, weights=[1, 1], step=1, mode="laplace")
+function Tikhonov(;num_dims=2, sum_dims=1:num_dims, weights=[1, 1], step=1, mode="laplace")
     if weights == nothing
         weights = ones(Int, num_dims)
     end
