@@ -35,21 +35,38 @@ function richardson_lucy_iterative(measured, psf;
                                    iterations=100,
                                    conv_dims=1:ndims(psf))
 
+
     otf, conv_temp = plan_conv(measured, psf, conv_dims) 
-
     otf_conj = conj.(otf)
-   
-    ∇reg(x) = gradient(regularizer, x)[1]
+    # initializer
+    rec = abs.(conv_temp(measured, otf))#ones(eltype(measured), size(measured))
+    
+    # buffer for gradient
 
-    iter_without_reg(rec) = (conv_temp(measured ./ (conv_temp(rec, otf)), otf_conj))
-    iter_with_reg(rec) =  (iter_without_reg(rec) .- λ .* Base.invokelatest(∇reg, rec))
+    buffer_grad =  let 
+        if !isnothing(regularizer)
+            gradient(regularizer, rec)[1]
+        else
+            nothing
+        end
+    end
+
+    ∇reg(x) = buffer_grad .= gradient(regularizer, x)[1]
+
+    buffer = copy(measured)
+
+    iter_without_reg(rec) = begin
+        buffer .= measured ./ (conv_temp(rec, otf))
+        conv_temp(buffer, otf_conj)
+    end
+    iter_with_reg(rec) = buffer .= (iter_without_reg(rec) .- λ .* Base.invokelatest(∇reg, rec))
 
     iter = isnothing(regularizer) ? iter_without_reg : iter_with_reg
 
-    rec = abs.(conv_temp(measured, otf))
     for i in 1:iterations
         rec .*= iter(rec)
     end
+
 
     return rec
 end
