@@ -174,7 +174,7 @@ function center_extract(arr::AbstractArray, new_size_array)
     
     # out_indices2 contains just ranges covering the full size of each dimension
     out_indices2 = [1:size(arr)[i] for i = (1 + length(new_size_array)):ndims(arr)]
-    return arr[out_indices1..., out_indices2...]
+    return view(arr, out_indices1..., out_indices2...)
 end
 
 function ChainRulesCore.rrule(::typeof(center_extract), arr, new_size_array)
