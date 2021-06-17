@@ -6,8 +6,7 @@
     img = randn((N, N))
     
     c(img, psf) = conv(img, psf, [1, 2])
-    conv_temp(img, psf) = DeconvOptim.conv_aux(c, img, psf)
-
+    conv_temp = c
     @test conv_temp(img, psf) ≈ img 
     s(img, psf) = sum(conv_temp(img, psf))
     

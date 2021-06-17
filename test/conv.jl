@@ -13,8 +13,8 @@
             @test img_out ≈ conv(img, psf, dims)
             @test img_out ≈ conv_p(img, otf_p)
             @test img_out ≈ conv_p(img)
-            @test img_out ≈ conv_p2(img, otf_p2)
-            @test img_out ≈ conv_p2(img)
+            @test img_out ≈ conv_p2(img .+ 0.0im, otf_p2)
+            @test img_out ≈ conv_p2(img .+ 0.0im)
             @test img_out ≈ conv_psf(img, fftshift(psf, dims), dims)
             @test img_out ≈ conv_p3(img)
         end
@@ -93,7 +93,7 @@
 
         y_ft, p = plan_conv(x, y)
         @test ≈(exp(1im * 1.23) .+ conv(ones(eltype(y), size(x)), conj.(y)), exp(1im * 1.23) .+ Zygote.gradient(x -> sum(real(conv(x, y))), x)[1], rtol=1e-4)   
-        @test ≈(exp(1im * 1.23) .+ conv(ones(ComplexF32, size(x)), conj.(y)), exp(1im * 1.23) .+ Zygote.gradient(x -> sum(real(p(x, y_ft))), x)[1], rtol=1e-4) 
+        @test ≈(exp(1im * 1.23) .+ conv(ones(ComplexF32, size(x)), conj.(y)), exp(1im * 1.23) .+ Zygote.gradient(x -> sum(real(p(x))), x)[1], rtol=1e-4) 
     end
 
 
