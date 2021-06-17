@@ -24,7 +24,7 @@ regularizers and mappings.
 
 """
 function invert(measured, rec0, forward; 
-                iterations=10, λ=0.05,
+                iterations=10, λ=eltype(rec0)(0.05),
                 regularizer=nothing,
                 optim_optimizer=LBFGS(linesearch=LineSearches.BackTracking()),
                 optim_options=nothing,
@@ -38,18 +38,18 @@ function invert(measured, rec0, forward;
     end
 
 
-    λ = eltype(rec0)(λ)
     
     # Get the mapping functions to achieve constraints
     # like non negativity
     mf, m_invf = get_mapping(mapping)
     regularizer = get_regularizer(regularizer, eltype(rec0))
-
+    
+    storage_μ = copy(measured)
     function total_loss(rec)
         # handle if there is a provided mapping function
         mf_rec = mf(rec) 
         forward_v = forward(mf_rec)
-        loss_v = sum(loss(forward_v, measured))
+        loss_v = sum(loss(forward_v, measured, storage_μ))
         loss_v += λ .* regularizer(mf_rec) 
         return loss_v 
     end
@@ -58,6 +58,7 @@ function invert(measured, rec0, forward;
 
     # see here https://github.com/FluxML/Zygote.jl/issues/342
     take_real_or_not(g) = real_gradient ? real.(g) : g
+    take_real_or_not(g::AbstractArray{<:Real}) = g 
 
     # this is the function which will be provided to Optimize
     # check Optim's documentation for the purpose of F and Get
@@ -74,7 +75,6 @@ function invert(measured, rec0, forward;
             y, back = Base.invokelatest(Zygote._pullback, total_loss, rec)
             # calculate gradient
             G .= take_real_or_not(Base.invokelatest(back, 1)[2])
-
             if F != nothing
                 return y
             end
