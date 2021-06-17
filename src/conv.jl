@@ -110,14 +110,15 @@ function plan_conv(u::AbstractArray{T, N}, v::AbstractArray{T, M}, dims=ntuple(+
     plan = get_plan(T)
     # do the preplanning step
     P = plan(u, dims)
-    u_ft = P * u
+    u_ft_stor = P * u
     P_inv = inv(P)
 
     v_ft = fft_or_rfft(T)(v, dims)
+    out = copy(u)
     # construct the efficient conv function
     # P and P_inv can be understood like matrices
     # but their computation is fast
-    conv(u, v_ft=v_ft) = p_conv_aux(P, P_inv, u, v_ft)
+    conv(u, v_ft=v_ft) = p_conv_aux!(P, P_inv, u, v_ft, u_ft_stor, out)
     return v_ft, conv
 end
 
@@ -129,16 +130,28 @@ function plan_conv_psf(u::AbstractArray{T, N}, psf::AbstractArray{T, M}, dims=nt
     return plan_conv(u, ifftshift(psf, dims), dims)
 end
 
-function p_conv_aux(P, P_inv, u, v_ft)
-    return P_inv.scale .* (P_inv.p * ((P * u) .* v_ft))
+function p_conv_aux!(P, P_inv, u, v_ft, u_ft_stor, out)
+    #return P_inv.scale .* (P_inv.p * ((P * u) .* v_ft))  
+    mul!(u_ft_stor, P, u)
+    u_ft_stor .*= v_ft
+    mul!(out, P_inv.p, u_ft_stor)
+    out .*= P_inv.scale
+    return out 
 end
 
-function ChainRulesCore.rrule(::typeof(p_conv_aux), P, P_inv, u, v)
-    Y = p_conv_aux(P, P_inv, u, v) 
+function ChainRulesCore.rrule(::typeof(p_conv_aux!), P, P_inv, u, v, u_ft_stor, out)
+    Y = p_conv_aux!(P, P_inv, u, v, u_ft_stor, out)
     function conv_pullback(barx)
         z = zero(eltype(u))
-        ∇ = p_conv_aux(P, P_inv, barx, conj(v))
-        return NO_FIELDS, z, z, ∇, z
+        conj_v = let
+            if eltype(v) <: Real
+                v
+            else
+                conj(v)
+            end
+        end
+        ∇ = p_conv_aux!(P, P_inv, collect(eltype(u).(barx)), conj_v, u_ft_stor, out)
+        return NO_FIELDS, z, z, ∇, z, z, z
     end 
     return Y, conv_pullback
 end
