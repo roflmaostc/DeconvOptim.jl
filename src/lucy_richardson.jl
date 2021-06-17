@@ -46,7 +46,7 @@ function richardson_lucy_iterative(measured, psf;
 
     iter = isnothing(regularizer) ? iter_without_reg : iter_with_reg
 
-    rec = conv_temp(measured, otf) 
+    rec = abs.(conv_temp(measured, otf))
     for i in 1:iterations
         rec .*= iter(rec)
     end
