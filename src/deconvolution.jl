@@ -50,8 +50,8 @@ julia> @time res, o = deconvolution(img_n, psf);
 function deconvolution(measured::AbstractArray{T, N}, psf;
         loss=Poisson(),
         regularizer=GR(),
-        λ=0.05,
-        background=0,
+        λ=T(0.05),
+        background=zero(T),
         mapping=Non_negative(),
         iterations=20,
         conv_dims = ntuple(+, ndims(psf)), 
@@ -59,8 +59,6 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
         optim_options=nothing,
         optim_optimizer=LBFGS(linesearch=BackTracking()),
         ) where {T, N}
-
-    background = convert(eltype(measured), background) 
 
 
     # rec0 will be an array storing the final reconstruction
@@ -109,7 +107,8 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     rec0_center = mean(measured) .* one_arr
     center_set!(rec0, rec0_center)
 
-
+    mf, mf_inv = get_mapping(mapping)
+    rec0 = mf_inv(rec0)
     # psf_n is the psf with the same size as rec0 but only in that dimensions
     # that were supported by the initial psf. Broadcasting of psf with less 
     # dimensions is still supported
@@ -137,8 +136,13 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     # due to numerics, we need to clip at 0
     # analytically it's a convolution psf ≥ 0 and image ≥ 0
     # so it must be conv(psf, image) ≥ 0
-    forward(x) = center_extract((conv_aux(conv_temp, x, otf)) .+ background, size(measured))
-   
+    forward(x) = let 
+        if iszero(background)
+            center_extract((conv_aux(conv_temp, x, otf)), size(measured))
+        else
+            center_extract((conv_aux(conv_temp, x, otf) .+ background), size(measured))
+        end
+    end
     # pass to more general optimization
     res_out, res = invert(measured, rec0, forward;
                           iterations=iterations, λ=λ,
