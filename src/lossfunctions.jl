@@ -63,7 +63,7 @@ end
 function ChainRulesCore.rrule(::typeof(gauss_aux), μ, meas, storage=copy(μ))
     Y = gauss_aux(μ, meas) 
     function gauss_aux_pullback(xbar)
-        return zero(eltype(μ)), 2 .* (μ - meas), zero(eltype(μ)) 
+        return zero(eltype(μ)), 2 .* (μ - meas), zero(eltype(μ)), zero(eltype(μ)) 
     end
     return Y, gauss_aux_pullback
 end

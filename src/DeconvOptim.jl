@@ -14,7 +14,7 @@ using Optim
  #mean
 using Statistics
 using FFTW
-FFTW.set_num_threads(4)
+FFTW.set_num_threads(12)
 using LineSearches
 
 # possible up_sampling 
