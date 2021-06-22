@@ -150,6 +150,12 @@ load("../docs/src/assets/tex/pipeline.png")
 TV_by_hand(x) = @tullio r = sqrt(1f-8 + abs2(x[i, j] - x[i+1, j]) + 
 						 	     abs2(x[i, j] - x[i, j+1]))
 
+# ╔═╡ 03139ac5-3525-4fad-abf1-84421492b763
+DeconvOptim.generate_TV(2, [1,2], [1,1], 1, 0)[1]
+
+# ╔═╡ 8f556ec3-1d90-4f07-9099-047724a568d2
+
+
 # ╔═╡ ffe29e8d-dad6-4238-a252-c8cff8f25613
 TV_by_DeconvOptim = DeconvOptim.TV(num_dims=4, mode="forward")
 
@@ -210,6 +216,8 @@ end;
 # ╟─fe7e0292-31f6-43b5-83a5-a38698a87563
 # ╟─e9ef5ba4-56c0-4595-bc28-e04882f44a9a
 # ╠═90e5708c-05a4-46e4-b1e4-9a61c96dae32
+# ╠═03139ac5-3525-4fad-abf1-84421492b763
+# ╠═8f556ec3-1d90-4f07-9099-047724a568d2
 # ╠═ffe29e8d-dad6-4238-a252-c8cff8f25613
 # ╟─4e84e739-9c59-4939-8b04-aec7dc069d67
 # ╟─15d54e5e-64f4-4a1d-8cc8-9334b2e3784f
