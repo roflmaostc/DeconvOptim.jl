@@ -11,10 +11,10 @@ function __init__()
         CUDA.allowscalar(false);
 
         # we need to fix some operations so that they are fast o GPUs
-        # Reference: https://discourse.julialang.org/t/cuarray-and-optim/14053
-        LinearAlgebra.norm1(x::CUDA.CuArray{T,N}) where {T,N} = sum(abs, x); # specializes the one-norm
-        LinearAlgebra.normInf(x::CUDA.CuArray{T,N}) where {T,N} = maximum(abs, x); # specializes the one-norm
-        Optim.maxdiff(x::CUDA.CuArray{T,N},y::CUDA.CuArray{T,N}) where {T,N} = maximum(abs.(x-y));
+#        # Reference: https://discourse.julialang.org/t/cuarray-and-optim/14053
+#        LinearAlgebra.norm1(x::CUDA.CuArray{T,N}) where {T,N} = sum(abs, x); # specializes the one-norm
+#        LinearAlgebra.normInf(x::CUDA.CuArray{T,N}) where {T,N} = maximum(abs, x); # specializes the one-norm
+#        Optim.maxdiff(x::CUDA.CuArray{T,N},y::CUDA.CuArray{T,N}) where {T,N} = maximum(abs.(x-y));
 
     end
 end
