@@ -220,7 +220,7 @@ of a n-dimensional array.
     different dimensions. If `weights=nothing` all dimensions are weighted equally.
 - `step=1`: A integer indicating the step width for the array indexing
 - `mode="forward"`: Either `"central"` or `"forward"` accounting for different
-    modes of the spatial gradient. Default is "central".
+    modes of the spatial gradient. Default is "forward".
 - `ϵ=1f-8` is a smoothness variable, to make it differentiable
 
 # Examples
@@ -234,22 +234,28 @@ julia> reg([1 2 3; 4 5 6; 7 8 9])
 ```
 """
 function GR(; num_dims=2, sum_dims=1:num_dims, weights=[1, 1], step=1,
-              mode="central", ϵ=1f-8)
+              mode="forward", ϵ=1f-8)
     if weights == nothing
         weights = ones(Int, num_dims)
     end
     if mode == "central"
-        GRf = @eval arr -> ($(generate_GR(num_dims, sum_dims, weights,
-                                        step, (-1) * step)...))
+        GRf = @eval arr2 -> begin
+            arr = sqrt.(arr2 .+ $ϵ)
+            $(generate_GR(num_dims, sum_dims, weights,
+                                        step, (-1) * step)...)
+        end
     elseif mode == "forward"
-        GRf = @eval arr -> ($(generate_GR(num_dims, sum_dims, weights,
+        GRf = @eval arr2 -> begin
+            arr = sqrt.(arr2 .+ $ϵ)
+            ($(generate_GR(num_dims, sum_dims, weights,
                                         step, 0)...))
+        end
     else
         throw(ArgumentError("The provided mode is not valid."))
     end
     
     # we need to add a ϵ to prevent NaN in the derivative of it
-    return arr -> GRf(sqrt.(arr .+ ϵ))
+    return GRf#arr -> begin 
 end
 
 
@@ -292,8 +298,8 @@ of a n-dimensional array.
 - `weights=nothing`: A array containing weights to weight the contribution of 
     different dimensions. If `weights=nothing` all dimensions are weighted equally.
 - `step=1`: A integer indicating the step width for the array indexing
-- `mode="central"`: Either `"central"` or `"forward"` accounting for different
-    modes of the spatial gradient. Default is "central".
+- `mode="forward"`: Either `"central"` or `"forward"` accounting for different
+    modes of the spatial gradient. Default is "forward".
 - `ϵ=1f-8` is a smoothness variable, to make it differentiable
 
 # Examples
@@ -306,7 +312,7 @@ julia> reg([1 2 3; 4 5 6; 7 8 9])
 12.649111f0
 ```
 """
-function TV(; num_dims=2, sum_dims=1:num_dims, weights=nothing, step=1, mode="central", ϵ=1f-8)
+function TV(; num_dims=2, sum_dims=1:num_dims, weights=nothing, step=1, mode="forward", ϵ=1f-8)
     
     if weights == nothing
         weights = ones(Int, num_dims)
