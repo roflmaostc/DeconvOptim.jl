@@ -24,7 +24,7 @@ end
 
     x = [1,2,3,1,3,1,12.0,2,2,3,2.0]
     reg = GR(num_dims=1, sum_dims=[1], weights=[1])
-    @test 26.43974127972943 ≈ reg(x)
+    @test 22.71233466779126 ≈ reg(x)
 
 
 end
@@ -33,7 +33,7 @@ end
 @testset "TV" begin
     x = [1,2,3,1,3,1,12.0,2,2,3,2.0]
     reg = TV(num_dims=1, sum_dims=[1], weights=[1])
-    @test 24.000300018554643 ≈ reg(x)
+    @test 31.00010002845424 ≈ reg(x)
     
 
     x = generate_TV(4, [1,2], [5, 7], 1, -1, debug=true)
