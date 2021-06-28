@@ -4,7 +4,7 @@ export ScaledGauss, scaled_gauss_aux
 
 
 """
-    poisson_aux(μ, meas)
+    poisson_aux(μ, meas, storage=copy(μ))
 
 Calculates the Poisson loss for `μ` and `meas`.
 `μ` can be of larger size than `meas`. In that case
@@ -13,7 +13,7 @@ we extract a centered region from `μ` of the same size as `meas`.
 function poisson_aux(μ, meas, storage=copy(μ))
     # due to numerical errors, μ can be negative or 0
     if minimum(μ) <= 0
-        μ .+= eps(maximum(μ)) .+ abs.(minimum(μ))
+        μ .= μ .+ eps(maximum(μ)) .+ abs.(minimum(μ))
     end
     storage .= μ .- meas .* log.(μ)
     return sum(storage)
@@ -48,7 +48,7 @@ end
 
 
 """
-    gauss_aux(μ, meas)
+    gauss_aux(μ, meas, storage=copy(μ))
 
 Calculates the Gauss loss for `μ` and `meas`.
 `μ` can be of larger size than `meas`. In that case
