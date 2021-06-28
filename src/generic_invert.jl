@@ -44,7 +44,7 @@ function invert(measured, rec0, forward;
     mf, m_invf = get_mapping(mapping)
     regularizer = get_regularizer(regularizer, eltype(rec0))
     
-    storage_μ = copy(measured)
+    storage_μ = deepcopy(measured)
     function total_loss(rec)
         # handle if there is a provided mapping function
         mf_rec = mf(rec) 
