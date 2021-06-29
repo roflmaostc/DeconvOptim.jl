@@ -1,0 +1,445 @@
+
+% JuliaCon proceedings template
+\documentclass{juliacon}
+\setcounter{page}{1}
+
+
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{amsmath}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{siunitx}
+\newcommand\todo[1]{\textcolor{red}{\textbf{TODO: #1}}}
+\begin{document}
+
+\input{header}
+
+\maketitle
+
+\begin{abstract}
+
+Deconvolution is a versatile method to enhance the quality of signals measured with systems which can 
+be mathematically expressed as a convolution of a system's response function with a signal. 
+In this paper, we present \verb|DeconvOptim.jl|, a flexible toolbox written in Julia to deconvolve multi-dimensional signals which have been
+degraded by a multi-dimensional signal response function. 
+\verb|DeconvOptim.jl| works both on CPUs and GPUs and utilizes recent advancements in Julias Automatic Differentiation ecosystem. The performance on CPUs surpasses the one of existing open source libraries. 
+The library is applicable to one dimensional time series datasets but also to multi-dimensional microscopy imaging datasets.
+\end{abstract}
+
+\todo{consistent notation with vector and indices}
+\todo{fix code formatting}
+
+\section{Introduction}
+Deconvolution has been a long addressed problem especially in astronomical imaging, digital signal processing or microscopy imaging.
+The assumption is that images are degraded by some kind of blur which can be described as a convolution between a kernel $h$ and the image $S$:
+\begin{equation}
+    I(\mathbf r) = (h * S)(\mathbf r)
+\end{equation}
+$h$ is often called the point spread function (PSF) since it characterizes how the systems maps a point in the object to a blurred area
+in the image.
+Often this convolution operation is disturbed by different types of noise where the most common are additive Gaussian noise due to the read out of the camera sensors or Poisson shot noise due to the quantum nature of photons:
+\begin{align}
+    Y_{\text{Poisson}}(\mathbf r) &= \text{Poisson}[(h * S)(\mathbf r)]\\
+    Y_{\text{Gauss}}(\mathbf r) &= (h * S)(\mathbf r) + \text{Gauss}_{\mu, \sigma}(\mathbf r)
+\end{align}
+Due to the noise, deconvolution is an ill-posed problem which cannot be solved directly.\\
+A well known approach, because of its simplicity, has been the iterative Richardson-Lucy deconvolution algorithm \cite{Richardson:72}, \cite{lucy:74} for Poisson noise degraded signals.
+Another common method is the non-iterative Wiener filter \cite{wiener2013extrapolation} because of its predictable runtime.
+Wiener filter assumes additive noise which is often not suitable, especially in low light conditions as in microscopy or astronomy. 
+Recently machine learning based methods have become more and more favoured in deconvolution methods because
+of the possibility to add learned properties of similar images to the algorithm \cite{Kruse_2017_ICCV}.
+However, those implementations are usually restricted to cases where many experimental datasets are available for the characterization.
+
+\section{Convolution}
+To obtain fast deconvolution algorithms we also need a fast way to calculate the convolution operations.
+In these times, convolution operations of spatially small kernels $h$ can be calculated on GPUs very efficiently.
+However, often the blurring kernel $h$ is not spatially small and might be also multi dimensional. In that case, FFT based convolutions
+outperform sliding kernels. In microscopy and astronomy that is often the case, since a defocus broadens the PSF.
+
+\subsection{FFT Based Convolution}
+    The basis for fast convolution operations lies in the convolution theorem. It states that
+    \begin{equation}
+        \mathcal F\left\{(h * g)\right\}(\mathbf k) = \mathcal F\{h\} (\mathbf k) \cdot \mathcal F\{g\} (\mathbf k),
+        \label{eq:fftconv}
+    \end{equation} 
+        which means that a Fourier transform of a  convolution operation is equivalent to a point wise multiplication of the Fourier transforms 
+        of $h$ and $g$.
+        Fortunately, the Fourier transform operations can be calculated even for moderate large 3D arrays quickly on modern computing machines via
+        the Fast Fourier Transform (FFT).
+        In Julia, \verb|FFTW.jl| offers a convenient interface to the fast FFTW library \cite{FFTW05}.
+        The time complexity to calculate \autoref{eq:fftconv} is $\mathcal{O}(N \cdot \log N)$ for a one dimensional discretized dataset with $N$ samples.
+        For a 2D dataset with size $N \times M$ it is $\mathcal{O}(N \cdot M \log(N + M))$ and similar for higher dimensions.
+
+\subsection{Sliding Convolution Windows}
+Convolutions can be also calculated with a sliding windows as show in \todo{figure}. 
+That mechanism is the working principle
+behind the convolutions in neural nets. The reason is that this operation can be parallelized easily and therefore 
+is suitable on GPUs. However, the computational complexity for a 2D kernel with size $K \times L$ applied on an image with
+$N \times M$ data points is $\mathcal O(N \cdot M \cdot K \cdot L)$. It is clear that for larger kernel sizes the sliding method 
+has worse computational complexity than the FFT based convolutions. The many cores of a GPU can mitigate that to a certain extent
+but since the FFT based method can be also executed in parallel fashion, both approaches profit from parallelization.
+
+
+\subsection{Wrap-Around Artifacts in FFT based Convolutions}
+    One drawback of the FFT based convolution are wrap-around artifacts. The reason is, that the FFT operation calculates the discrete
+    Fourier transform (DFT) which inherently assumes periodic data. If one applies a FFT on a finite data set the assumption is that
+    this finite data set repeats itself. 
+    To weaken the wrap-around artifacts in the convolution one can zero or mean pad the image before convolution and remove the boundaries afterwards.
+
+    \begin{figure}[h]
+        \centering
+        \begin{subfigure}[b]{.25\textwidth}
+            \centering
+            \begin{tikzpicture}
+                \node at (0,0) {\includegraphics[width=.9\textwidth]{figures/full_house_no_pad.png}};
+                \draw[red] (-2.0, -1.6) rectangle (-1.6, -1.2);
+                \node[color=red] at (0,0) {\includegraphics[width=.4\textwidth]{figures/edge_house_no_pad.png}};
+                \draw[color=red] (-0.91, -0.9) rectangle (0.9, 0.9); 
+                \draw[color=red] (-2.0, -1.2) -- (-0.9, 0.9);
+                \draw[color=red] (-1.6, -1.6) -- (0.9, -0.9);
+            \end{tikzpicture}
+            \caption{Without padding}
+            \label{fig:withoutpad}
+        \end{subfigure}%
+        \begin{subfigure}[b]{.25\textwidth}
+            \centering
+            \begin{tikzpicture}
+                \node at (0,0) {\includegraphics[width=.9\textwidth]{figures/full_house_pad.png}};
+                \draw[red] (-2.0, -1.6) rectangle (-1.6, -1.2);
+                \node[color=red] at (0,0) {\includegraphics[width=.4\textwidth]{figures/edge_house_pad.png}};
+                \draw[color=red] (-0.90, -0.9) rectangle (0.9, 0.9); 
+                \draw[color=red] (-2.0, -1.2) -- (-0.9, 0.9);
+                \draw[color=red] (-1.6, -1.6) -- (0.9, -0.9);
+            \end{tikzpicture}
+            \caption{With padding.}
+            \label{fig:withpad}
+        \end{subfigure}
+        \caption{Comparison between two blurred images. The left images is a straightforward FFT based blurred image.
+        The zoomed region shows dark artifacts at the left side. Also at the top of the image some dark regions from
+        the bottom scattered into the bright sky.
+        The right image was padded before blurring with 10 pixels on each side with value 0.7. The blur kernel was a Gaussian kernel
+        with standard deviation $\sigma=\SI{3}{pixel}$.}
+        \label{fig:}
+    \end{figure}
+     
+   
+\section{Inverse Modelling}
+In \autoref{fig:pipeline} we show our approach to deconvolution.
+The general idea is to create a physical forward model describing the measurement process.
+At the beginning of the optimization we start with an initial guess $x(\mathbf r)$. 
+Via a mapping function we can impose some restrictions to the final solution (e.g. non-negativity, certain value intervals).
+The forward model (can be a convolution) is then applied to the mapped reconstruction. This result is compared
+with our noisy measurement with a certain loss function.
+Since deconvolution is an ill-posed problem we regularize the loss function with a regularizer.
+Via automatic differentation (AD) we then calculate the gradient with respect to the reconstruction $x(\mathbf r)$. 
+The values of the total loss and the gradient are then used by an optimizer to apply some kind of gradient descent optimization to get a proper reconstruction.\\
+
+As typical for Julia packages, except \verb|FFTW.jl| and \verb|CUDA.jl| \cite{besard2018juliagpu}, all code is written in Julia.
+Therefore it is easy to replace the forward model with any Julia code, as long as we can 
+automatically differentiate through the code. The gradient step is currently calculated with the reverse mode AD of \verb|Zygote.jl| \cite{Zygote.jl-2018}. 
+As default for the optimization we use the L-BFGS \cite{LBFGS} routine provided by \verb|Optim.jl| \cite{mogensen2018optim}.
+L-BFGS is suitable for optimization with many million parameters as it only stores a sparse representation of the inverse Hessian matrix
+which is built from a finite number of past function and gradient evaluations. 
+In comparison to the Richardson-Lucy algorithm often results are converged after 20 to 50 iterations whereas Richardson-Lucy often takes
+a few hundreds iterations. However, as we will see later due to the more complex optimization routine the speed-up in using L-BFGS is for simple 
+deconvolution often minor.
+
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width = .5\textwidth]{figures/pipeline.pdf}
+    \caption{}
+    \label{fig:pipeline}
+\end{figure}
+
+\subsection{Mapping Function}
+    Mapping functions are an easy way to constrain the resulting reconstruction to certain values.
+    For example, if the optimizer optimizes the variables $\text{rec}$ which are then squared, we know that
+    $\text{rec}^2$ is definitely non-negative. Instead of directly using $\text{rec}$ we compare
+    $\text{rec}^2$ with the measurement $Y$. This mapping function does not change the result as long
+    as it is an surjective function for the desired number space (e.g. a parabola is non-negative and covers all positive values) 
+    and does not change the convexity of a problem.
+    Functions like shifted $\tanh$ are possible as well since it is an bijective function in $[-1, 1]$ and monotonic increasing
+    in the whole definition space.
+
+
+
+\subsection{Wrap-around Artifacts Suppression}
+
+\section{Loss Function}
+    Besides the forward model, the loss function is the most critical part in the optimization.
+    It has to take account for the noise created by the measurement process or device. 
+
+\subsection{Data Term}
+    As already mentioned, Poisson shot noise is often the dominant source of noise.
+    The key idea is to interpret the measurement as a stochastic process. Our aim is to find a deconvolved image which describes as accurate as possible the measured image.
+Mathematically the probability for a certain measurement $Y$ is
+
+\begin{equation}
+    p(Y(\mathbf r)|\mu(\mathbf r)) = \prod_r \frac{\mu(\mathbf r)^{Y(\mathbf r)}}{\Gamma(Y(\mathbf r) + 1)} \exp(- \mu(\mathbf r))
+\end{equation}
+
+where $Y$ is the measurement, $\mu$ is the expected measurement (ideal measurement without noise) and $\Gamma$ is the generalized factorial function.
+In the deconvolution process we get $Y$ as measured input and want to find the ideal specimen $S$ which results in a measurement $\mu(\mathbf r) = (S * \text{PSF})(\mathbf r))$.
+Since we want to obtain for the best reconstruction, we want to find a $\mu(\mathbf r)$ so that $p(Y(\mathbf r) | \mu(\mathbf r))$ gets as large as possible. Because that means
+that we find the specimen which describes the measurement with the highest probability.
+Instead of maximizing $p(Y(\mathbf r) | \mu(\mathbf r))$ a common trick is to minimize $- \log(p(Y(\mathbf r)|\mu(\mathbf r)))$. 
+Mathematically, the optimization of both functions provides same results but the latter is numerically more stable.
+
+\begin{align}
+&\underset{S(\mathbf r)}{\arg \min} (- \log(p(Y(\mathbf r)|\mu(\mathbf r)))) =\\ &\underset{S(\mathbf r)}{\arg \min} \sum_r (\mu(\mathbf r) + \log(\Gamma(Y(\mathbf r) + 1)) - Y(\mathbf r) \log(\mu(\mathbf r))
+\end{align}
+
+which is equivalent to
+
+\begin{equation}
+    \underset{S(\mathbf r)}{\arg \min}\, L = \underset{S(\mathbf r)}{\arg \min} \sum_r (\mu(\mathbf r)  - Y(\mathbf r) \log(\mu(\mathbf r))
+    \label{eq:poisson_loss}
+\end{equation}
+
+since the second term only depends on $Y(\mathbf r)$ but not on $\mu(\mathbf r)$.
+The gradient of $L$ with respect to $\mu(\mathbf r)$ is simply
+
+\begin{equation}
+    \nabla L = 1 - \frac{Y(\mathbf r)}{\mu(\mathbf r)}
+    \label{eq:gradpoisson}
+\end{equation}
+
+The function $L$ and the gradient $\nabla L$ are needed for any gradient descent optimization algorithm.
+The numerical evaluation of the Poisson loss can lead to issues. Since $\mu(r)=0$ can happen for a measurement with zero intensity background. However, the loss is not defined for $\mu \leq 0$. In our source code we set all intensity values below a certain threshold $\epsilon$ to $\epsilon$ itself. This prevents the evaluation of the logarithm at undefined values.
+The final source code has a modified version of \autoref{eq:gradpoisson} as registered gradient for \autoref{eq:poisson_loss}.
+The reason is, that for values of $\mu(\mathbf r) \leq 0$ the equation is not defined and has to be handled separately. 
+
+\subsection{Regularizer}
+    The regularizer is an additional part in the total loss to add some additional priors like sparsity and smoothness.
+    Most real samples are smooth over large regions and such regularizers enhance the quality of the reconstruction.
+    In our toolbox we currently implement several regularizer like (smoothed) Total variation, Good's roughness \cite{Verveer:98}, \cite{Good:71} and Tikhonov. 
+    \subsubsection{Total Variation as example}
+        As the name suggests, Total variation tries to penalize variation in the image intensity. Therefore it sums up the gradient strength at each point
+        of the image. In 2D this is:
+        \begin{equation}
+            \text{Reg}(S(\mathbf r)) = \sum_r  |(\nabla S)(\mathbf r)|
+        \end{equation}
+        Since we look at the magnitude of the gradient strength, this regularizer is anisotropic.
+        In 2D this is:
+        \begin{equation}
+        \begin{split}
+            \text{Reg}(S(\mathbf r)) = \sum_{x,y} \big[& |S(x + 1, y) - S(x, y)|^2 \\ 
+                                                & + |S(x, y + 1) - S(x, y)|^2\big]^{\frac12}
+        \end{split}
+        \end{equation}
+        In many frameworks such a regularizer is implemented via functions like \lstinline{circshift}. 
+        However, such approaches create often several copies of the data. We currently use \verb|Tullio.jl|\footnote{\url{https://github.com/mcabbott/Tullio.jl}} to create efficient functions providing a function to calculate the regularizer and the gradient. For simple expressions
+        such as below, \verb|Tullio.jl| registers an analytical gradient and therefore allows to apply the same mechanisms to the gradient calculation which have been used for the regularizer evaluation itself \todo{ask McAbott for reason}.
+        A (smoothed) Total variation with \verb|Tullio.jl| is defined here:
+        \begin{lstlisting}[language = Julia]
+function total_variation(arr, ϵ=eltype(arr)(1e-8))
+    @tullio r = sqrt(ϵ + 
+                abs2(arr[i,j] - arr[i+1,j]) +
+                abs2(arr[i,j] - arr[i,j+1]))
+end
+        \end{lstlisting}
+        \lstinline{ϵ} is needed because for regions where \lstinline{arr == 0} the gradient would result in singularities.
+        Note, that definition here just demonstrates how the regularizer can be written down.
+        In our toolbox we allow for much for options. \verb|Tullio.jl| cannot handle multi dimensional data yet.
+        Via Julia's metaprogramming capability we create regularizers which can vary in step size, dimensionality and
+        different weighting in dimensions.
+        A call like 
+        \begin{lstlisting}[language = Julia]
+julia> using DeconvOptim
+
+julia> reg = TV(num_dims=4, sum_dims=[1,2,3],
+                weights=[1,1,2])
+#169 (generic function with 1 method)
+
+julia> reg(randn((10,20,30,40)))
+417810.11332404887
+        \end{lstlisting}
+        results in a regularizer accepting four dimensional arrays. However, the regularization only happens along the first three dimension
+        and the third dimensions is weighted differently.
+        Such options are available for most of the regularizers.
+
+\section{Experiments}
+    In this section we show some experiments and compare parts of the software to other solutions.
+    All experiments were executed on Ubuntu 20.04 using a AMD Ryzen 5 5600X 6-Core processor (12 threads) with \SI{32}{GB} DDR4 RAM and Julia 1.6.1.
+    If possible, all threads were used.
+    As GPU accelerator we used a GeForce RTX 2060 SUPER with \SI{8}{GB} memory and CUDA 11.3 and CUDA.jl 3.3.1.
+
+    \subsection{One-Dimensional Time Series}
+        First, we want to demonstrate the deconvolution of an artificial one dimensional dataset blurred with a certain PSF.
+        Additionally, we want to demonstrate the mechanism to reduce wrap-around artifacts in the deconvolution.
+    
+        \todo{1D dataset}
+            
+    \subsection{Influence of Regularizer}
+
+
+    \subsection{Multi-Dimensional Microscopy Data}
+        To show the full power, we deconvolve a four dimensional dataset where the measured volume consists of a 3D datasets
+        with three different color channels. The PSF is only three dimensional.
+        Julia's broadcast mechanism handles that the PSF is only three dimensional and therefore
+        we only need to specify over which dimensions the convolution should happen.
+        
+        \todo{4D dataset}
+            
+
+
+    \subsection{Performance Comparison}
+        Since Julia is often advertised with great performance we compare parts and the full deconvolution to other implementations in
+        terms of their total performance.
+
+        \subsubsection{Regularizer}
+            In \autoref{tab:reg} we can see the runtimes for different TV regularizer implementations. As we can see, \verb|Tullio.jl| outperforms a plain 
+            Julia implementation by more than order of magnitude. Partially, that is caused by the reason that \verb|Tullio.jl| can make 
+            use of all threads whereas Julia's built in broadcast mechanism is not multi threaded.
+            By \textit{plain Julia} we are referring to an implementation which is written with standard Julia Base functions.
+            The same plain Julia implementation was then used together with \verb|CUDA.jl|
+            to make use of the GPU capabilities. We see that there is a minor benefit in using a GPU for the regularizer instead of 
+            the \verb|Tullio.jl| version on the CPU. Unfortunately, GPU support by \verb|Tullio.jl| is still experimental and especially on the gradient step 
+            we could not achieve reasonable results with it.
+            \begin{table}[h]
+                \begin{tabular}{l l l l l}
+                    & plain & $\nabla$ plain & \verb|Tullio.jl| & $\nabla$ \verb|Tullio.jl| \\
+                \hline
+                CPU & \SI{83.9}{\milli\second} & \SI{7.18}{\second} & \SI{5.53}{\milli\second}  & \SI{119.8}{\milli\second}   \\ 
+                GPU & \SI{2.5}{\milli\second}  & \SI{22.9}{\milli\second}& \SI{4.00}{\milli\second}  & \SI{12.53}{\second} \\
+                \hline
+                \hline
+                    & Jax & $\nabla$ JAX && \\
+                \hline
+                CPU & \SI{48}{\milli\second}   & \SI{364}{\milli\second}&   & \\
+                GPU & \SI{887}{\micro\second}   & \SI{10.2}{\milli\second}&   &
+                \end{tabular}
+                \caption{Runtimes of the Total Variation regularizer for different Julia versions and Jax. 
+                    We used a 3 dimensional Float32 array with size $300 \times 300 \times 300$.  }
+                \label{tab:reg}
+            \end{table}
+            We also compare the performance to an implementation written in Python with the Framework JAX \cite{jax2018github}. 
+            The GPU version seems to outperform the Julia version by roughly a factor of $2 - 3$ in both forward and gradient pass.
+            However, on the CPU \verb|Tullio.jl| is considerably faster on CPUs. 
+            One could always squeeze more performance out of the gradient calculations if the kernels would be hand optimized.
+            However, in our package we especially try avoid that because of the multi dimensionality it is much more convenient
+            to rely on AD and as shown above the performance is usually acceptable.
+
+
+
+    \subsection{Full Deconvolution}
+        The aim of this comparison is not to compare the quality of the results but the computing time to achieve similar reconstructions. The algorithms used in \verb|DeconvOptim.jl| are not fundamentally different to a plain Lucy-Richardson deconvolution and therefore the results will 
+        not exceed those results significantly in terms of quality.\\
+        In \autoref{tab:deconv} we show the computing time for different algorithms and packages and in \autoref{tab:deconvprop} the basic settings
+        in each package.
+        To account for the fact that we do not make a quantitative comparison of the results, we add a conservative \SI{50}{\percent} error
+        to the runtimes.
+        The different packages used were \verb|ThreeDeconv.jl| \cite{ikoma2018convex}, \verb|Huygens| Professional version 21.04 (Scientific Volume Imaging, The Netherlands, \url{http://svi.nl}), \verb|DeconvolutionLab2| \cite{deconvlab2} and \verb|GenericDeconv|.  
+
+        For the results of \verb|GenericDeconv| (written in Matlab by Rainer Heintzmann) we used a Poisson loss function with a L-BFGS minimizer and a quadratic non-negativity constraint.
+        When the TV regularizer was added the weight was $\lambda = 0.002$.
+        The general idea of \verb|GenericDeconv| is very similar to \verb|DeconvOptim.jl|.
+        \verb|DeconvolutionLab2| offers a wide variety of different algorithms which however only run on a CPU. To put the numbers into context, even the non-iterative Tikhonov Regularization Inverse Filter (TRIF/TR) had a runtime of \SI{4}{\second}. In the table we show the results of an 
+        iterative Lucy-Richardson deconvolution. As number of iterations we set 80 and as regularizer weight $\lambda=0.002$.\\
+        In \verb|DeconvOptim.jl| we measured the runtime of the default deconvolution routine with a Poisson loss function
+        and the runtime of straightforward Lucy-Richardson deconvolution without a regularizer.
+        \verb|ThreeDeconv.jl| is another Julia deconvolution toolbox for deconvolution of three dimensional data.
+        In contrast to their according publication \cite{ikoma2018convex} we needed more iterations to achieve good results
+        on our used dataset. The regularizer weight was $\lambda=10^{-7}$. 
+        The software requires a flat and a dark field image we could not provide. That might influence the quality of the reconstructed images
+        but in terms of performance the runtimes might by only by a factor of 2-4 faster than the runtimes we obtained(Ikoma et al. used 140 iterations in their deconvolutions.).
+
+        Since it is hard to compare all different images with a numerical loss function value, we compare them visually.
+        The CPU versions were multi threaded (if possible). \verb|DeconvolutionLab2|, \verb|Huygens| and \verb|GenericDeconv| were tested under Windows 10 and not Ubuntu.
+        \begin{table}[h]
+            \begin{tabular}{l l l}
+                &  CPU in s& GPU in s\\ 
+            \hline
+            \verb|DeconvOptim.jl| & 14.0 & 0.86\\
+            \verb|DeconvOptim.jl| - TV & 18.9 & 1.55 \\
+            Lucy-Richardson (Julia) & 14.8 & 1.26 \\
+            \verb|ThreeDeconv.jl|& 2415 & 44.5 \\
+            \verb|GenericDeconv|  & 127 & 5.9\\
+            \verb|GenericDeconv| - TV & 213 & 8.7 \\
+            \verb|Huygens|  & & \\
+            \verb|DeconvolutionLab2| - LR & 1089 & \\
+            \verb|DeconvolutionLab2| - LR TV& 1131 & 
+            \end{tabular}
+            \caption{Runtimes of different deconvolution implementations.}
+            \label{tab:deconv}
+        \end{table}
+
+        \begin{table}[h]
+            \begin{tabular}{l l l}
+                & Loss & iterations \\ 
+            \hline
+            \verb|DeconvOptim.jl| & Poisson & 15 \\
+            \verb|DeconvOptim.jl| TV & Poisson & 15\\
+            Lucy-Richardson & Poisson & 120 \\
+            \verb|ThreeDeconv.jl|  & Gauss+Poisson& 500\\
+            \verb|GenericDeconv|  & Poisson & 40\\
+            \verb|GenericDeconv| TV & Poisson & 40 \\
+            \verb|Huygens|  & & \\
+            \verb|DeconvolutionLab2| LR & Poisson & 200\\
+            \verb|DeconvolutionLab2| LR TV& Poisson & 200 
+            \end{tabular}
+            \caption{Overview which loss function (noise model) and the number of iterations is used.}
+            \label{tab:deconvprop}
+        \end{table}
+
+        As summary of those performance tests we can state that our Julia implementation is very competitive and especially on the CPU it is only
+        beaten by the commercial \verb|Huygens| software. Despite \verb|ThreeDeconv.jl| written in Julia 
+        it is notably slower in comparison to our implementation.
+        \verb|DeconvolutionLab2| is written in Java and uses hand optimized gradients but still its performance is poor in comparison to all
+        other packages.
+
+
+        \begin{figure}[h]
+            \begin{subfigure}{.3\textwidth}
+                \centering
+                \includegraphics[width=\textwidth]{figures/DeconvOptim_cuda_no_regularizer_0.87s.png}
+                \caption{\texttt{DeconvOptim.jl} without regularizer}
+            \end{subfigure}
+            \begin{subfigure}{.3\textwidth}
+                \centering
+                \includegraphics[width=\textwidth]{figures/DeconvOptim_TV_0.002.png}
+                \caption{\texttt{DeconvOptim.jl} with TV}
+            \end{subfigure}
+            \begin{subfigure}{.3\textwidth}
+                \centering
+                \includegraphics[width=\textwidth]{figures/Lucy_richardson_julia.png}
+                \caption{\texttt{DeconvOptim.jl} Lucy-Richardson}
+            \end{subfigure}
+            \bigskip
+            \begin{subfigure}{.3\textwidth}
+                \centering
+                \includegraphics[width=\textwidth]{figures/Deconvolution_Lab2_200iterations.PNG}
+                \caption{\texttt{Deconvolution\\Lab2} with TV}
+            \end{subfigure}
+            \begin{subfigure}{.3\textwidth}
+                \centering
+                \includegraphics[width=\textwidth]{figures/ThreeDeconv_600_iterations.png}
+                \caption{\texttt{ThreeDeconv.jl}}
+            \end{subfigure}
+            \begin{subfigure}{.3\textwidth}
+                \centering
+                \includegraphics[width=\textwidth]{figures/noisy.png}
+                \caption{~~Measured image with Poisson noise}
+            \end{subfigure}
+            \caption{Overview of some of the deconvolution results of different packages.}
+            \label{img:results}
+        \end{figure} 
+
+\section{Summary}
+    In conclusion, \verb|DeconvOptim.jl| is a very performant, flexible deconvolution software to deconvolve multi dimensional datasets.
+    Its focus has been from the beginning to be fast and the source code should be automatic differentiated by the available
+    packages in Julia. Usually we would expect that AD decreases performances however our software is faster than
+    many other packages which have been written with hand-optimized gradients.
+    Furthermore, our toolbox is not restricted in dimensionality and has mechanism to prevent wrap-around artifacts which
+    occurs with FFT based convolutions.
+    Julia's metaprogramming capabilities allow together with \verb|Tullio.jl| to generate regularizer which have high performance
+    and are easy to adapt.
+    In future, we want to support more regularizers on GPUs since they can not be handled efficiently with the current \verb|Tullio.jl| solution.
+    
+
+
+\input{bib.tex}
+
+\end{document}
