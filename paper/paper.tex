@@ -27,7 +27,6 @@ degraded by a multi-dimensional signal response function.
 The library is applicable to one dimensional time series datasets but also to multi-dimensional microscopy imaging datasets.
 \end{abstract}
 
-\todo{consistent notation with vector and indices}
 \todo{fix code formatting}
 
 \section{Introduction}
@@ -230,8 +229,11 @@ The reason is, that for values of $\mu(\mathbf r) \leq 0$ the equation is not de
         \end{split}
         \end{equation}
         In many frameworks such a regularizer is implemented via functions like \lstinline{circshift}. 
-        However, such approaches create often several copies of the data. We currently use \verb|Tullio.jl|\footnote{\url{https://github.com/mcabbott/Tullio.jl}} to create efficient functions providing a function to calculate the regularizer and the gradient. For simple expressions
-        such as below, \verb|Tullio.jl| registers an analytical gradient and therefore allows to apply the same mechanisms to the gradient calculation which have been used for the regularizer evaluation itself \todo{ask McAbott for reason}.
+        However, such approaches create often several copies of the data. 
+        We currently use \verb|Tullio.jl|\footnote{\url{https://github.com/mcabbott/Tullio.jl}} to create efficient functions 
+        calculating the regularizer and the gradient. For simple expressions
+        such as below, \verb|Tullio.jl| registers an analytical gradient and therefore allows to apply the same efficient mechanisms 
+        to the gradient calculation which have been used for the regularizer evaluation itself \todo{ask McAbott for reason}.
         A (smoothed) Total variation with \verb|Tullio.jl| is defined here:
         \begin{lstlisting}[language = Julia]
 function total_variation(arr, ϵ=eltype(arr)(1e-8))
@@ -269,11 +271,82 @@ julia> reg(randn((10,20,30,40)))
     \subsection{One-Dimensional Time Series}
         First, we want to demonstrate the deconvolution of an artificial one dimensional dataset blurred with a certain PSF.
         Additionally, we want to demonstrate the mechanism to reduce wrap-around artifacts in the deconvolution.
-    
-        \todo{1D dataset}
-            
-    \subsection{Influence of Regularizer}
+        In \autoref{fig:1D_dataset} we can see on the left hand side a data series which has been simulated 
+        as a convolution with a PSF and degraded with additive Gaussian noise.
+        \begin{figure}[h]
+            \begin{subfigure}[b]{.25\textwidth}
+                \centering
+                \includegraphics[width=\textwidth]{figures/1d_plot_data_blurred.pdf}
+                \caption{}
+                \label{fig:1D_dataseta}
+            \end{subfigure}%
+            \begin{subfigure}[b]{.25\textwidth}
+                \centering
+                \includegraphics[width=\textwidth]{figures/1d_plot_data_res_pad_vs_nopad.pdf}
+                \caption{}
+                \label{fig:1D_datasetb}
+            \end{subfigure}
+            \caption{1D data which has been convolved with a PSF and was degraded with additive Gaussian noise with $\sigma=1.0$.}
+            \label{fig:1D_dataset}
+        \end{figure}
+        On the right hand we can see the results of the following deconvolution:
+        \begin{lstlisting}[language=Julia]
+r_p, o = deconvolution(measured, psf, loss=Gauss(),
+     iterations=12, regularizer=TV(num_dims=1),
+     λ=0.05, padding=1)
+r, o = deconvolution(measured, psf, loss=Gauss(), 
+     iterations=12, regularizer=TV(num_dims=1),
+     λ=0.05, padding=0)
+        \end{lstlisting}
+    The firs statement applies a total padding of $1$ meaning that the size is doubled and therefore the measured data is padded.
+    As we can see, the blue curve in \autoref{fig:1D_datasetb} does not have the spikes at the boundaries as the green curve does have.
+    Also we notice that the deconvolved data in \autoref{fig:1D_datasetb} does not show all the details which are visible in the ground truth.
+    The reason is that the PSF is a low pass filter and therefore only frequencies which have been passed through the filter 
+    can be enhanced in terms of contrast in a deconvolved result.
 
+    \subsection{Influence of Regularizer}
+        In this part we want to demonstrate the influence of the regularizer.
+        \autoref{fig:fabioa} is a simulated imaged which has been affected by Poisson shot noise and blurred by a PSF.
+        \autoref{fig:fabiob} shows the results after 15 iterations of the deconvolution. 
+        We see that the image is heavily affected by some artifacts which usually occur after too many iterations without a regularizer.
+        \autoref{fig:fabioc} shows the results after 15 iterations of the deconvolution but regularized with a Good's roughness regularizer.
+        The total image quality is much better. A larger regularizer weight dampens the artifacts even more but also results in lower
+        resolution.
+        \begin{figure}[h]
+            \begin{subfigure}[b]{.166\textwidth}
+                \centering
+                \includegraphics[width=\textwidth]{figures/fabio_blurry.png}
+                \caption{Measured}
+                \label{fig:fabioa}
+            \end{subfigure}%
+            \begin{subfigure}[b]{.166\textwidth}
+                \centering
+                \includegraphics[width=\textwidth]{figures/fabio_deconv_no_reg_iter_30.png}
+                \caption{Without regularizer}
+                \label{fig:fabiob}
+            \end{subfigure}%
+            \begin{subfigure}[b]{.166\textwidth}
+                \centering
+                \includegraphics[width=\textwidth]{figures/fabio_deconv_regularizer_005_iter_30.png}
+                \caption{With regularizer}
+                \label{fig:fabioc}
+            \end{subfigure}%            
+            \caption{The left image has been convolved with a PSF and affected by Poisson shot noise (1000 photons expected for the brightest pixel). The image in the middle and the right are results from the deconvolution.}
+            \label{fig:image}
+        \end{figure}
+        In \autoref{fig:fft_data_image} we show the absolute value of the FFT of the data. The blue curve is the measured data and as it can
+        be seen the value is lower than the red ground truth value. This is again due to the low pass filter effect of the PSF.
+        The measured curve also contains high frequency information which has been added due to noise and would not be expected 
+        after a pure convolution.
+        \begin{figure}[h]
+            \centering
+            \includegraphics[width = .4\textwidth]{figures/frequencies_img.pdf}
+            \caption{This plot shows the absolute value of the FFT of the data.}
+            \label{fig:fft_data_image}
+        \end{figure}
+        We see that the orange curve also contains high spatial frequency information. The reason is, that the deconvolution does amplify also noise
+        without a regularizer. The green curve shows that the regularizer indeed dampens the high frequencies and results in a visually much
+        nicer image which is also closer to the ground truth
 
     \subsection{Multi-Dimensional Microscopy Data}
         To show the full power, we deconvolve a four dimensional dataset where the measured volume consists of a 3D datasets
@@ -288,7 +361,6 @@ julia> reg(randn((10,20,30,40)))
     \subsection{Performance Comparison}
         Since Julia is often advertised with great performance we compare parts and the full deconvolution to other implementations in
         terms of their total performance.
-
         \subsubsection{Regularizer}
             In \autoref{tab:reg} we can see the runtimes for different TV regularizer implementations. As we can see, \verb|Tullio.jl| outperforms a plain 
             Julia implementation by more than order of magnitude. Partially, that is caused by the reason that \verb|Tullio.jl| can make 
