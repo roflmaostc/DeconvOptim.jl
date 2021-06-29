@@ -333,3 +333,19 @@ end
 function get_regularizer(reg::Nothing, etype)
     x -> zero(etype)
 end
+
+
+"""
+    next_fast_fft_size(x)
+
+`x` is a tuple of sizes.
+It rounds to the next fast FFT size.
+FFT is especially fast on small prime factors.
+"""
+function next_fast_fft_size(x)
+    nextprod([2, 3, 5, 7], x)
+end
+
+function next_fast_fft_size(x::Tuple)
+    next_fast_fft_size.(x)
+end

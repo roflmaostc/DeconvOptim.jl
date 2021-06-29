@@ -99,5 +99,8 @@ end
 end
 
 
-
+@testset "next fast fft size" begin
+    @test DeconvOptim.next_fast_fft_size(23) == 24
+    @test DeconvOptim.next_fast_fft_size((23, 46)) == (24, 48)
+end
 
