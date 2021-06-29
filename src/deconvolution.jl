@@ -79,7 +79,7 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
             if ~iszero(padding)
                 # 2 * ensures symmetric padding
                 # minimum padding is 2 (4 in total) on each side
-                x = max(4, 2 * round(Int, size(measured)[i] * padding))
+                x = next_fast_fft_size(max(4, 2 * round(Int, size(measured)[i] * padding)))
             else
                 x = 0
             end
@@ -94,7 +94,7 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     measured = measured ./ rescaling
     # create rec0 which will be the initial guess for the reconstruction
     rec0 = similar(measured, (size_padded)...)
-    fill!(rec0, zero(eltype(measured))) 
+    fill!(rec0, one(eltype(measured))) 
     
     # alternative rec0_center, unused at the moment
     #rec0_center = m_invf(abs.(conv_psf(measured, psf, conv_dims)))
@@ -104,9 +104,8 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     # measured
     one_arr = similar(measured, size(measured))
     fill!(one_arr, one(eltype(measured)))
-    rec0_center = mean(measured) .* one_arr
-    center_set!(rec0, rec0_center)
-
+    center_set!(rec0, one_arr)
+    rec0 .*= mean(measured)
     mf, mf_inv = get_mapping(mapping)
     rec0 = mf_inv(rec0)
     # psf_n is the psf with the same size as rec0 but only in that dimensions
@@ -120,6 +119,7 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
         push!(psf_new_size, size(rec0)[i])
     end
     
+
     psf_new_size = tuple(psf_new_size...)
     psf_n = similar(rec0, psf_new_size)
     fill!(psf_n, zero(eltype(rec0)))
