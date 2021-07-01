@@ -21,32 +21,32 @@
 \begin{abstract}
 
 Deconvolution is a versatile method to enhance the quality of signals measured with systems which can 
-be mathematically expressed as a convolution of a system's response function with a signal. 
+be expressed mathematically as a convolution of a system's response function with a signal. 
 In this paper, we present \verb|DeconvOptim.jl|, a flexible toolbox written in Julia to deconvolve multi-dimensional signals which have been
 degraded by a multi-dimensional signal response function. 
-\verb|DeconvOptim.jl| works both on CPUs and GPUs and utilizes recent advancements in Julias Automatic Differentiation ecosystem. The performance on CPUs surpasses the one of existing open source libraries. 
-The library is applicable to one dimensional time series datasets but also to multi-dimensional microscopy imaging datasets.
+\verb|DeconvOptim.jl| works both on CPUs and GPUs and utilizes recent advancements in Julias automatic differentiation ecosystem. 
+
+In this work we demonstrate that \verb|DeconvOptim.jl| surpasses the performance of existing open source libraries clearly
+and is applicable to one dimensional time series datasets but also to multi-dimensional microscopical imaging datasets.
 \end{abstract}
 
-\todo{fix code formatting}
-
 \section{Introduction}
-Deconvolution has been a long addressed problem especially in astronomical imaging, digital signal processing or microscopy imaging.
+Deconvolution has been a long addressed problem especially in astronomical imaging, digital signal processing or microscopical imaging.
 The assumption is that images are degraded by some kind of blur which can be described as a convolution between a kernel $h$ and the image $S$:
 \begin{equation}
     I(\mathbf r) = (h * S)(\mathbf r)
 \end{equation}
 $h$ is often called the point spread function (PSF) since it characterizes how the systems maps a point in the object to a blurred area
 in the image.
-Often this convolution operation is disturbed by different types of noise where the most common are additive Gaussian noise due to the read out of the camera sensors or Poisson shot noise due to the quantum nature of photons:
+Often this convolution operation is disturbed by different types of noise where the most common are additive Gaussian noise (e.g. due to the read out of the camera sensors) or Poisson shot noise (e.g. due to the quantum nature of photons):
 \begin{align}
     Y_{\text{Poisson}}(\mathbf r) &= \text{Poisson}[(h * S)(\mathbf r)]\\
     Y_{\text{Gauss}}(\mathbf r) &= (h * S)(\mathbf r) + \text{Gauss}_{\mu, \sigma}(\mathbf r)
 \end{align}
-Due to the noise and the low pass filter effect of the PSF, deconvolution is an ill-posed problem which cannot be solved directly.\\
+Due to noise and the low pass filter effect of the PSF, deconvolution is an ill-posed problem which cannot be solved directly.\\
 A well known approach, because of its simplicity, has been the iterative Richardson-Lucy deconvolution algorithm \cite{Richardson:72}, \cite{lucy:74} for Poisson noise degraded signals.
 Another common method is the non-iterative Wiener filter \cite{wiener2013extrapolation} because of its predictable runtime.
-Wiener filter assumes additive noise which is often not true, especially in low light conditions as in microscopy or astronomy. 
+The Wiener filter assumes additive noise which is often not true, especially in low light conditions as in microscopy or astronomy. 
 Recently machine learning based methods have become more and more favoured in deconvolution methods because
 of the possibility to add learned properties of similar images to the algorithm \cite{Kruse_2017_ICCV}.
 However, those implementations are usually restricted to cases where experimental datasets are available for the characterization and training.
@@ -77,7 +77,7 @@ outperform sliding kernels. In microscopy and astronomy that is often the case, 
         the Fast Fourier Transform (FFT).
         In Julia, \verb|FFTW.jl| offers a convenient interface to the FFTW library \cite{FFTW05}.
         The time complexity to calculate \autoref{eq:fftconv} is $\mathcal{O}(N \cdot \log N)$ for a one dimensional discretized dataset with $N$ samples.
-        For a 2D dataset with size $N \times M$ it is $\mathcal{O}(N \cdot M \log(N + M))$ and similar for higher dimensions.
+        For a 2D dataset with size $N \times M$ it is $\mathcal{O}(N \cdot M \log(N + M))$ and accordingly for higher dimensions.
 
 \subsection{Sliding Convolution Windows}
 Convolutions can be also calculated with a sliding kernel in real space which is the direct approach to
@@ -91,10 +91,11 @@ but since the FFT (CuFFT in the CUDA library \cite{CUDA}) can be also executed i
 
 
 \subsection{Wrap-Around Artifacts in FFT based Convolutions}
-    One drawback of the FFT based convolution are wrap-around artifacts. The reason is, that the FFT operation calculates the discrete
+    One drawback of a FFT based convolution are wrap-around artifacts. The reason is, that the FFT operation calculates the discrete
     Fourier transform (DFT) which inherently assumes periodic data. If one applies a FFT on a finite data set the assumption is that
     this finite data set repeats itself. 
-    To weaken the wrap-around artifacts in the convolution one can zero or mean pad the image before convolution and remove the boundaries afterwards.
+    To weaken the wrap-around artifacts in the convolution one can zero or mean pad the image before convolution 
+    and remove the padding afterwards.
 
     \begin{figure}[h]
         \centering
@@ -155,7 +156,7 @@ the forward function is a convolution but we also allow to plug in a different f
 This output of the forward function is compared
 with our noisy measurement under a certain loss function.
 Since deconvolution is an ill-posed problem we regularize the loss function with a regularizer.
-Afterwards we calculate the gradient of the loss function with respect to reconstruction $x(\mathbf r)$ via automatic differentation (AD).
+Afterwards we calculate the gradient of the loss function with respect to the reconstruction $x(\mathbf r)$ via automatic differentation (AD).
 The values of the total loss and the gradient are then used by an optimizer (to minimize the total loss) to apply some kind of gradient descent optimization to get a proper reconstruction.\\
 
 As typical for Julia packages, except \verb|FFTW.jl| and \verb|CUDA.jl| \cite{besard2018juliagpu}, all code is written in Julia.
@@ -166,7 +167,7 @@ L-BFGS is suitable for optimization with many million parameters as it only stor
 which is built from a finite number of past function and gradient evaluations. 
 In comparison to the Richardson-Lucy algorithm results are often good after 10 to 30 iterations whereas Richardson-Lucy takes
 a few hundreds iterations. 
-However, as we will see later due to the more complex optimization routine the speed-up in using L-BFGS is for simple 
+However, as we will see later due to the more complex optimization routine the speed-up in using L-BFGS is for a simple 
 deconvolution minor.
 
 
@@ -247,7 +248,7 @@ The gradient of $L$ with respect to $\mu(\mathbf r)$ is simply
 The function $L$ and the gradient $\nabla L$ are needed for any gradient descent optimization algorithm.
 The numerical evaluation of the Poisson loss can lead to issues. Since $\mu(r)=0$ can happen for a measurement with zero intensity background. However, the loss is not defined for $\mu \leq 0$. In our source code we set all intensity values below a certain threshold $\epsilon$ to $\epsilon$ itself. This prevents the evaluation of the logarithm at undefined values.
 The final source code has a modified version of \autoref{eq:gradpoisson} as registered gradient for \autoref{eq:poisson_loss}.
-The reason is, that for values of $\mu(\mathbf r) \leq 0$ the equation is not defined and has to be handled separately. 
+The reason is, that for values of $\mu(\mathbf r) = 0$ the equation is not defined and has to be handled separately. 
 
 \subsection{Regularizer}
     The regularizer is an additional part in the total loss to add some additional priors like sparsity and smoothness.
@@ -272,7 +273,7 @@ The reason is, that for values of $\mu(\mathbf r) \leq 0$ the equation is not de
         We currently use \verb|Tullio.jl|\footnote{\url{https://github.com/mcabbott/Tullio.jl}} to create efficient functions 
         calculating the regularizer and the gradient. For simple expressions
         such as below, \verb|Tullio.jl| registers an analytical gradient and therefore allows to apply the same efficient mechanisms 
-        to the gradient calculation which have been used for the regularizer evaluation itself \todo{ask McAbott for reason}.
+        to the gradient calculation which have been used for the regularizer evaluation itself.
         A (smoothed) Total variation with \verb|Tullio.jl| is defined here:
         \begin{lstlisting}[language = Julia]
 function total_variation(arr, ϵ=eltype(arr)(1e-8))
@@ -281,8 +282,8 @@ function total_variation(arr, ϵ=eltype(arr)(1e-8))
                 abs2(arr[i,j] - arr[i,j+1]))
 end
         \end{lstlisting}
-        \lstinline{ϵ} is needed for regions where \lstinline{arr == 0} because otherwise the gradient return infinite values.
-        Note, that definition here just demonstrates how the regularizer can be written down.
+        \lstinline{ϵ} is needed for regions where \lstinline{arr == 0} because otherwise the gradient returns infinite values.
+        Note, that definition just demonstrates how the regularizer can be written down.
         In our toolbox we allow for much more options. Since \verb|Tullio.jl| cannot handle generic multi-dimensional data yet
         we create regularizers which can vary in step size, dimensionality and
         different weighting in dimensions via Julia's metaprogramming capability.
@@ -346,11 +347,6 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
     \subsection{Influence of Regularizer}
         In this part we want to demonstrate the influence of the regularizer.
         \autoref{fig:fabioa} is a simulated imaged which has been affected by Poisson shot noise and blurring by a PSF.
-        \autoref{fig:fabiob} shows the results after 15 iterations of the deconvolution. 
-        We see that the image is heavily affected by some artifacts which usually occur after too many iterations without a regularizer.
-        \autoref{fig:fabioc} shows the results after 15 iterations of the deconvolution but regularized with a Good's roughness regularizer.
-        The total image quality is much better. A larger regularizer weight dampens the artifacts even more but also results in lower
-        resolution.
         \begin{figure}[h]
             \begin{subfigure}[b]{.166\textwidth}
                 \centering
@@ -370,14 +366,24 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
                 \caption{With regularizer}
                 \label{fig:fabioc}
             \end{subfigure}%            
-            \caption{a) has been convolved with a PSF and affected by Poisson shot noise (1000 photons expected for the brightest pixel). b) has been deconvolved for 15 iterations without an regularizer whereas c) was regularizer with Good's roughness.}
+            \caption{a) has been convolved with a PSF and affected by Poisson shot noise (1000 photons expected for the brightest pixel). b) has been deconvolved for 30 iterations without an regularizer whereas c) was regularizer with Good's roughness.}
             \label{fig:image}
         \end{figure}
+
+        This test chart is suited to judge the resolution of a reconstruction since the pieces of the Siemens star
+        are getting closer in the center which is equivalent to higher spatial frequencies.
+        \autoref{fig:fabiob} shows the result after 30 iterations of the deconvolution. 
+        We see that the image is heavily affected by some artifacts which usually occur after too many iterations without a regularizer.
+        Additionally, we notice that the core in the Siemens star is smaller meaning better spatial resolution. 
+        \autoref{fig:fabioc} shows the results after 30 iterations of the deconvolution but regularized with a Good's roughness regularizer.
+        The total image quality is much better since the regularizer dampens the artifacts but also results in lower
+        resolution. With the regularizer weight $\lambda$ one can adjust the strength.
         In \autoref{fig:fft_data_image} we show the absolute value of the FFT of the data. 
         The meaning of this plot is to judge how the deconvolution enhances the contrast of frequencies which have 
         been blurred by the convolution before.
+        The vertical black line indicates the frequency where the PSF has its bandlimit.
         The blue curve is the measured data and is below the red ground truth curve. This is due to the low pass filter effect of the PSF.
-        The measured curve also contains high frequency information which has been added due to noise and would not be expected 
+        The measured curve also contains high frequency (above the frequency limit of the PSF) information which has been added due to noise and would not be expected 
         after a pure convolution.
         \begin{figure}[h]
             \centering
@@ -385,9 +391,10 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
             \caption{This plot shows the absolute value of the FFT of the data.}
             \label{fig:fft_data_image}
         \end{figure}
-        We see that the orange curve also contains high spatial frequency information. The reason is, that the deconvolution does amplify also noise
+        We see that the orange curve also contains high spatial frequency information. The reason is that deconvolution amplifies noise
         without a regularizer. The green curve shows that the regularizer indeed dampens the high frequencies and results in a visually much
-        nicer image which is also closer to the ground truth
+        nicer image which is also closer to the ground truth.
+        Both the orange and the green curve show better contrast in frequency regions below the PSF resolution limit.
 
     \subsection{Multi-Dimensional Microscopy Data}
         To show the full ability, we deconvolve a four dimensional dataset where the measured volume consists of a 3D datasets
@@ -488,7 +495,7 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
         In contrast to their according publication \cite{ikoma2018convex} we needed more iterations to achieve good results
         on our used dataset. The regularizer weight was $\lambda=10^{-7}$. 
         The software requires a flat and a dark field image we could not provide. That might influence the quality of the reconstructed images
-        but in terms of performance the runtimes might by only by a factor of 2-4 faster than the runtimes we obtained (Ikoma et al. used 140 iterations in their datasets).
+        but in terms of performance the runtimes might be only by a factor of 2-5 smaller than the runtimes we obtained (Ikoma et al. used 140 iterations in their datasets).
 
         Since it is hard to judge the quality of those results with a numerical loss function value, we compare them visually.
         The CPU versions were multi threaded (if possible). \verb|DeconvolutionLab2|, \verb|Huygens| and \verb|GenericDeconv| were tested under Windows 10 and not Ubuntu.
@@ -571,6 +578,8 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
     Julia's metaprogramming capabilities together with \verb|Tullio.jl| allow to generate regularizer which have high performance
     and are easy to adapt.
     In future, we want to support more regularizers on GPUs since they can not be handled efficiently with the current \verb|Tullio.jl| solution.
+    Also we plan to extend the package to deconvolution of spatially varying kernels which are of importance in optical systems
+    with large field of view or poor manufacturing quality.
     
 
 
