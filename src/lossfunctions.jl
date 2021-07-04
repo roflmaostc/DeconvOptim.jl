@@ -1,7 +1,7 @@
 export Poisson, poisson_aux
 export Gauss, gauss_aux
 export ScaledGauss, scaled_gauss_aux
-
+export Anscombe, anscombe_aux
 
 """
     poisson_aux(μ, meas, storage=copy(μ))
@@ -63,7 +63,7 @@ end
 function ChainRulesCore.rrule(::typeof(gauss_aux), μ, meas, storage=copy(μ))
     Y = gauss_aux(μ, meas) 
     function gauss_aux_pullback(xbar)
-        return zero(eltype(μ)), 2 .* (μ - meas), zero(eltype(μ)), zero(eltype(μ)) 
+        return zero(eltype(μ)), 2 .* xbar .* (μ - meas), zero(eltype(μ)), zero(eltype(μ)) 
     end
     return Y, gauss_aux_pullback
 end
@@ -84,24 +84,25 @@ end
 
 
 """
-    scaled_gauss_aux(μ, meas)
+    scaled_gauss_aux(μ, meas, storage=copy(μ); read_var=0)
 Calculates the scaled Gauss loss for `μ` and `meas`.
+`read_var=0` is the readout noise variance of the sensor.
 `μ` can be of larger size than `meas`. In that case
 we extract a centered region from `μ` of the same size as `meas`.
 """
-function scaled_gauss_aux(μ, meas, storage=copy(μ))
+function scaled_gauss_aux(μ, meas, storage=copy(μ); read_var=0)
     μ[μ .<= 1f-8] .= 1f-8
-    storage .= 1/2f0 .* log.(μ) .+ (meas .- μ).^2 ./ (2 .* μ)
+    storage .= log.(μ .+ read_var) .+ (meas .- μ).^2 ./ ((μ .+ read_var))
     return sum(storage)
 end
 
  # define custom gradient for speed-up
-function ChainRulesCore.rrule(::typeof(scaled_gauss_aux), μ, meas, storage=copy(μ))
+function ChainRulesCore.rrule(::typeof(scaled_gauss_aux), μ, meas, storage=copy(μ); read_var=0)
     Y = scaled_gauss_aux(μ, meas) 
     function scaled_gauss_aux_pullback(xbar)
-        ∇ = (μ + μ.^2 - meas.^2)./(2 .* μ.^2)
+        ∇ = xbar .* (μ.^2 .- meas.^2 .+ μ .+ read_var.*(1 .- 2 .* (meas .- µ)))./((μ .+read_var).^2)
         ∇[μ .<= 1f-8] .= 0 
-        return zero(eltype(μ)), ∇, zero(eltype(μ)) 
+        return zero(eltype(μ)), ∇, zero(eltype(μ)),  zero(eltype(μ)), zero(eltype(μ))
     end
     return Y, scaled_gauss_aux_pullback
 end
@@ -113,6 +114,54 @@ end
 Returns a function to calculate scaled Gauss loss.
 Check the help of `scaled_gauss_aux`.
 """
-function ScaledGauss()
-    return scaled_gauss_aux
+function ScaledGauss(read_var=0)
+    return (µ, meas, storage=copy(µ)) -> scaled_gauss_aux(µ, meas, storage, read_var=read_var)
+end
+
+
+
+
+
+"""
+    anscombe_aux(μ, meas, storage=copy(μ); b=1)
+
+Calculates the Poisson loss using the Anscombe-based norm for `μ` and `meas`.
+`μ` can be of larger size than `meas`. In that case
+we extract a centered region from `μ` of the same size as `meas`.
+`b=1` is the optional parameter under the `√`.
+"""
+function anscombe_aux(μ, meas, storage=copy(μ); b=1)
+    # due to numerical errors, μ can be negative or 0
+    mm = minimum(μ)
+    if mm <= 0
+        μ .= μ .+ eps(maximum(μ)) .+ abs.(mm)
+    end
+    storage .= abs2.(sqrt.(meas .+ b) .- sqrt.(μ .+ b))
+    return sum(storage)
+end
+
+
+ # define custom gradient for speed-up
+ # ChainRulesCore offers the possibility to define a backward AD rule
+ # which can be used by several different AD systems
+function ChainRulesCore.rrule(::typeof(anscombe_aux), μ, meas, storage=copy(μ); b=1)
+    Y = anscombe_aux(μ, meas, storage, b=b)
+    function anscombe_aux_pullback(xbar)
+            storage .= xbar .* (one(eltype(μ)) .- sqrt.((meas .+ b) ./ (μ.+b)))
+        return zero(eltype(μ)), storage, zero(eltype(μ)), zero(eltype(storage)), zero(eltype(b)), zero(eltype(μ))
+    end
+
+    return Y, anscombe_aux_pullback
+end
+
+
+
+"""
+    Anscombe()
+Returns a function to calculate Poisson loss using the Anscombe transform
+Check the help of `anscombe_aux`.
+"""
+
+function Anscombe(b=1)
+    (μ, meas) -> anscombe_aux(μ, meas, b=b)
 end

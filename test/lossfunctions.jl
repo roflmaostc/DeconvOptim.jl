@@ -28,12 +28,23 @@ end
     N = 6
     img = abs.(randn((N, N)))
     
-    scaled_gauss = ScaledGauss()
-    
-    @test 1.7047189562170502 ≈ scaled_gauss([5.], [2.]) 
-    @test 1.7047189562170502 ≈ scaled_gauss_aux([5.], [2.]) 
-    
-    @test all( -1 .≈ Zygote.gradient(scaled_gauss_aux, [1.], [2.])[1])
+    scaled_gauss = ScaledGauss(0)
 
+    @test 3.4094379124341003 ≈ scaled_gauss([5.], [2.])
+    @test 3.4094379124341003 ≈ scaled_gauss_aux([5.], [2.], read_var=0)
+
+    @test all( -0.75 .≈ Zygote.gradient((a, b) -> scaled_gauss_aux(a, b, read_var=1), [1.], [2.])[1])
+end
+
+@testset "Anscombe Loss" begin
+    N = 6
+    img = abs.(randn((N, N)))
+
+    anscombe = Anscombe(1.0)
+    @test 0 ≈ anscombe(img, img)
+
+    @test 0 ≈ anscombe_aux(img, img,b=1)
+
+    @test all(0 .≈ Zygote.gradient(im1 -> anscombe_aux(im1,img, b=1), img)[1])
 
 end
