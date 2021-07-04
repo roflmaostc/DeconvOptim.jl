@@ -88,7 +88,7 @@ is suitable on GPUs. However, the computational complexity for a 2D kernel with 
 $N \times M$ data points is $\mathcal O(N \cdot M \cdot K \cdot L)$. It is clear that for larger kernel sizes ($K,L \gg 1$) the sliding method 
 has worse computational complexity than the FFT based convolutions. The many cores of a GPU can mitigate that to a certain extent
 but since the FFT (CuFFT in the CUDA library \cite{CUDA}) can be also executed in parallel fashion, both approaches profit from parallelization.
-If the kernel is separable over the dimensions (like a Gaussian kernel) the complexity changes to $\mathcal O(N \cdot K \cdot L +  N \cdot K \cdot L)$ however most optical PSF are not separable and therefore this is not general applicable. 
+If the kernel is separable over the dimensions (like a Gaussian kernel) the complexity changes to $\mathcal O(N \cdot M \cdot L +  N \cdot M \cdot K)$ however most optical PSFs are not separable and therefore this is not generally applicable. 
 
 
 \subsection{Wrap-Around Artifacts in FFT based Convolutions}
