@@ -13,6 +13,7 @@ include("requires.jl")
 using Optim
  #mean
 using Statistics
+using StatsBase
 using FFTW
 FFTW.set_num_threads(12)
 using LineSearches
@@ -40,6 +41,7 @@ include("conv.jl")
 include("generic_invert.jl")
 include("lucy_richardson.jl")
 include("deconvolution.jl")
+include("analysis_tools.jl")
 
 # refresh Zygote to load the custom rrules defined with ChainRulesCore
 using Zygote: gradient
