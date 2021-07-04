@@ -90,7 +90,7 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
 
 
     # we divide by the maximum to normalize
-    rescaling = maximum(measured) 
+    rescaling = mean(measured) # was: maximum(measured) 
     measured = measured ./ rescaling
     # create rec0 which will be the initial guess for the reconstruction
     rec0 = similar(measured, (size_padded)...)
