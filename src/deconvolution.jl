@@ -30,7 +30,7 @@ regularizers and mappings.
         `padding=0` disables any padding.
 - `optim_options=nothing`: Can be a options file required by Optim.jl. Will overwrite iterations.
 - `optim_optimizer=LBFGS()`: The chosen Optim.jl optimizer. 
-
+- `debug_f=nothing`: A debug function which must take a single argument, the current reconstruction.
 
 # Example
 ```julia-repl
@@ -58,6 +58,7 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
         padding=0.00,
         optim_options=nothing,
         optim_optimizer=LBFGS(linesearch=BackTracking()),
+        debug_f=nothing,
         ) where {T, N}
 
 
@@ -150,7 +151,8 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
                           optim_optimizer=optim_optimizer,
                           optim_options=optim_options,
                           mapping=mapping,
-                          loss=loss)
+                          loss=loss,
+                          debug_f=debug_f)
 
     res_out .*= rescaling
     # since we do some padding we need to extract the center part

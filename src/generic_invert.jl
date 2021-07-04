@@ -21,7 +21,7 @@ regularizers and mappings.
     definitely should stop. Will be overwritten if `optim_options` is provided.
 - `optim_options=nothing`: Can be a options file required by Optim.jl. Will overwrite iterations.
 - `optim_optimizer=LBFGS()`: The chosen Optim.jl optimizer. 
-
+- `debug_f=nothing`: A debug function which must take a single argument, the current reconstruction. 
 """
 function invert(measured, rec0, forward; 
                 iterations=10, λ=eltype(rec0)(0.05),
@@ -30,7 +30,8 @@ function invert(measured, rec0, forward;
                 optim_options=nothing,
                 mapping=Non_negative(),
                 loss=Poisson(),
-                real_gradient=true)
+                real_gradient=true,
+                debug_f=nothing)
 
     # if not special options are given, just restrict iterations
     if optim_options == nothing
@@ -38,6 +39,13 @@ function invert(measured, rec0, forward;
     end
 
 
+    debug_f = let
+        if isnothing(debug_f)
+            identity
+        else
+            debug_f
+        end
+    end
     
     # Get the mapping functions to achieve constraints
     # like non negativity
@@ -69,9 +77,13 @@ function invert(measured, rec0, forward;
     # This leads to the common "world age problem" in Julia
     # for more details on that check:
     # https://discourse.julialang.org/t/dynamically-create-a-function-initial-idea-with-eval-failed-due-to-world-age-issue/49139/17
-    function f!(F, G, rec)
+    function fg!(F, G, rec)
+    
         # Zygote calculates both derivative and loss, therefore do everything in one step
         if G != nothing
+            # apply debug function
+            debug_f(rec)
+
             y, back = Base.invokelatest(Zygote._pullback, total_loss, rec)
             # calculate gradient
             G .= take_real_or_not(Base.invokelatest(back, 1)[2])
@@ -87,7 +99,7 @@ function invert(measured, rec0, forward;
     optim_options = Optim.Options(iterations=iterations)
     
     # do the optimization with LBGFS
-    res = Optim.optimize(Optim.only_fg!(f!), rec0, optim_optimizer, optim_options)
+    res = Optim.optimize(Optim.only_fg!(fg!), rec0, optim_optimizer, optim_options)
     res_out = mf(Optim.minimizer(res))
 
 
