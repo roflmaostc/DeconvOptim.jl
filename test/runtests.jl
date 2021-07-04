@@ -7,7 +7,9 @@ using TestImages, Noise
  # fix seed for reproducibility
 Random.seed!(42)
 
+
 @testset "Utils" begin
+    @test gpu_or_cpu(randn((2,2))) == Array
     include("utils.jl")
 end
 
@@ -23,3 +25,5 @@ include("lossfunctions.jl")
 include("regularizer.jl")
 
 include("main.jl")
+
+
