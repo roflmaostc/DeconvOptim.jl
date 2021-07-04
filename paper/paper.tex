@@ -367,35 +367,53 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
                 \caption{With regularizer}
                 \label{fig:fabioc}
             \end{subfigure}%            
-            \caption{a) has been convolved with a PSF and affected by Poisson shot noise (100 photons expected for the brightest pixel). b) has been deconvolved for 50 iterations without an regularizer whereas c) was regularizer with Good's roughness which converged after 20 iterations with $\lambda=0.03$.}
+            \caption{a) has been convolved with a PSF and affected by Poisson shot noise (100 photons expected for the brightest pixel). 
+                        Deconvolved b) for 50 iterations without an regularizer c) with Good's roughness regularizer and 
+                            converged after 20 iterations with $\lambda=0.03$.}
             \label{fig:image}
         \end{figure}
 
         This test chart is suited to judge the resolution of a reconstruction since the pieces of the Siemens star
         are getting closer in the center which is equivalent to higher spatial frequencies.
-        \autoref{fig:fabiob} shows the result after 30 iterations of the deconvolution. 
+        \autoref{fig:fabiob} shows the result after 50 iterations of the deconvolution. 
         We see that the image is heavily affected by some artifacts which usually occur after too many iterations without a regularizer.
         Additionally, we notice that the core in the Siemens star is smaller meaning better spatial resolution. 
-        \autoref{fig:fabioc} shows the results after 30 iterations of the deconvolution but regularized with a Good's roughness regularizer.
+        \autoref{fig:fabioc} shows the results after 20 iterations of the deconvolution but regularized with a Good's roughness regularizer.
         The total image quality is much better since the regularizer dampens the artifacts but also results in lower
         resolution. With the regularizer weight $\lambda$ one can adjust the strength.
-        In \autoref{fig:fft_data_image} we show the absolute value of the FFT of the data. 
-        The meaning of this plot is to judge how the deconvolution enhances the contrast of frequencies which have 
-        been blurred by the convolution before.
-        The vertical black line indicates the frequency where the PSF has its bandlimit.
-        The blue curve is the measured data and is below the red ground truth curve. This is due to the low pass filter effect of the PSF.
-        The measured curve also contains high frequency (above the frequency limit of the PSF) information which has been added due to noise and would not be expected 
-        after a pure convolution.
+        In \autoref{fig:rel_energy_regain} we show the relative energy regain $G_\textrm{R}$ \cite{rel_energy_regain} (REG).
+        The meaning of the relative energy regain is how well certain frequencies are reconstructed in comparison
+        to the ground truth. $G_\textrm{R} = 1$ is a perfect reconstruction, $G_\textrm{R} = 0$ indicates that 
+        this frequency could not be recovered at all, $G_\textrm{R} < 0$ means that the reconstruction introduces fake frequencies
+        which do not fit to the ground truth at all.
         \begin{figure}[h]
             \centering
-            \includegraphics[width = .4\textwidth]{figures/test_chart_relative_energy_regain.pdf}
-            \caption{This plot shows the absolute value of the FFT of the data.}
-            \label{fig:fft_data_image}
+            \begin{subfigure}[b]{.23\textwidth}
+                \centering
+                \includegraphics[width =\textwidth]{figures/test_chart_relative_energy_regain.pdf}
+                \caption{Relative energy regain $G_\textrm{R}$ over different frequencies.}
+                \label{fig:rel_energy_regain}
+            \end{subfigure}
+            \hfill
+            \begin{subfigure}[b]{.23\textwidth}
+                \centering
+                \includegraphics[width =0.97 \textwidth]{figures/test_chart_ncc.pdf}
+                \caption{Normalized correlation coefficient (NCC) over the number of iterations.}
+                \label{fig:ncc}
+            \end{subfigure}
+            \caption{NCC and REG are quantitative measurements to judge the quality of a deconvolution result.}
         \end{figure}
-        We see that the orange curve also contains high spatial frequency information. The reason is that deconvolution amplifies noise
-        without a regularizer. The green curve shows that the regularizer indeed dampens the high frequencies and results in a visually much
-        nicer image which is also closer to the ground truth.
-        Both the orange and the green curve show better contrast in frequency regions below the PSF resolution limit.
+        We can see that the red measured curve shows the typical contrast loss until the maximum frequency $f_\textrm{max}$ (the PSF has
+            zero transmittance over this frequency threshold).
+        Beyond $f_\textrm{max}$ Poisson noise introduces fake frequencies.
+        The green curve shows the relative energy regain of the deconvolution without a regularizer. For certain regions below  $f_\textrm{max}$
+        the deconvolution enhances the contrast. However, around and beyond $f_\textrm{max}$ several artifacts are introduced.
+        The regularized blue curve performs much better and only certain frequencies show a relative energy regain below zero.
+        To some extent the regularized version can also recover information above $f_\textrm{max}$ which are not supported by the PSF.
+        \autoref{fig:ncc} shows the normalized correlation coefficient over the number of iterations.
+        Especially the deconvolution without an regularizer suffers from poor performance after a high number of iterations.
+        Either one has to stop early after a hand optimized iteration number or use a regularizer.
+
 
     \subsection{Multi-Dimensional Microscopy Data}
         To show the full ability, we deconvolve a four dimensional dataset where the measured volume consists of a 3D datasets
@@ -581,6 +599,7 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
     In future, we want to support more regularizers on GPUs since they can not be handled efficiently with the current \verb|Tullio.jl| solution.
     Also we plan to extend the package to deconvolution of spatially varying kernels which are of importance in optical systems
     with large field of view or poor manufacturing quality.
+
 
 
 \input{bib.tex}
