@@ -67,3 +67,20 @@ abstract = {An iterative method of restoring degraded images was developed by tr
  volume = {58},
  year = {1971}
 }
+
+
+@article{rel_energy_regain,
+title = {Estimating missing information by maximum likelihood deconvolution},
+journal = {Micron},
+volume = {38},
+number = {2},
+pages = {136-144},
+year = {2007},
+note = {Special issue on Super-resolution and other Novel Microscopies},
+issn = {0968-4328},
+doi = {https://doi.org/10.1016/j.micron.2006.07.009},
+url = {https://www.sciencedirect.com/science/article/pii/S0968432806001272},
+author = {Rainer Heintzmann},
+keywords = {Deblurring, Fluorescence microscopy, Quality criterion, Bandwidth extension},
+abstract = {The ability of iteratively constrained maximum likelihood (ML) deconvolution to reconstruct out-of-band information is discussed and exemplified by simulations. The frequency dependent relative energy regain, a novel way of quantifying the reconstruction ability, is introduced. The positivity constraint of ML deconvolution allows reconstructing information outside the spatial frequency bandwidth which is set by the optical system. This is demonstrated for noise-free and noisy data. It is also shown that this property depends on the type of object under investigation. An object is constructed where no significant out-of-band reconstruction is possible. It is concluded that in practical situations the amount of possible out-of-band reconstruction depends on the agreement between reality and the model describing “typical objects” incorporated into the algorithm by appropriate penalty functions.}
+}

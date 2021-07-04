@@ -5,4 +5,4 @@ DocumenterCitations = "daee34ce-89f3-4625-b898-19384cb65244"
 Noise = "81d43f40-5267-43b7-ae1c-8b967f377efa"
 
 [compat]
-Documenter = "0.25"
+Documenter = "0.27"

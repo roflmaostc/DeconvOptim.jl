@@ -1,7 +1,7 @@
 using Documenter, DocumenterCitations, DeconvOptim
 
 
-cite_bib = CitationBibliography(joinpath(@__DIR__, "bibtex_references.md"))
+cite_bib = CitationBibliography(joinpath(@__DIR__, "../paper/ref.bib"))
 
 DocMeta.setdocmeta!(DeconvOptim, :DocTestSetup, :(using DeconvOptim); recursive=true)
 makedocs(cite_bib, modules=[DeconvOptim],
@@ -29,6 +29,7 @@ makedocs(cite_bib, modules=[DeconvOptim],
                     "function_references/mapping.md",
                     "function_references/regularizer.md",
                     "function_references/utils.md",
+                    "function_references/analysis.md",
                     ],
                 "References" => "references.md"
                 ],

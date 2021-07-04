@@ -6,6 +6,7 @@ conv
 conv_psf
 plan_conv
 plan_conv_psf
+DeconvOptim.next_fast_fft_size
 ```
 
 
