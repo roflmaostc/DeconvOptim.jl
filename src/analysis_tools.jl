@@ -5,6 +5,8 @@ Calculates the relative energy regain between the `ground_truth`
 and the reconstruction.
 Assumes that both arrays are 2 dimensional
 
+# Reference
+* [Rainer Heintzmann, \"Estimating missing information by maximum likelihood deconvolution\"](https://www.sciencedirect.com/science/article/abs/pii/S0968432806001272)
 """
 function relative_energy_regain(ground_truth, rec)
     # go to fourier space
