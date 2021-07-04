@@ -88,6 +88,7 @@ is suitable on GPUs. However, the computational complexity for a 2D kernel with 
 $N \times M$ data points is $\mathcal O(N \cdot M \cdot K \cdot L)$. It is clear that for larger kernel sizes ($K,L \gg 1$) the sliding method 
 has worse computational complexity than the FFT based convolutions. The many cores of a GPU can mitigate that to a certain extent
 but since the FFT (CuFFT in the CUDA library \cite{CUDA}) can be also executed in parallel fashion, both approaches profit from parallelization.
+If the kernel is separable over the dimensions (like a Gaussian kernel) the complexity changes to $\mathcal O(N \cdot K \cdot L +  N \cdot K \cdot L)$ however most optical PSF are not separable and therefore this is not general applicable. 
 
 
 \subsection{Wrap-Around Artifacts in FFT based Convolutions}
@@ -95,8 +96,8 @@ but since the FFT (CuFFT in the CUDA library \cite{CUDA}) can be also executed i
     Fourier transform (DFT) which inherently assumes periodic data. If one applies a FFT on a finite data set the assumption is that
     this finite data set repeats itself. 
     To weaken the wrap-around artifacts in the convolution one can zero or mean pad the image before convolution 
-    and remove the padding afterwards.
-
+    and remove the padding afterwards. Such approaches still suffer from artifacts when boundary values do not fit
+    to the mean or to zero as it can be observed in \autoref{fig:withpad} at the top.
     \begin{figure}[h]
         \centering
         \begin{subfigure}[b]{.25\textwidth}
@@ -132,7 +133,7 @@ but since the FFT (CuFFT in the CUDA library \cite{CUDA}) can be also executed i
         with standard deviation $\sigma=\SI{3}{pixel}$.}
         \label{fig:}
     \end{figure}
-     
+    To solve for the wrap-around artifacts in deconvolution we use a different approach which will be presented later. 
 \subsection{Preferred Convolution}
 The current state of \verb|DeconvOptim.jl| uses the FFT approach to calculate the convolution.
 However, in principle one could add the possibility to change to spatially based convolutions.
@@ -326,7 +327,7 @@ julia> reg(randn((10,20,30,40)))
                 \caption{}
                 \label{fig:1D_datasetb}
             \end{subfigure}
-            \caption{1D data which has been convolved with a PSF and was degraded with additive Gaussian noise with $\sigma=1.0$.}
+            \caption{1D data which has been convolved with a PSF and was degraded with additive Gaussian noise with $\sigma=1.0$. Note that for the deconvolution we have chosen a position interval which is well within the full series so that there are not wrap-around artifacts in the measurement.}
             \label{fig:1D_dataset}
         \end{figure}
         On the right hand we can see the results of the following deconvolution:
@@ -350,23 +351,23 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
         \begin{figure}[h]
             \begin{subfigure}[b]{.166\textwidth}
                 \centering
-                \includegraphics[width=\textwidth]{figures/fabio_blurry.png}
+                \includegraphics[width=\textwidth]{figures/resolution_test_chart_blurry.png}
                 \caption{Measured}
                 \label{fig:fabioa}
             \end{subfigure}%
             \begin{subfigure}[b]{.166\textwidth}
                 \centering
-                \includegraphics[width=\textwidth]{figures/fabio_deconv_no_reg_iter_30.png}
+                \includegraphics[width=\textwidth]{figures/resolution_test_chart_no_reg_iter_30.png}
                 \caption{Without regularizer}
                 \label{fig:fabiob}
             \end{subfigure}%
             \begin{subfigure}[b]{.166\textwidth}
                 \centering
-                \includegraphics[width=\textwidth]{figures/fabio_deconv_regularizer_005_iter_30.png}
+                \includegraphics[width=\textwidth]{figures/resolution_test_chart_regularizer_005_iter_30.png}
                 \caption{With regularizer}
                 \label{fig:fabioc}
             \end{subfigure}%            
-            \caption{a) has been convolved with a PSF and affected by Poisson shot noise (1000 photons expected for the brightest pixel). b) has been deconvolved for 30 iterations without an regularizer whereas c) was regularizer with Good's roughness.}
+            \caption{a) has been convolved with a PSF and affected by Poisson shot noise (100 photons expected for the brightest pixel). b) has been deconvolved for 50 iterations without an regularizer whereas c) was regularizer with Good's roughness which converged after 20 iterations with $\lambda=0.03$.}
             \label{fig:image}
         \end{figure}
 
@@ -387,7 +388,7 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
         after a pure convolution.
         \begin{figure}[h]
             \centering
-            \includegraphics[width = .4\textwidth]{figures/frequencies_img.pdf}
+            \includegraphics[width = .4\textwidth]{figures/test_chart_relative_energy_regain.pdf}
             \caption{This plot shows the absolute value of the FFT of the data.}
             \label{fig:fft_data_image}
         \end{figure}
@@ -405,7 +406,7 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
         \begin{figure}[h]
             \begin{subfigure}{.25\textwidth}
                 \centering
-                \includegraphics[width = .95\textwidth]{figures/deconvolved_rgb.png}
+                \includegraphics[width = .95\textwidth]{figures/raw_rgb.png}
             \end{subfigure}%
             \begin{subfigure}{.25\textwidth}
                 \centering
@@ -580,7 +581,6 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
     In future, we want to support more regularizers on GPUs since they can not be handled efficiently with the current \verb|Tullio.jl| solution.
     Also we plan to extend the package to deconvolution of spatially varying kernels which are of importance in optical systems
     with large field of view or poor manufacturing quality.
-    
 
 
 \input{bib.tex}
