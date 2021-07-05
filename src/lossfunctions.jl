@@ -163,5 +163,5 @@ Check the help of `anscombe_aux`.
 """
 
 function Anscombe(b=1)
-    (μ, meas) -> anscombe_aux(μ, meas, b=b)
+    (μ, meas, storage=copy(μ)) -> anscombe_aux(μ, meas, storage, b=b)
 end
