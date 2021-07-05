@@ -84,6 +84,6 @@ function normalized_cross_correlation(ground_truth, measured)
     ground_truth = fl(ground_truth)
     measured = fl(measured)
 
-    ncc = crosscor(ground_truth, measured, [0], demean=false)[begin]
+    ncc = crosscor(ground_truth, measured, [0], demean=true)[begin]
     return ncc
 end
