@@ -39,18 +39,20 @@ function invert(measured, rec0, forward;
     end
 
 
-    debug_f = let
-        if isnothing(debug_f)
-            identity
-        else
-            debug_f
-        end
-    end
     
     # Get the mapping functions to achieve constraints
     # like non negativity
     mf, m_invf = get_mapping(mapping)
     regularizer = get_regularizer(regularizer, eltype(rec0))
+
+
+    debug_f_n(x) = let
+        if isnothing(debug_f)
+            identity(x)
+        else
+            debug_f(mf(x))
+        end
+    end
     
     storage_μ = deepcopy(measured)
     function total_loss(rec)
@@ -82,7 +84,7 @@ function invert(measured, rec0, forward;
         # Zygote calculates both derivative and loss, therefore do everything in one step
         if G != nothing
             # apply debug function
-            debug_f(rec)
+            debug_f_n(rec)
 
             y, back = Base.invokelatest(Zygote._pullback, total_loss, rec)
             # calculate gradient
