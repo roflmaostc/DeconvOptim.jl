@@ -50,8 +50,8 @@ The Wiener filter assumes additive noise which is often not true, especially in 
 Recently machine learning based methods have become more and more favoured in deconvolution methods because
 of the possibility to add learned properties of similar images to the algorithm \cite{Kruse_2017_ICCV}.
 However, those implementations are usually restricted to cases where experimental datasets are available for the characterization and training.
-\verb|DeconvOptim.jl| offers several deconvolution algorithms like the iterative Richardson-Lucy algorithms but also
-a much more flexible method which is based on a loss function being minimized by a gradient descent.
+\verb|DeconvOptim.jl| is a toolbox written in Julia \cite{bezanson2017julia} which offers several deconvolution algorithms like the iterative Richardson-Lucy algorithms but also
+a much more flexible methods which are based on a loss function being minimized by a gradient descent.
 Also this toolbox is not restricted in dimensionality and therefore can be applied to deconvolution problems in many different fields.
 
 \section{Efficient Convolutions}
@@ -349,40 +349,52 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
         In this part we want to demonstrate the influence of the regularizer.
         \autoref{fig:fabioa} is a simulated imaged which has been affected by Poisson shot noise and blurring by a PSF.
         \begin{figure}[h]
-            \begin{subfigure}[b]{.166\textwidth}
+            \begin{subfigure}[b]{.25\textwidth}
                 \centering
                 \includegraphics[width=\textwidth]{figures/resolution_test_chart_blurry.png}
-                \caption{Measured}
+                \caption{Measured with Poisson noise}
                 \label{fig:fabioa}
             \end{subfigure}%
-            \begin{subfigure}[b]{.166\textwidth}
+            \hfill
+            \begin{subfigure}[b]{.25\textwidth}
                 \centering
-                \includegraphics[width=\textwidth]{figures/resolution_test_chart_no_reg_iter_30.png}
-                \caption{Without regularizer}
+                \includegraphics[width=\textwidth]{figures/resolution_test_chart_no_reg_iter_50.png}
+                \caption{Without regularizer $N=50$}
                 \label{fig:fabiob}
             \end{subfigure}%
-            \begin{subfigure}[b]{.166\textwidth}
+            \hfill
+            \begin{subfigure}[b]{.25\textwidth}
                 \centering
-                \includegraphics[width=\textwidth]{figures/resolution_test_chart_regularizer_005_iter_30.png}
-                \caption{With regularizer}
+                \includegraphics[width=\textwidth]{figures/resolution_test_chart_no_reg_iter_10.png}
+                \caption{Without regularizer $N=10$}
                 \label{fig:fabioc}
             \end{subfigure}%            
+            \hfill
+            \begin{subfigure}[b]{.25\textwidth}
+                \centering
+                \includegraphics[width=\textwidth]{figures/resolution_test_chart_regularizer_008_iter_21.png}
+                \caption{With regularizer $N=21$.}
+                \label{fig:fabiod}
+            \end{subfigure}%            
             \caption{a) has been convolved with a PSF and affected by Poisson shot noise (100 photons expected for the brightest pixel). 
-                        Deconvolved b) for 50 iterations without an regularizer c) with Good's roughness regularizer and 
-                            converged after 20 iterations with $\lambda=0.03$.}
+                        Deconvolved b) for 50 iterations without a regularizer c) for 10 iterations without a regularizer d) with Good's roughness regularizer and 
+                            converged after 21 iterations with $\lambda=0.08$.}
             \label{fig:image}
         \end{figure}
 
         This test chart is suited to judge the resolution of a reconstruction since the pieces of the Siemens star
         are getting closer in the center which is equivalent to higher spatial frequencies.
-        \autoref{fig:fabiob} shows the result after 50 iterations of the deconvolution. 
+        \autoref{fig:fabioc} shows the result after 50 iterations of the deconvolution. 
         We see that the image is heavily affected by some artifacts which usually occur after too many iterations without a regularizer.
         Additionally, we notice that the core in the Siemens star is smaller meaning better spatial resolution. 
-        \autoref{fig:fabioc} shows the results after 20 iterations of the deconvolution but regularized with a Good's roughness regularizer.
+        \autoref{fig:fabioc} shows the results after 10 iterations of the deconvolution without a regularizer.
+        We have chosen 10 iterations since the normal cross correlation (NCC) shows the maximum at 10 iterations.
+        Optimizing for more iterations seems to introduce more and more artifacts to the image as it can be seen visually as well.
+        \autoref{fig:fabiod} shows the results after 21 iterations of the deconvolution but regularized with a Good's roughness regularizer.
         The total image quality is much better since the regularizer dampens the artifacts but also results in lower
         resolution. With the regularizer weight $\lambda$ one can adjust the strength.
         In \autoref{fig:rel_energy_regain} we show the relative energy regain $G_\textrm{R}$ \cite{rel_energy_regain} (REG).
-        The meaning of the relative energy regain is how well certain frequencies are reconstructed in comparison
+        The meaning of the REG is how well certain frequencies are reconstructed in comparison
         to the ground truth. $G_\textrm{R} = 1$ is a perfect reconstruction, $G_\textrm{R} = 0$ indicates that 
         this frequency could not be recovered at all, $G_\textrm{R} < 0$ means that the reconstruction introduces fake frequencies
         which do not fit to the ground truth at all.
@@ -391,29 +403,34 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
             \begin{subfigure}[b]{.23\textwidth}
                 \centering
                 \includegraphics[width =\textwidth]{figures/test_chart_relative_energy_regain.pdf}
-                \caption{Relative energy regain $G_\textrm{R}$ over different frequencies.}
+                \caption{REG $G_\textrm{R}$ over different frequencies.}
                 \label{fig:rel_energy_regain}
             \end{subfigure}
             \hfill
             \begin{subfigure}[b]{.23\textwidth}
                 \centering
-                \includegraphics[width =0.97 \textwidth]{figures/test_chart_ncc.pdf}
-                \caption{Normalized correlation coefficient (NCC) over the number of iterations.}
+                \includegraphics[width =1 \textwidth]{figures/test_chart_ncc.pdf}
+                \caption{NCC over the number of iterations.}
                 \label{fig:ncc}
             \end{subfigure}
-            \caption{NCC and REG are quantitative measurements to judge the quality of a deconvolution result.}
+            \caption{NCC and REG are quantitative measurements to judge the quality of a deconvolution result. 
+                In a) we show the REG for the hand-optimized non-regularized version with 10 iterations and the (converged) regularized versions with $\lambda=0.08$ and $\lambda=0.5$.}
         \end{figure}
         We can see that the red measured curve shows the typical contrast loss until the maximum frequency $f_\textrm{max}$ (the PSF has
             zero transmittance over this frequency threshold).
         Beyond $f_\textrm{max}$ Poisson noise introduces fake frequencies.
-        The green curve shows the relative energy regain of the deconvolution without a regularizer. For certain regions below  $f_\textrm{max}$
+        The green curve shows the REG of the deconvolution without a regularizer. For certain regions below  $f_\textrm{max}$
         the deconvolution enhances the contrast. However, around and beyond $f_\textrm{max}$ several artifacts are introduced.
-        The regularized blue curve performs much better and only certain frequencies show a relative energy regain below zero.
+        The regularized blue curve performs better and only certain frequencies show a REG below zero.
         To some extent the regularized version can also recover information above $f_\textrm{max}$ which are not supported by the PSF.
-        \autoref{fig:ncc} shows the normalized correlation coefficient over the number of iterations.
+        \autoref{fig:ncc} shows the NCC over the number of iterations.
         Especially the deconvolution without an regularizer suffers from poor performance after a high number of iterations.
-        Either one has to stop early after a hand optimized iteration number or use a regularizer.
-
+        Either one has to stop early after a hand optimized iteration number (here 10) or use a regularizer.
+        The regularized version seems to be robust against a higher number of iterations and even converges after 21.
+        In conclusion we can say that both the regularized and the non-regularized versions produce good results. 
+        In the non-regularized one has to hand-optimize the number of iterations whereas in the regularized one has to optimize $\lambda$.
+        Advantage of the non-regularized version is, that it performs more than twice as fast but as it can be seen in \autoref{fig:fabioc} 
+        it shows slightly more artifacts in homogenous regions.
 
     \subsection{Multi-Dimensional Microscopy Data}
         To show the full ability, we deconvolve a four dimensional dataset where the measured volume consists of a 3D datasets
