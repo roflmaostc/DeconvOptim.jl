@@ -1,4 +1,9 @@
-export invert 
+export invert, OptimInterface, OptimOptim, OptimNextGen
+using Infiltrator
+
+abstract type OptimInterface end  # To accomodate multiple optimizers which are incompatible
+struct OptimOptim <: OptimInterface end  # 
+struct OptimNextGen <: OptimInterface end  # 
 
 """
     invert(measured, rec0, forward; <keyword arguments>)
@@ -31,14 +36,13 @@ function invert(measured, rec0, forward;
                 mapping=Non_negative(),
                 loss=Poisson(),
                 real_gradient=true,
-                debug_f=nothing)
+                debug_f=nothing,
+                use_optim =OptimOptim)
 
     # if not special options are given, just restrict iterations
-    if optim_options == nothing
+    if isa(use_optim, OptimOptim) && optim_options == nothing
         optim_options = Optim.Options(iterations=iterations)
     end
-
-
     
     # Get the mapping functions to achieve constraints
     # like non negativity
@@ -98,11 +102,25 @@ function invert(measured, rec0, forward;
         end
     end
 
-    optim_options = Optim.Options(iterations=iterations)
-    
-    # do the optimization with LBGFS
-    res = Optim.optimize(Optim.only_fg!(fg!), rec0, optim_optimizer, optim_options)
-    res_out = mf(Optim.minimizer(res))
+    if isa(use_optim, Type{OptimOptim}) 
+        optim_options = Optim.Options(iterations=iterations)
+        
+        # do the optimization with LBGFS
+        res = Optim.optimize(Optim.only_fg!(fg!), rec0, optim_optimizer, optim_options)
+        res_out = mf(Optim.minimizer(res))
+    elseif isa(use_optim, Type{OptimNextGen})
+        res = copy(rec0)
+            
+        # @infiltrate
+        if isnothing(optim_options)
+            optim_optimizer((x,g) -> fg!(true, g, x), res; maxiter=iterations)
+        else
+            optim_optimizer((x,g) -> fg!(true, g, x), res; maxiter=iterations, optim_options...)
+        end
+        res_out = mf(res)
+    else
+        error("Unknown optimizer interface $(typeof(use_optim))")
+    end
 
 
     return res_out, res

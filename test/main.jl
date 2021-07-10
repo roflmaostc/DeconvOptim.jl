@@ -31,7 +31,11 @@
     #= @show deconvolution(img, psf, regularizer=nothing, padding=0.1, mapping=nothing)[1] =# 
     @test all(≈(res4, deconvolution(img, psf, regularizer=nothing, padding=0.1, mapping=nothing)[1], rtol=0.1))
 
-
+    # test NextGen optimizers
+    res5 = [0.49633      16.4936   0.00862045; 0.0139499    15.8587   2.31716; 0.000227487   9.263   19.5289]
+    #= @show deconvolution(img, psf, regularizer=nothing, padding=0.1, mapping=nothing)[1] =# 
+    @test all(≈(res5, deconvolution(img, psf, optim_optimizer=vmlmb!, optim_options=(mem=20, lower=0, lnsrch=OptimPackNextGen.LineSearches.MoreThuenteLineSearch()),
+    regularizer=nothing, padding=0.1, mapping=nothing, use_optim=OptimNextGen)[1], rtol=0.1))
     
     # test broadcasting with image having more dimensions
     img = zeros((3, 3, 2))
