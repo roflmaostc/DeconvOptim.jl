@@ -37,10 +37,10 @@ function invert(measured, rec0, forward;
                 loss=Poisson(),
                 real_gradient=true,
                 debug_f=nothing,
-                use_optim =OptimOptim)
+                optimizer_package =OptimOptim)
 
     # if not special options are given, just restrict iterations
-    if isa(use_optim, OptimOptim) && optim_options == nothing
+    if isa(optimizer_package, OptimOptim) && optim_options == nothing
         optim_options = Optim.Options(iterations=iterations)
     end
     
@@ -102,13 +102,13 @@ function invert(measured, rec0, forward;
         end
     end
 
-    if isa(use_optim, Type{OptimOptim}) 
+    if isa(optimizer_package, Type{OptimOptim}) 
         optim_options = Optim.Options(iterations=iterations)
         
         # do the optimization with LBGFS
         res = Optim.optimize(Optim.only_fg!(fg!), rec0, optim_optimizer, optim_options)
         res_out = mf(Optim.minimizer(res))
-    elseif isa(use_optim, Type{OptimNextGen}) # supports a different interface as for example used in OptimPackNextGen for the function 'vmlmb!'
+    elseif isa(optimizer_package, Type{OptimNextGen}) # supports a different interface as for example used in OptimPackNextGen for the function 'vmlmb!'
         res = copy(rec0)
             
         if isnothing(optim_options)
@@ -118,7 +118,7 @@ function invert(measured, rec0, forward;
         end
         res_out = mf(res)
     else
-        error("Unknown optimizer interface $(typeof(use_optim))")
+        error("Unknown optimizer interface $(typeof(optimizer_package))")
     end
 
 
