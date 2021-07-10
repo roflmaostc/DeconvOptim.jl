@@ -31,8 +31,7 @@ julia> ] add DeconvOptim
 ## Usage
 A quick example is shown below.
 ```julia
-using Revise # for development useful
-using DeconvOptim, TestImages, Colors, FFTW, Noise, ImageShow
+using DeconvOptim, TestImages, Colors, ImageIO, Noise, ImageShow
 
 # load test image
 img = Float32.(testimage("resolution_test_512"))
@@ -41,11 +40,14 @@ img = Float32.(testimage("resolution_test_512"))
 psf = Float32.(generate_psf(size(img), 30))
 
 # create a blurred, noisy version of that image
-img_b = conv_psf(img, psf)
+img_b = conv(img, psf)
 img_n = poisson(img_b, 300)
 
 # deconvolve 2D with default options
 @time res, o = deconvolution(img_n, psf)
+
+# deconvolve 2D with no regularizer
+@time res_no_reg, o = deconvolution(img_n, psf, regularizer=nothing)
 
 # show final results next to original and blurred version
 Gray.([img img_n res])
@@ -64,7 +66,7 @@ For CUDA we only provide a Total variation regularizer via `TV_cuda`. The reason
 
 ## Performance Tips
 ### Regularizers
-The regularizers are generated when `TV()` or similar is called. To prevent compilation every time, define the regularizer once and use it multiple times without newly defining it:
+The regularizers are generated when `TV()` (or any other regularizer). To prevent compilation every time, define the regularizer once and use it multiple times without newly defining it:
 ```julia
 reg = TV()
 ```
