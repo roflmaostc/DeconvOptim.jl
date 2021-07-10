@@ -108,10 +108,9 @@ function invert(measured, rec0, forward;
         # do the optimization with LBGFS
         res = Optim.optimize(Optim.only_fg!(fg!), rec0, optim_optimizer, optim_options)
         res_out = mf(Optim.minimizer(res))
-    elseif isa(use_optim, Type{OptimNextGen})
+    elseif isa(use_optim, Type{OptimNextGen}) # supports a different interface as for example used in OptimPackNextGen for the function 'vmlmb!'
         res = copy(rec0)
             
-        # @infiltrate
         if isnothing(optim_options)
             optim_optimizer((x,g) -> fg!(true, g, x), res; maxiter=iterations)
         else
