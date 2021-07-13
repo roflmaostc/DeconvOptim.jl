@@ -28,8 +28,8 @@ regularizers and mappings.
         A array with `size(arr)=(400, 400)` with `padding=0.05` would result in reconstruction size of 
         `(440, 440)`. However, we only return the reconstruction cropped to the original size.
         `padding=0` disables any padding.
-- `optim_options=nothing`: Can be a options file required by Optim.jl. Will overwrite iterations.
-- `optim_optimizer=LBFGS()`: The chosen Optim.jl optimizer. 
+- `opt_options=nothing`: Can be a options file required by Optim.jl. Will overwrite iterations.
+- `opt=LBFGS()`: The chosen Optim.jl optimizer. 
 - `debug_f=nothing`: A debug function which must take a single argument, the current reconstruction.
 
 # Example
@@ -56,10 +56,10 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
         iterations=20,
         conv_dims = ntuple(+, ndims(psf)), 
         padding=0.00,
-        optim_options=nothing,
-        optim_optimizer=LBFGS(linesearch=BackTracking()),
+        opt_options=nothing,
+        opt=LBFGS(linesearch=BackTracking()),
         debug_f=nothing,
-        optimizer_package=OptimOptim) where {T, N}
+        opt_package=Opt_Optim) where {T, N}
 
 
     # rec0 will be an array storing the final reconstruction
@@ -148,11 +148,11 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     res_out, res = invert(measured, rec0, forward;
                           iterations=iterations, λ=λ,
                           regularizer=regularizer,
-                          optim_optimizer=optim_optimizer,
-                          optim_options=optim_options,
+                          opt=opt,
+                          opt_options=opt_options,
                           mapping=mapping,
                           loss=loss,
-                          debug_f=debug_f, optimizer_package=optimizer_package)
+                          debug_f=debug_f, opt_package=opt_package)
 
     res_out .*= rescaling
     # since we do some padding we need to extract the center part

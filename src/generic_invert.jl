@@ -1,9 +1,8 @@
-export invert, OptimInterface, OptimOptim, OptimNextGen
-using Infiltrator
+export invert, OptInterface, Opt_Optim, Opt_OptimPackNextGen
 
-abstract type OptimInterface end  # To accomodate multiple optimizers which are incompatible
-struct OptimOptim <: OptimInterface end  # 
-struct OptimNextGen <: OptimInterface end  # 
+abstract type OptInterface end  # To accomodate multiple optimizers which are incompatible
+struct Opt_Optim <: OptInterface end  # 
+struct Opt_OptimPackNextGen <: OptInterface end  # 
 
 """
     invert(measured, rec0, forward; <keyword arguments>)
@@ -23,25 +22,26 @@ regularizers and mappings.
 - `mapping=Non_negative()`: Applies a mapping of the optimizer weight. Default is a 
               parabola which achieves a non-negativity constraint.
 - `iterations=10`: Specifies a number of iterations after the optimization.
-    definitely should stop. Will be overwritten if `optim_options` is provided.
-- `optim_options=nothing`: Can be a options file required by Optim.jl. Will overwrite iterations.
-- `optim_optimizer=LBFGS()`: The chosen Optim.jl optimizer. 
+    definitely should stop. Will be overwritten if `opt_options` is provided.
+- `opt_options=nothing`: Can be a options file required by Optim.jl. Will overwrite iterations.
+- `opt=LBFGS()`: The chosen Optim.jl optimizer. 
+- `opt_package=Opt_Optim`: decides which backend for the optimizer is used.
 - `debug_f=nothing`: A debug function which must take a single argument, the current reconstruction. 
 """
 function invert(measured, rec0, forward; 
                 iterations=10, λ=eltype(rec0)(0.05),
                 regularizer=nothing,
-                optim_optimizer=LBFGS(linesearch=LineSearches.BackTracking()),
-                optim_options=nothing,
+                opt=LBFGS(linesearch=LineSearches.BackTracking()),
+                opt_options=nothing,
                 mapping=Non_negative(),
                 loss=Poisson(),
                 real_gradient=true,
                 debug_f=nothing,
-                optimizer_package =OptimOptim)
+                opt_package=Opt_Optim)
 
     # if not special options are given, just restrict iterations
-    if isa(optimizer_package, OptimOptim) && optim_options == nothing
-        optim_options = Optim.Options(iterations=iterations)
+    if isa(opt_package, Opt_Optim) && opt_options == nothing
+        opt_options = Optim.Options(iterations=iterations)
     end
     
     # Get the mapping functions to achieve constraints
@@ -102,23 +102,24 @@ function invert(measured, rec0, forward;
         end
     end
 
-    if isa(optimizer_package, Type{OptimOptim}) 
-        optim_options = Optim.Options(iterations=iterations)
+    if isa(opt_package, Type{Opt_Optim}) 
+        opt_options = Optim.Options(iterations=iterations)
         
         # do the optimization with LBGFS
-        res = Optim.optimize(Optim.only_fg!(fg!), rec0, optim_optimizer, optim_options)
+        res = Optim.optimize(Optim.only_fg!(fg!), rec0, opt, opt_options)
         res_out = mf(Optim.minimizer(res))
-    elseif isa(optimizer_package, Type{OptimNextGen}) # supports a different interface as for example used in OptimPackNextGen for the function 'vmlmb!'
+    # supports a different interface as for example used in OptimPackNextGen for the function 'vmlmb!'
+    elseif isa(opt_package, Type{Opt_OptimPackNextGen}) 
         res = copy(rec0)
             
-        if isnothing(optim_options)
-            optim_optimizer((x,g) -> fg!(true, g, x), res; maxiter=iterations)
+        if isnothing(opt_options)
+            opt((x,g) -> fg!(true, g, x), res; maxiter=iterations)
         else
-            optim_optimizer((x,g) -> fg!(true, g, x), res; maxiter=iterations, optim_options...)
+            opt((x,g) -> fg!(true, g, x), res; maxiter=iterations, opt_options...)
         end
         res_out = mf(res)
     else
-        error("Unknown optimizer interface $(typeof(optimizer_package))")
+        error("Unknown optimizer interface $(typeof(opt_package))")
     end
 
 
