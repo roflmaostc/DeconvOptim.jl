@@ -1,7 +1,7 @@
 name = "DeconvOptim"
 uuid = "03e7cd2f-1a03-4ea9-b59b-760a446df67f"
 authors = ["Felix Wechsler <fxw+github@mailbox.org>"]
-version = "0.3.0"
+version = "0.4.0"
 
 [deps]
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
@@ -35,7 +35,8 @@ ImageMagick = "6218d12a-5da1-5696-b52f-db25d2ecc6d1"
 Noise = "81d43f40-5267-43b7-ae1c-8b967f377efa"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 TestImages = "5e47fb64-e119-507b-a336-dd2b206d9990"
 
 [targets]
-test = ["Test", "Random", "Noise", "TestImages", "ImageMagick"]
+test = ["Test", "Random", "Noise", "TestImages", "ImageMagick", "Pkg"]

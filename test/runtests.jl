@@ -3,6 +3,9 @@ using Test
 using FFTW, Noise, Statistics, Zygote
 using Random
 using TestImages, Noise
+using Pkg
+Pkg.add(url="https://github.com/emmt/OptimPackNextGen.jl")
+using OptimPackNextGen
 
  # fix seed for reproducibility
 Random.seed!(42)
