@@ -28,8 +28,9 @@ regularizers and mappings.
         A array with `size(arr)=(400, 400)` with `padding=0.05` would result in reconstruction size of 
         `(440, 440)`. However, we only return the reconstruction cropped to the original size.
         `padding=0` disables any padding.
+- `opt_package=Opt_Optim`: decides which backend for the optimizer is used.
+- `opt=LBFGS()`: The chosen optimizer which must fit to `opt_package` 
 - `opt_options=nothing`: Can be a options file required by Optim.jl. Will overwrite iterations.
-- `opt=LBFGS()`: The chosen Optim.jl optimizer. 
 - `debug_f=nothing`: A debug function which must take a single argument, the current reconstruction.
 
 # Example

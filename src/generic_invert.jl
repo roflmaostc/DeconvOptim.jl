@@ -23,9 +23,9 @@ regularizers and mappings.
               parabola which achieves a non-negativity constraint.
 - `iterations=10`: Specifies a number of iterations after the optimization.
     definitely should stop. Will be overwritten if `opt_options` is provided.
-- `opt_options=nothing`: Can be a options file required by Optim.jl. Will overwrite iterations.
-- `opt=LBFGS()`: The chosen Optim.jl optimizer. 
 - `opt_package=Opt_Optim`: decides which backend for the optimizer is used.
+- `opt=LBFGS()`: The chosen optimizer which must fit to `opt_package`. 
+- `opt_options=nothing`: Can be a options file required by Optim.jl. Will overwrite iterations.
 - `debug_f=nothing`: A debug function which must take a single argument, the current reconstruction. 
 """
 function invert(measured, rec0, forward; 
