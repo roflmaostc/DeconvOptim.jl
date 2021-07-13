@@ -1,5 +1,8 @@
 export Non_negative
 export Map_0_1
+export Piecewise_positive
+export Pow4_positive
+export Abs_positive
  
 
  # All these functions return a mapping function and 
@@ -10,7 +13,7 @@ export Map_0_1
 """
     Non_negative()
 
-Returns a function and a inverse function inverse function
+Returns a function and an inverse function inverse function
 to map numbers to non-negative numbers.
 We use a parabola.
 
@@ -59,8 +62,9 @@ end
 """
     Map_0_1()
 
-Returns a function and a inverse function inverse function
-to map numbers to an interval between 0 and 1. 
+Returns a function and an inverse function
+to map numbers to an interval between 0 and 1.
+via an exponential function.
 
 """
 function Map_0_1()
@@ -69,3 +73,55 @@ end
 
 f01(x) = 1 .- exp.(.- x.^2)
 f01_inv(y) = sqrt.(.- log.(1 .- y))
+
+"""
+    Piecewise_positive()
+
+Returns a function and an inverse function 
+to map numbers to larger than 0 via
+two function stitched together.
+"""
+function Piecewise_positive()
+    return f_pw_pos, f_pw_pos_inv
+end
+
+f_pw_pos(x) = ifelse.(x .> 0, one(eltype(x)) .+ x,one(eltype(x))./(one(eltype(x)).-x))
+f_pw_pos_grad(x) = ifelse.(x .> 0, one(eltype(x)) , one(eltype(x))./abs2.(one(eltype(x)).-x))
+f_pw_pos_inv(y) = ifelse.(y .> 1, y .- one(eltype(y)), one(eltype(y)) .- one(eltype(y))./y)
+
+function ChainRulesCore.rrule(::typeof(f_pw_pos), x)
+    Y = f_pw_pos(x)
+    function aux_pullback(barx)
+        return zero(eltype(Y)), barx .* f_pow_pos_grad(x)
+    end
+    return Y, aux_pullback
+end
+
+
+"""
+    Pow4_positive()
+
+Returns a function and an inverse function
+to map numbers to larger than 0 with `abs2.(abs2.(x))`
+
+"""
+function Pow4_positive()
+    return f_pow4, f_pow4_inv
+end
+
+f_pow4(x) = abs2.(abs2.(x))
+f_pow4_inv(y) = sqrt.(sqrt.(y))
+
+
+"""
+    Abs_positive()
+
+Returns a function and an inverse function
+to map numbers to larger than 0. 
+"""
+function Abs_positive()
+    return f_abs, f_abs_inv
+end
+
+f_abs(x) = abs.(x)
+f_abs_inv(y) = abs.(y)
