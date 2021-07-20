@@ -282,7 +282,7 @@ The reason is, that for values of $\mu(\mathbf r) = 0$ the equation is not defin
         \end{equation}
         In many frameworks such a regularizer is implemented via functions like \lstinline{circshift}. 
         However, such approaches create often several copies of the data. 
-        We currently use \verb|Tullio.jl|\footnote{\url{https://github.com/mcabbott/Tullio.jl}} to create efficient functions 
+        We currently use \verb|Tullio.jl|\cite{michael_abbott_2021_5047410} to create efficient functions 
         calculating the regularizer and the gradient. For simple expressions
         such as below, \verb|Tullio.jl| registers an analytical gradient and therefore allows to apply the same efficient mechanisms 
         to the gradient calculation which have been used for the regularizer evaluation itself.
@@ -451,8 +451,9 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
         we deconvolve a four dimensional dataset where the measured volume consists of a 3D datasets
         with three different color channels, shown in \autoref{fig:result_3d}.
         Here we assumed a common single 3D PSF for all color channels.
-        Julia's broadcast mechanism handles that the PSF is only three dimensional and therefore
-        we only need to specify over which dimensions the convolution should happen.
+        Julia's broadcast mechanism is able to understand that 
+        the data has more dimensions that the PSF and expands the PSF so that a multiplication still works.
+        We only need to specify for the FFT over which dimensions the convolution should happen.
         \begin{figure}[h]
             \begin{subfigure}{.25\textwidth}
                 \centering
@@ -635,7 +636,6 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
     In future, we want to support more regularizers on GPUs since they can not be handled efficiently with the current \verb|Tullio.jl| solution.
     Also we plan to extend the package to deconvolution of spatially varying kernels which are of importance in optical systems
     with large field of view or poor manufacturing quality.
-
 
 
 \input{bib.tex}
