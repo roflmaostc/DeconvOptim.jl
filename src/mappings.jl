@@ -92,7 +92,7 @@ f_pw_pos_inv(y) = ifelse.(y .> 1, y .- one(eltype(y)), one(eltype(y)) .- one(elt
 function ChainRulesCore.rrule(::typeof(f_pw_pos), x)
     Y = f_pw_pos(x)
     function aux_pullback(barx)
-        return zero(eltype(Y)), barx .* f_pow_pos_grad(x)
+        return zero(eltype(Y)), barx .* f_pw_pos_grad(x)
     end
     return Y, aux_pullback
 end
