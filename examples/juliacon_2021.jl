@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.14.8
+# v0.14.5
 
 using Markdown
 using InteractiveUtils
@@ -192,7 +192,7 @@ $(@bind iter Slider(0:50, show_value=true))
 regularizer = $(@bind reg_bool CheckBox())"
 
 # ╔═╡ 803368e6-53fd-4413-b3f5-ffe46ee8983e
-img_deconv, res_img = deconvolution(img, psf, regularizer=reg_bool ? reg : nothing, iterations=iter, λ=λ);
+img_deconv, res_img = deconvolution(img_blurry, psf, regularizer=reg_bool ? reg : nothing, iterations=iter, λ=λ);
 
 # ╔═╡ e58e1f63-2c81-48fb-866a-4bb70bd428a6
 Gray.(img_deconv)
