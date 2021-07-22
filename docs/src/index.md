@@ -28,23 +28,23 @@ To get the latest stable release of DeconvOptim.jl type `]` in the Julia REPL:
 Below is a quick example how to deconvolve a image which is blurred with a Gaussian Kernel.
 
 ```@jldoctest
-using DeconvOptim, TestImages, Images, FFTW, Noise
+using DeconvOptim, TestImages, Colors, ImageIO, Noise, ImageShow
 
 # load test image
-img = channelview(testimage("resolution_test_512"))
+img = Float32.(testimage("resolution_test_512"))
 
 # generate simple Point Spread Function of aperture radius 30
-psf = generate_psf(size(img), 30)
+psf = Float32.(generate_psf(size(img), 30))
 
 # create a blurred, noisy version of that image
-img_b = conv_psf(img, psf)
+img_b = conv(img, psf)
 img_n = poisson(img_b, 300)
 
-# define regularizer before
-regularizer = GR()
-
 # deconvolve 2D with default options
-@time res, o = deconvolution(img_n, psf, regularizer=regularizer)
+@time res, o = deconvolution(img_n, psf)
+
+# deconvolve 2D with no regularizer
+@time res_no_reg, o = deconvolution(img_n, psf, regularizer=nothing)
 
 # show final results next to original and blurred version
 Gray.([img img_n res])
