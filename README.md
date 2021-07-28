@@ -9,7 +9,7 @@
 </div>
 <br>
 A package for microscopy image based deconvolution via Optim.jl. This package works with N dimensional Point Spread Functions and images.
-The package was created with microscopy in mind but since the code base is quite general it should be possible to deconvolve different kernels as well. 
+The package was created with microscopy in mind but since the code base is quite general it is possible to deconvolve different kernels as well. 
 
 We would be happy to deconvolve *real* data! File an issue if we can help deconvolving an image/stack. We would be also excited to adapt DeconvOptim.jl to your special needs!
 <br>
@@ -62,11 +62,13 @@ Using regularizers together with a CUDA GPU is faster but unfortunately only a f
 For [3D](examples/cuda_3D.ipynb) the speed-up is larger.
 
 ## CUDA
-For CUDA we only provide a Total variation regularizer via `TV_cuda`. The reason is that Tullio.jl is currently not very fast with `CuArray`s.
+For CUDA we only provide a Total variation regularizer via `TV_cuda`. The reason is that Tullio.jl is currently not very fast with `CuArray`s and especially
+the derivative of such functions.
 
 ## Performance Tips
 ### Regularizers
-The regularizers are generated when `TV()` (or any other regularizer). To prevent compilation every time, define the regularizer once and use it multiple times without newly defining it:
+The regularizers are generated with metaprogramming when `TV()` (or any other regularizer) is called. To prevent that the code
+compile every time again, define the regularizer once and use it multiple times without newly defining it:
 ```julia
 reg = TV()
 ```
