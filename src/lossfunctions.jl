@@ -4,13 +4,13 @@ export ScaledGauss, scaled_gauss_aux
 export Anscombe, anscombe_aux
 
 """
-    poisson_aux(μ, meas, storage=copy(μ))
+    poisson_aux(μ, meas, storage=similar(μ))
 
 Calculates the Poisson loss for `μ` and `meas`.
 `μ` can be of larger size than `meas`. In that case
 we extract a centered region from `μ` of the same size as `meas`.
 """ 
-function poisson_aux(μ, meas, storage=copy(μ))
+function poisson_aux(μ, meas, storage=similar(μ))
     # due to numerical errors, μ can be negative or 0
     if minimum(μ) <= 0
         μ .= μ .+ eps(maximum(μ)) .+ abs.(minimum(μ))
@@ -23,7 +23,7 @@ end
  # define custom gradient for speed-up
  # ChainRulesCore offers the possibility to define a backward AD rule
  # which can be used by several different AD systems
-function ChainRulesCore.rrule(::typeof(poisson_aux), μ, meas, storage=copy(μ))
+function ChainRulesCore.rrule(::typeof(poisson_aux), μ, meas, storage=similar(μ))
     Y = poisson_aux(μ, meas, storage)
 
     function poisson_aux_pullback(xbar)
@@ -48,19 +48,19 @@ end
 
 
 """
-    gauss_aux(μ, meas, storage=copy(μ))
+    gauss_aux(μ, meas, storage=similar(μ))
 
 Calculates the Gauss loss for `μ` and `meas`.
 `μ` can be of larger size than `meas`. In that case
 we extract a centered region from `μ` of the same size as `meas`.
 """ 
-function gauss_aux(μ, meas, storage=copy(μ))
+function gauss_aux(μ, meas, storage=similar(μ))
     storage .= abs2.(μ - meas)
     return sum(storage)
 end
 
  # define custom gradient for speed-up
-function ChainRulesCore.rrule(::typeof(gauss_aux), μ, meas, storage=copy(μ))
+function ChainRulesCore.rrule(::typeof(gauss_aux), μ, meas, storage=nothing)
     Y = gauss_aux(μ, meas) 
     function gauss_aux_pullback(xbar)
         return zero(eltype(μ)), 2 .* xbar .* (μ - meas), zero(eltype(μ)), zero(eltype(μ)) 
@@ -84,20 +84,20 @@ end
 
 
 """
-    scaled_gauss_aux(μ, meas, storage=copy(μ); read_var=0)
+    scaled_gauss_aux(μ, meas, storage=similar(μ); read_var=0)
 Calculates the scaled Gauss loss for `μ` and `meas`.
 `read_var=0` is the readout noise variance of the sensor.
 `μ` can be of larger size than `meas`. In that case
 we extract a centered region from `μ` of the same size as `meas`.
 """
-function scaled_gauss_aux(μ, meas, storage=copy(μ); read_var=0)
+function scaled_gauss_aux(μ, meas, storage=similar(μ); read_var=0)
     μ[μ .<= 1f-8] .= 1f-8
     storage .= log.(μ .+ read_var) .+ (meas .- μ).^2 ./ ((μ .+ read_var))
     return sum(storage)
 end
 
  # define custom gradient for speed-up
-function ChainRulesCore.rrule(::typeof(scaled_gauss_aux), μ, meas, storage=copy(μ); read_var=0)
+function ChainRulesCore.rrule(::typeof(scaled_gauss_aux), μ, meas, storage=nothing; read_var=0)
     Y = scaled_gauss_aux(μ, meas) 
     function scaled_gauss_aux_pullback(xbar)
         ∇ = xbar .* (μ.^2 .- meas.^2 .+ μ .+ read_var.*(1 .- 2 .* (meas .- µ)))./((μ .+read_var).^2)
@@ -115,7 +115,7 @@ Returns a function to calculate scaled Gauss loss.
 Check the help of `scaled_gauss_aux`.
 """
 function ScaledGauss(read_var=0)
-    return (µ, meas, storage=copy(µ)) -> scaled_gauss_aux(µ, meas, storage, read_var=read_var)
+    return (µ, meas, storage=similar(µ)) -> scaled_gauss_aux(µ, meas, storage, read_var=read_var)
 end
 
 
@@ -123,14 +123,14 @@ end
 
 
 """
-    anscombe_aux(μ, meas, storage=copy(μ); b=1)
+    anscombe_aux(μ, meas, storage=similar(μ); b=1)
 
 Calculates the Poisson loss using the Anscombe-based norm for `μ` and `meas`.
 `μ` can be of larger size than `meas`. In that case
 we extract a centered region from `μ` of the same size as `meas`.
 `b=1` is the optional parameter under the `√`.
 """
-function anscombe_aux(μ, meas, storage=copy(μ); b=1)
+function anscombe_aux(μ, meas, storage=similar(μ); b=1)
     # due to numerical errors, μ can be negative or 0
     mm = minimum(μ)
     if mm <= 0
@@ -144,7 +144,7 @@ end
  # define custom gradient for speed-up
  # ChainRulesCore offers the possibility to define a backward AD rule
  # which can be used by several different AD systems
-function ChainRulesCore.rrule(::typeof(anscombe_aux), μ, meas, storage=copy(μ); b=1)
+function ChainRulesCore.rrule(::typeof(anscombe_aux), μ, meas, storage=similar(μ); b=1)
     Y = anscombe_aux(μ, meas, storage, b=b)
     function anscombe_aux_pullback(xbar)
             storage .= xbar .* (one(eltype(μ)) .- sqrt.((meas .+ b) ./ (μ.+b)))
@@ -163,5 +163,5 @@ Check the help of `anscombe_aux`.
 """
 
 function Anscombe(b=1)
-    (μ, meas, storage=copy(μ)) -> anscombe_aux(μ, meas, storage, b=b)
+    (μ, meas, storage=similar(μ)) -> anscombe_aux(μ, meas, storage, b=b)
 end
