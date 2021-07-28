@@ -114,7 +114,7 @@ function plan_conv(u::AbstractArray{T, N}, v::AbstractArray{T, M}, dims=ntuple(+
     P_inv = inv(P)
 
     v_ft = fft_or_rfft(T)(v, dims)
-    out = copy(u)
+    out = similar(u)
     # construct the efficient conv function
     # P and P_inv can be understood like matrices
     # but their computation is fast
@@ -135,8 +135,8 @@ function p_conv_aux!(P, P_inv, u, v_ft, u_ft_stor, out)
     mul!(u_ft_stor, P, u)
     u_ft_stor .*= v_ft
     mul!(out, P_inv.p, u_ft_stor)
-    out .*= P_inv.scale
-    return out 
+    out2 = out .* P_inv.scale
+    return out2 
 end
 
 function ChainRulesCore.rrule(::typeof(p_conv_aux!), P, P_inv, u, v, u_ft_stor, out)
