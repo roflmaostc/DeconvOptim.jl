@@ -19,7 +19,7 @@
 \maketitle
 
 \begin{abstract}
-
+\todo{fix citations with PkgCite.jl}
 Deconvolution is a versatile method to enhance the quality of signals measured with systems which can 
 be expressed mathematically as a convolution of a system's response function with a signal. 
 In this paper, we present \verb|DeconvOptim.jl|, a flexible toolbox written in Julia to deconvolve one or multiple multi-dimensional signals which have been
@@ -523,15 +523,14 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
             \begin{tabular}{l l l}
                 &  CPU in s& GPU in s\\ 
             \hline
-            \verb|DeconvOptim.jl| & 14.0 & 0.86\\
-            \verb|DeconvOptim.jl| - TV & 18.9 & 1.55 \\
-            Richardson-Lucy (Julia) & 14.8 & 1.26 \\
-            \verb|ThreeDeconv.jl|& 2415 & 44.5 \\
-            \verb|GenericDeconv|  & 127 & 5.9\\
-            \verb|GenericDeconv| - TV & 213 & 8.7 \\
-            \verb|Huygens|  & & \\
-            \verb|DeconvolutionLab2| - LR & 1089 & \\
-            \verb|DeconvolutionLab2| - LR TV& 1131 & 
+            \verb|DeconvOptim.jl| & 32.9 & 2.20\\
+            \verb|DeconvOptim.jl| - TV & 39.9 & 4.46 \\
+            Richardson-Lucy (Julia) & 40.0 & 3.05 \\
+            \verb|ThreeDeconv.jl|& 1550 & 27.1 \\
+            \verb|GenericDeconv|  & 140 & 6.32\\
+            \verb|GenericDeconv| - TV & 233 & 9.35 \\
+            \verb|Huygens| & 30.1 & 6.8 \\
+            \verb|DeconvolutionLab2| - LR& 1640 & \\
             \end{tabular}
             \caption{Runtimes of different deconvolution implementations.}
             \label{tab:deconv}
@@ -561,64 +560,67 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
             \begin{tabular}{l l l}
                 & Loss & iterations \\ 
             \hline
-            \verb|DeconvOptim.jl| & Poisson & 15 \\
-            \verb|DeconvOptim.jl| TV & Poisson & 15\\
-            Richardson-Lucy & Poisson & 120 \\
-            \verb|ThreeDeconv.jl|  & Gauss+Poisson& 500\\
-            \verb|GenericDeconv|  & Poisson & 40\\
-            \verb|GenericDeconv| TV & Poisson & 40 \\
-            \verb|Huygens|  & & \\
-            \verb|DeconvolutionLab2| LR & Poisson & 200\\
-            \verb|DeconvolutionLab2| LR TV& Poisson & 200 
+            \verb|DeconvOptim.jl| & Poisson & 45 \\
+            \verb|DeconvOptim.jl| TV & Poisson & 45\\
+            Richardson-Lucy & Poisson & 300 \\
+            \verb|ThreeDeconv.jl|  & Gauss+Poisson& 300\\
+            \verb|GenericDeconv|  & Poisson & 45\\
+            \verb|GenericDeconv| TV & Poisson & 45 \\
+            \verb|Huygens| & & \\
+            \verb|DeconvolutionLab2| LR & Poisson & 300\\
+            \verb|DeconvolutionLab2| LR TV& Poisson & 300 
             \end{tabular}
             \caption{Overview which loss function (noise model) and number of iterations are used.}
             \label{tab:deconvprop}
         \end{table}
+        As summary of those performance tests we can state that our Julia implementation is very competitive and especially on the GPU
+        it was the fastest of the tested packages. On the CPU it is only beaten by the commercial \verb|Huygens| software. 
+        Despite \verb|ThreeDeconv.jl| written in Julia it is notably slower in comparison to our implementation.
+        \verb|DeconvolutionLab2| is written in Java and uses hand optimized gradients but still its speed is poor.
 
-        As summary of those performance tests we can state that our Julia implementation is very competitive and especially on the CPU it is only
-        beaten by the commercial \verb|Huygens| software. Despite \verb|ThreeDeconv.jl| written in Julia 
-        it is notably slower in comparison to our implementation.
-        \verb|DeconvolutionLab2| is written in Java and uses hand optimized gradients but still its speed is comparably poor.
+
+        \todo{maximum intensity}
         \begin{figure}[h]
+            \centering
             \begin{subfigure}{.3\textwidth}
                 \centering
-                \includegraphics[width=\textwidth]{figures/DeconvOptim_cuda_no_regularizer_0.87s.png}
-                \caption{\texttt{DeconvOptim.jl} without regularizer}
+                \includegraphics[width=\textwidth]{figures/MIPs/mip_DeconvOptim.png}
+                \caption{\texttt{DeconvOptim.jl} . $\text{NCC}= 0.86$.}
             \end{subfigure}
             \begin{subfigure}{.3\textwidth}
                 \centering
-                \includegraphics[width=\textwidth]{figures/DeconvOptim_TV_0.002.png}
-                \caption{\texttt{DeconvOptim.jl} with TV}
+                \includegraphics[width=\textwidth]{figures/MIPs/mip_DeconvOptim_RL.png}
+                \caption{Julia Richardson-Lucy. $\text{NCC}= 0.74$.}
             \end{subfigure}
             \begin{subfigure}{.3\textwidth}
                 \centering
-                \includegraphics[width=\textwidth]{figures/Lucy_richardson_julia.png}
-                \caption{\texttt{DeconvOptim.jl} Richardson-Lucy}
+                \includegraphics[width=\textwidth]{figures/MIPs/mip_DeconvolutionLab2.png}
+                \caption{\texttt{Deconvolution Lab2}. $\text{NCC}= 0.76$.}
             \end{subfigure}
             \begin{subfigure}{.3\textwidth}
                 \centering
-                \includegraphics[width=\textwidth]{figures/Deconvolution_Lab2_200iterations.PNG}
-                \caption{\texttt{Deconvolution\\Lab2} with TV}
+                \includegraphics[width=\textwidth]{figures/MIPs/mip_ThreeDeconv.png}
+                \caption{\texttt{ThreeDeconv.jl}. $\text{NCC}= 0.85$.}
             \end{subfigure}
             \begin{subfigure}{.3\textwidth}
                 \centering
-                \includegraphics[width=\textwidth]{figures/ThreeDeconv_600_iterations.png}
-                \caption{\texttt{ThreeDeconv.jl}}
+                \includegraphics[width=\textwidth]{figures/MIPs/mip_GenericDeconv.png}
+                \caption{\texttt{GenericDeconv}. $\text{NCC}= 0.86$.}
             \end{subfigure}
             \begin{subfigure}{.3\textwidth}
                 \centering
-                \includegraphics[width=\textwidth, height=2.5cm]{example-image-a}
-                \caption{\texttt{GenericDeconv}}
+                \includegraphics[width=\textwidth]{figures/MIPs/mip_Huygens.png}
+                \caption{\texttt{Huygens}$\text{NCC}= 0.86$.}
             \end{subfigure}
             \begin{subfigure}{.3\textwidth}
                 \centering
-                \includegraphics[width=\textwidth, height=2.5cm]{example-image-a}
-                \caption{\texttt{Huygens}}
+                \includegraphics[width=\textwidth]{figures/MIPs/mip_raw.png}
+                \caption{Measured image. $\text{NCC}= 0.41$.}
             \end{subfigure}
             \begin{subfigure}{.3\textwidth}
                 \centering
-                \includegraphics[width=\textwidth]{figures/noisy.png}
-                \caption{~~Measured image with Poisson noise}
+                \includegraphics[width=\textwidth]{figures/MIPs/mip_ground_truth.png}
+                \caption{Ground truth. $\text{NCC}= 1.0$}
             \end{subfigure}
             \caption{Overview of some of the deconvolution results of different packages.}
             \label{img:results}
@@ -637,6 +639,11 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
     Also we plan to extend the package to deconvolution of spatially varying kernels which are of importance in optical systems
     with large field of view or poor manufacturing quality.
 
+\section{Acknowledgement}
+This work was partially funded by the Honours Programme of the Friedrich Schiller 
+University of Jena\footnote{\url{https://www.uni-jena.de/en/honours_programme}}. 
+Additionally, we want to thank Scientific Volume Imaging for providing a trial license for Huygens and especially Mark Koenis for advising
+us how to adjust the settings to get optimal performance. 
 
 \input{bib.tex}
 
