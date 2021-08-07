@@ -21,6 +21,7 @@ We would be happy to deconvolve *real* data! File an issue if we can help deconv
 ## Documentation
 The documentation of the latest release is [here](docs-stable-url).
 The documentation of current master is [here](docs-dev-url).
+For a quick introduction you can also watch the [presentation at the JuliaCon 2021](https://www.youtube.com/watch?v=FodpnOhccis)
 
 ## Installation
 Type `]`in the REPL to get to the package manager:
