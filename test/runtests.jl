@@ -17,6 +17,7 @@ Random.seed!(42)
 end
 
 
+include("analysis_tools.jl")
 include("conv.jl")
 include("mappings.jl")
 
