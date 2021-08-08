@@ -24,8 +24,8 @@ function ideal_freq()
     psf ./= sum(psf)
     psf = convert(Array{Float32}, psf)
     
-    #img_b = center_extract(conv_psf(center_set!(copy(z1), img), ifftshift(center_set!(z, fftshift(psf))), [1, 2]), size(img))
-    img_b = conv_psf(img, psf, [1, 2])
+    #img_b = center_extract(conv(center_set!(copy(z1), img), ifftshift(center_set!(z, fftshift(psf))), [1, 2]), size(img))
+    img_b = conv(img, psf, [1, 2])
     img_n = poisson(img_b, N_phot)
     
     reg = DeconvOptim.TV(num_dims=2, sum_dims=[1, 2])

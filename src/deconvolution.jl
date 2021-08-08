@@ -41,7 +41,7 @@ julia> img = Float32.(testimage("resolution_test_512"));
 
 julia> psf = Float32.(generate_psf(size(img), 30));
 
-julia> img_b = conv_psf(img, psf);
+julia> img_b = conv(img, psf);
 
 julia> img_n = poisson(img_b, 300);
 
@@ -99,7 +99,7 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     fill!(rec0, one(eltype(measured))) 
     
     # alternative rec0_center, unused at the moment
-    #rec0_center = m_invf(abs.(conv_psf(measured, psf, conv_dims)))
+    #rec0_center = m_invf(abs.(conv(measured, psf, conv_dims)))
     #
     # take the mean as the initial guess
     # therefore has the same total energy at the initial guess as

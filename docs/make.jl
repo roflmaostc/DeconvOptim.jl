@@ -16,6 +16,7 @@ makedocs(cite_bib, modules=[DeconvOptim],
                         "workflow/3D_dataset.md",
                         "workflow/cuda.md",
                         "workflow/flexible_invert.md",
+                        "workflow/performance_tips.md",
                     ],
                 "Background" => Any[
                     "background/physical_background.md",
