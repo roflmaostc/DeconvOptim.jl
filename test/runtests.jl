@@ -18,6 +18,7 @@ end
 
 
 include("analysis_tools.jl")
+include("hessian_schatten_norm.jl")
 include("conv.jl")
 include("mappings.jl")
 
