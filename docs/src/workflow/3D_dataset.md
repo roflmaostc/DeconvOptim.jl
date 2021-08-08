@@ -13,7 +13,7 @@ img = convert(Array{Float32}, channelview(load("obj.tif")))
 psf = ifftshift(convert(Array{Float32}, channelview(load("psf.tif"))))
 psf ./= sum(psf)
 # create a blurred, noisy version of that image
-img_b = conv_psf(img, psf, [1, 2, 3])
+img_b = conv(img, psf, [1, 2, 3])
 img_n = poisson(img_b, 300);
 ```
 As the next step we need to create the regularizers. With `num_dims` we define how many dimensions our reconstruction image has. 
