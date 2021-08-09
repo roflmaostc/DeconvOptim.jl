@@ -3,9 +3,11 @@ export conv, plan_conv, conv_psf, plan_conv_psf
 
 """
     conv(u, v[, dims])
-    Convolve `u` with `v` over `dims` dimensions with an FFT based method.
-    Note, that this method introduces wrap-around artifacts without
-    proper padding/windowing.
+
+Convolve `u` with `v` over `dims` dimensions with an FFT based method.
+Note, that this method introduces wrap-around artifacts without
+proper padding/windowing.
+
 # Arguments
 * `u` is an array in real space.
 * `v` is the array to be convolved in real space as well.
@@ -14,10 +16,12 @@ export conv, plan_conv, conv_psf, plan_conv_psf
     If `dims` is an array with integers, we perform convolution 
     only over these dimensions. Eg. `dims=[1,3]` would perform the convolution
     over the first and third dimension. Second dimension is not convolved.
+
 If `u` and `v` are both a real valued array we use `rfft` and hence
 the output is real as well.
 If either `u` or `v` is complex we use `fft` and output is hence complex.
- # Examples
+
+# Examples
 1D with FFT over all dimensions. We choose `v` to be a delta peak.
 Therefore convolution should act as identity.
 ```jldoctest
@@ -79,6 +83,7 @@ end
 
 """
     plan_conv(u, v [, dims])
+
 Pre-plan an optimized convolution for arrays shaped like `u` and `v` (based on pre-plan FFT)
 along the given dimenions `dims`.
 `dims = 1:ndims(u)` per default.
@@ -89,6 +94,13 @@ The second return is the convolution function `pconv`.
 `pconv` itself has two arguments. `pconv(u, v_ft=v_ft)` where `u` is the object and `v_ft` the v_ft.
 This function achieves faster convolution than `conv(u, u)`.
 Depending whether `u` is real or complex we do `fft`s or `rfft`s
+
+# Warning
+The resulting output of the `pconv` function is a reference to an internal, allocated array.
+If you use the `pconv` function for different tasks, 
+a new call to `pconv` will change the previous result (since the previous result was only a reference, not a new array). 
+
+
 # Examples
 ```jldoctest
 julia> u = [1 2 3 4 5]
@@ -124,6 +136,7 @@ end
 
 """
     plan_conv_psf(u, psf [, dims]) where {T, N}
+
 `plan_conv_psf` is a shorthand for `plan_conv(u, ifftshift(psf))`. For examples see `plan_conv`.
 """
 function plan_conv_psf(u::AbstractArray{T, N}, psf::AbstractArray{T, M}, dims=ntuple(+, N)) where {T, N, M}
@@ -135,8 +148,9 @@ function p_conv_aux!(P, P_inv, u, v_ft, u_ft_stor, out)
     mul!(u_ft_stor, P, u)
     u_ft_stor .*= v_ft
     mul!(out, P_inv.p, u_ft_stor)
-    out2 = out .* P_inv.scale
-    return out2 
+    #out2 = out .* P_inv.scale
+    out .*= P_inv.scale
+    return out
 end
 
 function ChainRulesCore.rrule(::typeof(p_conv_aux!), P, P_inv, u, v, u_ft_stor, out)
@@ -172,6 +186,7 @@ end
 
 """
     get_plan(T)
+
 Small helper function to decide whether a real
 or a complex valued FFT plan is appropriate.
 """
