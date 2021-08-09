@@ -30,7 +30,8 @@ julia> ] add DeconvOptim
 The documentation of the latest release is [here](docs-stable-url).
 The documentation of current master is [here](docs-dev-url).
 For a quick introduction you can also watch the presentation at the JuliaCon 2021.
-[![IMAGE ALT TEXT](docs/src/assets/julia_con.jpg)](https://www.youtube.com/watch?v=FodpnOhccis)
+
+<a  href="https://www.youtube.com/watch?v=FodpnOhccis"><img src="docs/src/assets/julia_con.jpg"  width="300"></a>
 
 ## Usage
 A quick example is shown below.
@@ -57,7 +58,6 @@ img_n = poisson(img_b, 300)
 Gray.([img img_n res])
 ```
 ![Results Quick Example](docs/src/assets/quick_example_results.png)
-
 
 ## Examples
 Have a quick look into the [examples folder](examples).
