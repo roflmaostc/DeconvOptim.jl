@@ -53,7 +53,7 @@ Recently, machine learning based methods have become more and more favoured in d
 of the possibility to add learned properties of similar images to the algorithm \cite{Kruse_2017_ICCV}.
 However, those implementations are usually restricted to cases where experimental datasets are available for the characterization and training.
 \verb|DeconvOptim.jl| is a toolbox written in Julia \cite{bezanson2017julia} which offers several deconvolution algorithms 
-like the iterative Richardson-Lucy algorithms but also
+like the iterative Richardson-Lucy algorithm but also
 much more flexible methods which are based on minimizing a 
 noise-dependent loss function with the help of modern gradient-descent minimization routines. 
 Also this toolbox is not restricted in dimensionality and therefore can be applied to deconvolution problems in many different fields.
@@ -75,25 +75,20 @@ outperform sliding kernels. In microscopy and astronomy that is often the case, 
         \mathcal F\left\{(h * S)\right\}(\mathbf k) = \mathcal F\{h\} (\mathbf k) \cdot \mathcal F\{S\} (\mathbf k),
         \label{eq:fftconv}
     \end{equation} 
-        which means that a Fourier transform of a  convolution operation is equivalent to a point wise multiplication of the Fourier transforms 
+        which means that a Fourier transform $\mathcal F$ of a convolution operation is equivalent to a point wise multiplication of the Fourier transforms 
         of $h$ and $S$.
         Fortunately, the Fourier transform operations can be calculated even for moderate large 3D arrays quickly on modern computing machines via
         the Fast Fourier Transform (FFT).
         In Julia, \verb|FFTW.jl| offers a convenient interface to the FFTW library \cite{FFTW05}.
         The time complexity to calculate \autoref{eq:fftconv} is $\mathcal{O}(N \cdot \log N)$ for a one dimensional discretized dataset with $N$ samples.
         For a 2D dataset with size $N \times M$ it is $\mathcal{O}(N \cdot M \log(N \cdot M))$ and accordingly for higher dimensions.
-
-\subsection{Sliding Convolution Windows}
-Convolutions can be also calculated with a sliding kernel in real space which is the direct approach to
-solve the integral in \autoref{eq:conv}.
-That mechanism is the working principle
-behind the convolutions in neural networks. The reason is that this operation can be parallelized easily and therefore 
-is suited for GPUs. However, the computational complexity for a 2D kernel with size $K \times L$ applied on an image with
-$N \times M$ data points is $\mathcal O(N \cdot M \cdot K \cdot L)$. It is clear that for larger kernel sizes ($K,L \gg 1$) the sliding method 
-has worse computational complexity than the FFT based convolutions. The many cores of a GPU can mitigate that to a certain extent
-but since the FFT (CuFFT in the CUDA library \cite{CUDA}) can be also executed in parallel fashion, both approaches profit from parallelization.
-If the kernel is separable over the dimensions (like a Gaussian kernel) the complexity changes to $\mathcal O(N \cdot M \cdot L +  N \cdot M \cdot K)$ however most optical PSFs are not separable and therefore this is not generally applicable. 
-
+        Spatially based convolution kernels with size $K \times L$ applied on an image with
+        $N \times M$ data points have a runtime of $\mathcal O(N \cdot M \cdot K \cdot L)$.
+        It is clear that for larger kernel sizes ($K,L \gg 1$) the sliding method 
+        has worse computational complexity than the FFT based convolutions. The many cores of a GPU can mitigate that to a certain extent
+        but since the FFT (CuFFT in the CUDA library \cite{CUDA}) can be also executed in parallel fashion, 
+        both approaches profit from parallelization.
+        
 
 \subsection{Wrap-Around Artifacts in FFT based Convolutions}
     One drawback of a FFT based convolution are wrap-around artifacts (see arrow in \autoref{fig:withoutpad}). The reason is, that the FFT operation calculates the discrete
@@ -446,6 +441,8 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
         The regularized version seems to be robust against a higher number of iterations and even converges after 24.
         In conclusion we can say that both the regularized and the non-regularized versions produce good results. 
         In the non-regularized one has to hand-optimize the number of iterations whereas in the regularized one has to optimize $\lambda$.
+        However, without the ground truth image it is not clear which iteration or $\lambda$ is optimal and hence
+        this depends on the user.
         Advantage of the non-regularized version is, that it performs more than twice as fast but as it can be seen in \autoref{fig:fabioc} 
         it shows slightly more artifacts in homogenous regions.
 
@@ -489,14 +486,14 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
                 \begin{tabular}{l l l l l}
                     & plain & $\nabla$ plain & \verb|Tullio.jl| & $\nabla$ \verb|Tullio.jl| \\
                 \hline
-                CPU & \SI{83.9}{\milli\second} & \SI{7.18}{\second} & \SI{5.53}{\milli\second}  & \SI{119.8}{\milli\second}   \\ 
-                GPU & \SI{2.5}{\milli\second}  & \SI{22.9}{\milli\second}& \SI{4.00}{\milli\second}  & \SI{12.53}{\second} \\
+                CPU & \SI{83.9}{\milli\second} & \SI{7180}{\milli\second} & \SI{5.53}{\milli\second}  & \SI{119.8}{\milli\second}   \\ 
+                GPU & \SI{2.5}{\milli\second}  & \SI{22.9}{\milli\second}& \SI{4.00}{\milli\second}  & \SI{12530}{\milli\second} \\
                 \hline
                 \hline
                     & JAX & $\nabla$ JAX && \\
                 \hline
                 CPU & \SI{48}{\milli\second}   & \SI{364}{\milli\second}&   & \\
-                GPU & \SI{887}{\micro\second}   & \SI{10.2}{\milli\second}&   &
+                GPU & \SI{0.887}{\milli\second}   & \SI{10.2}{\milli\second}&   &
                 \end{tabular}
                 \caption{Runtimes of a single Total Variation regularizer calculation for different Julia versions and JAX. 
                     We used a 3 dimensional Float32 array with size $300 \times 300 \times 300$.  }
@@ -512,7 +509,7 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
 
 
     \subsection{Full Deconvolution}
-        In \autoref{tab:deconv} we show the deconvolution time for a 3D dataset with a size of $512 \times 256 \times 128$\footnote{Dataset was taken from \url{http://bigwww.epfl.ch/deconvolution/data/microtubules/}\cite{deconvlab2}.} 
+        In \autoref{tab:deconv} we show the deconvolution time for a 3D dataset with a size of $512 \times 256 \times 128$\footnote{Dataset was taken from \url{http://bigwww.epfl.ch/deconvolution/data/microtubules/}\cite{deconvlab2}. During our experiments we noticed a pixel offset between the ground truth and the noisy image. To reproduce our results, one has to correct this offset if the images are compared quantitatively.} 
         The basic settings of the different algorithms and packages are noted in \autoref{tab:deconvprop}.
         The aim of this comparison is not to compare the quality of the results but the computing time to achieve similar reconstructions. 
         The algorithms used in \verb|DeconvOptim.jl| are not fundamentally different to a plain Richardson-Lucy deconvolution and therefore the results will 
@@ -535,7 +532,8 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
             \verb|Huygens| & 30.1 & 6.8 & 0.86\\
             \verb|DeconvolutionLab2| - LR& 1640 & & 0.76\\
             \end{tabular}
-            \caption{Runtimes of different deconvolution implementations.}
+            \caption{Runtimes of different deconvolution implementations. See \autoref{tab:deconvprop} for the number of iterations
+            for each method. We have chosen the same number of iterations for the deconvolutions with and without regularizers.}
             \label{tab:deconv}
         \end{table}
 
@@ -554,7 +552,8 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
         we compare them by the NCC, see \autoref{img:results}.
         The CPU versions were multi threaded (if possible). 
         \verb|DeconvolutionLab2|, \verb|Huygens| and \verb|GenericDeconv| were tested under Windows 10 and not Ubuntu.
-
+        \todo{anscombe norm speed}
+        \todo{Fix table }
         \begin{table}[h]
             \begin{tabular}{l l l}
                 & Loss & iterations \\ 
@@ -567,7 +566,6 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
             \verb|GenericDeconv| TV & Poisson & 45 \\
             \verb|Huygens| & & \\
             \verb|DeconvolutionLab2| LR & Poisson & 300\\
-            \verb|DeconvolutionLab2| LR TV& Poisson & 300 
             \end{tabular}
             \caption{Overview which loss function (noise model) and number of iterations are used.}
             \label{tab:deconvprop}
@@ -578,7 +576,7 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
         of iterations.
         On the CPU \verb|DeconvOptim.jl| is only beaten by the commercial \verb|Huygens| software. 
         Despite \verb|ThreeDeconv.jl| written in Julia it is notably slower in comparison to our implementation.
-        \verb|DeconvolutionLab2| is written in Java and uses hand optimized gradients but still its speed is poor in
+        \verb|DeconvolutionLab2| is written in Java and also uses hand written gradients but still its speed is poor in
         comparison to all other packages.
 
         \begin{figure}[h]
