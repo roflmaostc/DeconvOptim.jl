@@ -18,16 +18,19 @@ We would be happy to deconvolve *real* data! File an issue if we can help deconv
 |:---------------------------------------:|:-----------------------------------------:|:-------------------------------:|
 | [![][docs-stable-img]][docs-stable-url] [![][docs-dev-img]][docs-dev-url] | [![][CI-img]][CI-url] | [![][codecov-img]][codecov-url] |
 
-## Documentation
-The documentation of the latest release is [here](docs-stable-url).
-The documentation of current master is [here](docs-dev-url).
-For a quick introduction you can also watch the [presentation at the JuliaCon 2021](https://www.youtube.com/watch?v=FodpnOhccis)
+
 
 ## Installation
 Type `]`in the REPL to get to the package manager:
 ```julia
 julia> ] add DeconvOptim
 ```
+
+## Documentation
+The documentation of the latest release is [here](docs-stable-url).
+The documentation of current master is [here](docs-dev-url).
+For a quick introduction you can also watch the presentation at the JuliaCon 2021.
+[![IMAGE ALT TEXT](docs/src/assets/julia_con.jpg)](https://www.youtube.com/watch?v=FodpnOhccis)
 
 ## Usage
 A quick example is shown below.
