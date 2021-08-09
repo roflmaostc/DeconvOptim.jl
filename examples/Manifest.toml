@@ -195,7 +195,7 @@ uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
 deps = ["ChainRulesCore", "FFTW", "Interpolations", "LineSearches", "LinearAlgebra", "Noise", "Optim", "Requires", "Statistics", "StatsBase", "Tullio", "Zygote"]
 path = ".."
 uuid = "03e7cd2f-1a03-4ea9-b59b-760a446df67f"
-version = "0.4.0"
+version = "0.4.1"
 
 [[DelimitedFiles]]
 deps = ["Mmap"]
