@@ -9,17 +9,18 @@ Assumes that both arrays are 2 dimensional
 * [Rainer Heintzmann, \"Estimating missing information by maximum likelihood deconvolution\"](https://www.sciencedirect.com/science/article/abs/pii/S0968432806001272)
 """
 function relative_energy_regain(ground_truth, rec)
+    T = eltype(ground_truth)
     # go to fourier space
     ground_truth_fft = fft(ground_truth)
     rec_fft = fft(rec)
 
     # a dict to store the values for certain frequencies
     # we store a list since some (rounded) frequencies occur more than once
-    ΔE_R_dict = Dict{Float64, Vector{Float64}}()
-    E_R_dict = Dict{Float64, Vector{Float64}}()
+    ΔE_R_dict = Dict{T, Vector{T}}()
+    E_R_dict = Dict{T, Vector{T}}()
 
     # round the frequencies to 4 digits, alternative would be to bin
-    round4(x) = round(x, digits=3)
+    round4(x) = T(round(x, digits=3))
     
     
     # iterate over the frequencies and calculate the relative energy regain
@@ -37,13 +38,12 @@ function relative_energy_regain(ground_truth, rec)
     
     # finally transform everything into a list of frequencies and 
     # a list of relative energy regains
-    freqs = Float64[]
-    G_R_list = Float64[]
-    for f in sort(Float64.(keys(ΔE_R_dict)))
+    freqs = T[]
+    G_R_list = T[]
+    for f in sort(T.(keys(ΔE_R_dict)))
         push!(freqs, f)
         mean_ΔE_r = mean(ΔE_R_dict[f])
         mean_E_r = mean(E_R_dict[f])
-
         push!(G_R_list, (mean_E_r - mean_ΔE_r) / mean_E_r)
     end
     

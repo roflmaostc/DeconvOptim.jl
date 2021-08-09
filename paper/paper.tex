@@ -45,13 +45,15 @@ Often this convolution operation is disturbed by different types of noise where 
     Y_{\text{Gauss}}(\mathbf r) &= (h * S)(\mathbf r) + \text{Gauss}_{\sigma}(\mathbf r)
 \end{align}
 Due to noise and the low pass filter effect of the PSF, deconvolution is an ill-posed problem which cannot be solved directly.\\
-A well known approach, because of its simplicity, has been the iterative Richardson-Lucy deconvolution algorithm \cite{Richardson:72}, \cite{lucy:74} for Poisson noise degraded signals.
+A well known approach, because of its simplicity, has been the iterative Richardson-Lucy deconvolution algorithm 
+\cite{Richardson:72}, \cite{lucy:74} for Poisson noise degraded signals.
 Another common method is the non-iterative Wiener filter \cite{wiener2013extrapolation} because of its predictable runtime.
 The Wiener filter assumes additive noise which is often not a good approximation, especially in low light conditions as in microscopy or astronomy. 
-Recently machine learning based methods have become more and more favoured in deconvolution because
+Recently, machine learning based methods have become more and more favoured in deconvolution because
 of the possibility to add learned properties of similar images to the algorithm \cite{Kruse_2017_ICCV}.
 However, those implementations are usually restricted to cases where experimental datasets are available for the characterization and training.
-\verb|DeconvOptim.jl| is a toolbox written in Julia \cite{bezanson2017julia} which offers several deconvolution algorithms like the iterative Richardson-Lucy algorithms but also
+\verb|DeconvOptim.jl| is a toolbox written in Julia \cite{bezanson2017julia} which offers several deconvolution algorithms 
+like the iterative Richardson-Lucy algorithms but also
 much more flexible methods which are based on minimizing a 
 noise-dependent loss function with the help of modern gradient-descent minimization routines. 
 Also this toolbox is not restricted in dimensionality and therefore can be applied to deconvolution problems in many different fields.
@@ -85,7 +87,7 @@ outperform sliding kernels. In microscopy and astronomy that is often the case, 
 Convolutions can be also calculated with a sliding kernel in real space which is the direct approach to
 solve the integral in \autoref{eq:conv}.
 That mechanism is the working principle
-behind the convolutions in neural nets. The reason is that this operation can be parallelized easily and therefore 
+behind the convolutions in neural networks. The reason is that this operation can be parallelized easily and therefore 
 is suited for GPUs. However, the computational complexity for a 2D kernel with size $K \times L$ applied on an image with
 $N \times M$ data points is $\mathcal O(N \cdot M \cdot K \cdot L)$. It is clear that for larger kernel sizes ($K,L \gg 1$) the sliding method 
 has worse computational complexity than the FFT based convolutions. The many cores of a GPU can mitigate that to a certain extent
@@ -105,9 +107,9 @@ If the kernel is separable over the dimensions (like a Gaussian kernel) the comp
         \begin{subfigure}[b]{.25\textwidth}
             \centering
             \begin{tikzpicture}[scale=0.7]
-                \node at (0,0) {\includegraphics[width=.9\textwidth]{figures/full_house_no_pad.png}};
+                \node at (0,0) {\includegraphics[width=.63\textwidth]{figures/full_house_no_pad.png}};
                 \draw[red] (-2.0, -1.6) rectangle (-1.6, -1.2);
-                \node[color=red] at (0,0) {\includegraphics[width=.4\textwidth]{figures/edge_house_no_pad.png}};
+                \node[color=red] at (0,0) {\includegraphics[width=.28\textwidth]{figures/edge_house_no_pad.png}};
                 \draw[color=red] (-0.91, -0.9) rectangle (0.9, 0.9); 
                 \draw[color=red] (-2.0, -1.2) -- (-0.9, 0.9);
                 \draw[color=red] (-1.6, -1.6) -- (0.9, -0.9);
@@ -119,9 +121,9 @@ If the kernel is separable over the dimensions (like a Gaussian kernel) the comp
         \begin{subfigure}[b]{.25\textwidth}
             \centering
             \begin{tikzpicture}[scale=0.7]
-                \node at (0,0) {\includegraphics[width=.9\textwidth]{figures/full_house_pad.png}};
+                \node at (0,0) {\includegraphics[width=.63\textwidth]{figures/full_house_pad.png}};
                 \draw[red] (-2.0, -1.6) rectangle (-1.6, -1.2);
-                \node[color=red] at (0,0) {\includegraphics[width=.4\textwidth]{figures/edge_house_pad.png}};
+                \node[color=red] at (0,0) {\includegraphics[width=.28\textwidth]{figures/edge_house_pad.png}};
                 \draw[color=red] (-0.90, -0.9) rectangle (0.9, 0.9); 
                 \draw[color=red] (-2.0, -1.2) -- (-0.9, 0.9);
                 \draw[color=red] (-1.6, -1.6) -- (0.9, -0.9);
@@ -318,7 +320,7 @@ julia> reg(randn((10,20,30,40)))
     All experiments were executed on Ubuntu 20.04 using a AMD Ryzen 5 5600X 6-Core processor (12 threads) with \SI{32}{GB} DDR4 RAM and Julia 1.6.1.
     If possible, all threads were used.
     As GPU accelerator we used a GeForce RTX 2060 SUPER with \SI{8}{GB} memory and CUDA 11.3 and CUDA.jl 3.3.1.
-    Our experiments additionally made use of the following packages: ArrayInterface.jl\cite{DifferentialEquations.jl-2017}, 
+    Our experiments additionally made use of the following packages in Julia 1.6.2: ArrayInterface.jl\cite{DifferentialEquations.jl-2017}, 
     BenchmarkTools.jl\cite{BenchmarkTools.jl-2016}, FFTW.jl\cite{FFTW05}, LLVM.jl\cite{LLVM.jl-2017}, Optim.jl\cite{mogensen2018optim}
     and  Zygote.jl\cite{Zygote.jl-2018}. 
     \subsection{One-Dimensional Time Series}
@@ -363,28 +365,28 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
         \begin{figure}[h]
             \begin{subfigure}[b]{.25\textwidth}
                 \centering
-                \includegraphics[width=0.85\textwidth]{figures/resolution_test_chart_blurry.png}
+                \includegraphics[width=0.75\textwidth]{figures/resolution_test_chart_blurry.png}
                 \caption{Measured with Poisson noise}
                 \label{fig:fabioa}
             \end{subfigure}%
             \hfill
             \begin{subfigure}[b]{.25\textwidth}
                 \centering
-                \includegraphics[width=0.85\textwidth]{figures/resolution_test_chart_no_reg_iter_50.png}
+                \includegraphics[width=0.75\textwidth]{figures/resolution_test_chart_no_reg_iter_50.png}
                 \caption{Without regularizer $N=50$}
                 \label{fig:fabiob}
             \end{subfigure}%
             \hfill
             \begin{subfigure}[b]{.25\textwidth}
                 \centering
-                \includegraphics[width=0.85\textwidth]{figures/resolution_test_chart_no_reg_iter_10.png}
+                \includegraphics[width=0.75\textwidth]{figures/resolution_test_chart_no_reg_iter_10.png}
                 \caption{Without regularizer $N=10$}
                 \label{fig:fabioc}
             \end{subfigure}%            
             \hfill
             \begin{subfigure}[b]{.25\textwidth}
                 \centering
-                \includegraphics[width=0.85\textwidth]{figures/resolution_test_chart_regularizer_008_iter_21.png}
+                \includegraphics[width=0.75\textwidth]{figures/resolution_test_chart_regularizer_008_iter_21.png}
                 \caption{With regularizer $N=24$.}
                 \label{fig:fabiod}
             \end{subfigure}%            
@@ -454,20 +456,20 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
         Here we assumed a common single 3D PSF for all color channels.
         Julia's broadcast mechanism is able to understand that 
         the data has more dimensions that the PSF and expands the PSF so that a multiplication still works.
-        We only need to specify for the FFT over which dimensions the convolution should happen.
         \begin{figure}[h]
             \begin{subfigure}{.25\textwidth}
                 \centering
-                \includegraphics[width = .95\textwidth]{figures/raw_rgb.png}
+                \includegraphics[width = .85\textwidth]{figures/raw_rgb.png}
             \end{subfigure}%
             \begin{subfigure}{.25\textwidth}
                 \centering
-                \includegraphics[width = .95\textwidth]{figures/deconvolved_rgb.png}
+                \includegraphics[width = .85\textwidth]{figures/deconvolved_rgb.png}
             \end{subfigure}
             \caption{Slice of a 3D dataset with three different colors. a) is the raw data and b) is the
                     deconvolved image.}
             \label{fig:result_3d}
         \end{figure} 
+        We only need to specify for the FFT over which dimensions the convolution should happen.
         Clearly we can see that the deconvolution removed a lot of the background blur.
 
     \subsection{Performance Comparison}
@@ -510,8 +512,7 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
 
 
     \subsection{Full Deconvolution}
-        In \autoref{tab:deconv} we show the deconvolution time for a 3D dataset with a size of $512 \times 256 \times 128$ 
-        \footnote{Dataset was taken from \url{http://bigwww.epfl.ch/deconvolution/data/microtubules/}\cite{deconvlab2}.} 
+        In \autoref{tab:deconv} we show the deconvolution time for a 3D dataset with a size of $512 \times 256 \times 128$\footnote{Dataset was taken from \url{http://bigwww.epfl.ch/deconvolution/data/microtubules/}\cite{deconvlab2}.} 
         The basic settings of the different algorithms and packages are noted in \autoref{tab:deconvprop}.
         The aim of this comparison is not to compare the quality of the results but the computing time to achieve similar reconstructions. 
         The algorithms used in \verb|DeconvOptim.jl| are not fundamentally different to a plain Richardson-Lucy deconvolution and therefore the results will 
@@ -522,17 +523,17 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
         The different packages used were \verb|ThreeDeconv.jl| \cite{ikoma2018convex}, \verb|Huygens| Professional version 21.04 (Scientific Volume Imaging, The Netherlands, \url{http://svi.nl}), \verb|DeconvolutionLab2| \cite{deconvlab2} and \verb|GenericDeconv|.  
 
         \begin{table}[h]
-            \begin{tabular}{l l l}
-                &  CPU in s& GPU in s\\ 
+            \begin{tabular}{l l l l }
+                &  CPU in \si{\second}& GPU in \si{\second} & NCC\\ 
             \hline
-            \verb|DeconvOptim.jl| & 32.9 & 2.20\\
-            \verb|DeconvOptim.jl| - TV & 39.9 & 4.46 \\
-            Richardson-Lucy (Julia) & 40.0 & 3.05 \\
-            \verb|ThreeDeconv.jl|& 1550 & 27.1 \\
-            \verb|GenericDeconv|  & 140 & 6.32\\
-            \verb|GenericDeconv| - TV & 233 & 9.35 \\
-            \verb|Huygens| & 30.1 & 6.8 \\
-            \verb|DeconvolutionLab2| - LR& 1640 & \\
+            \verb|DeconvOptim.jl| & 32.9 & 2.20 & 0.86\\
+            \verb|DeconvOptim.jl| - TV & 39.9 & 4.46 & 0.79\\
+            Richardson-Lucy (Julia) & 40.0 & 3.05 & 0.74 \\
+            \verb|ThreeDeconv.jl|& 1550 & 27.1 & 0.85\\
+            \verb|GenericDeconv|  & 140 & 6.32 & 0.86\\
+            \verb|GenericDeconv| - TV & 233 & 9.35 & 0.73\\
+            \verb|Huygens| & 30.1 & 6.8 & 0.86\\
+            \verb|DeconvolutionLab2| - LR& 1640 & & 0.76\\
             \end{tabular}
             \caption{Runtimes of different deconvolution implementations.}
             \label{tab:deconv}
@@ -641,7 +642,9 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
 
 \section{Acknowledgement}
     This work was partially funded by the Honours Programme of the Friedrich Schiller 
-    University of Jena\footnote{\url{https://www.uni-jena.de/en/honours_programme}}. 
+    University of Jena\footnote{\url{https://www.uni-jena.de/en/honours_programme}}.
+    We want to thank Michael Abbott because he had the
+    initial idea for the metaprogramming regularizers based on \verb|Tullio.jl|. 
     Additionally, we want to thank Scientific Volume Imaging for providing a trial license for Huygens and especially Mark Koenis for advising
     us how to adjust the settings to get optimal performance. 
 

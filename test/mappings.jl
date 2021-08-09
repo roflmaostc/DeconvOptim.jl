@@ -48,6 +48,13 @@ end
     @test x ≈ p_inv(p(x))
 
     @test all(p(x2) .>= 0)
+
+    function f(x)
+        @test all(.≈(Zygote.gradient(x -> sum(p(x)), x)[1], (p(x .+ 1e-8) .- p(x))./1e-8, rtol=1e-4))
+        @test Zygote.gradient(x -> sum(p(x)), x)[1] ≈ DeconvOptim.f_pw_pos_grad(x)
+    end
+
+    f([1.1, 12312.2, -10.123, 22.2, -123.23, 0])
 end
 
 @testset "Abs_positive" begin

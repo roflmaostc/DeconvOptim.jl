@@ -23,4 +23,14 @@ docs/site/
 # environment.
 Manifest.toml
 
+*.aux
+*.bbl
+*.blg
+*.latex*
+*.fls
+*.log
+*.out
+*.pdf
+*ipynb_checkpoints*
+
 *.swp

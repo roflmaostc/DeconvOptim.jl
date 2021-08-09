@@ -22,7 +22,7 @@ julia> img = Float32.(testimage("resolution_test_512"));
 
 julia> psf = Float32.(generate_psf(size(img), 30));
 
-julia> img_b = conv_psf(img, psf);
+julia> img_b = conv(img, psf);
 
 julia> img_n = poisson(img_b, 300);
 

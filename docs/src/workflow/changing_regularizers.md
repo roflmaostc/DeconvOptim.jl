@@ -29,7 +29,7 @@ img = convert(Array{Float32}, channelview(testimage("resolution_test_512")))
 psf = generate_psf(size(img), 30)
 
 # create a blurred, noisy version of that image
-img_b = conv_psf(img, psf, [1, 2])
+img_b = conv(img, psf, [1, 2])
 img_n = poisson(img_b, 300);
 
 h_view(img, img_b, img_n)

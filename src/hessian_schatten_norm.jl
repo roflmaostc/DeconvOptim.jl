@@ -69,7 +69,7 @@ end
 
 function schatten_norm_tullio(H11, H12, H22, p)
     λ₁, λ₂ = eigvals_symmetric_tullio(H11, H12, H22) 
-    return @tullio res = (1f-8 + λ₁[i, j]^p + λ₂[i, j]^p)^(1/p)
+    return @tullio res = abs((1f-8 + λ₁[i, j]^p + λ₂[i, j]^p))^(1/p)
 end
 
 """
