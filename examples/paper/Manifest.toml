@@ -232,7 +232,7 @@ deps = ["Printf"]
 uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
 
 [[DeconvOptim]]
-deps = ["ChainRulesCore", "FFTW", "Interpolations", "LineSearches", "LinearAlgebra", "Noise", "Optim", "Requires", "Statistics", "StatsBase", "Tullio", "Zygote"]
+deps = ["ChainRulesCore", "FFTW", "Interpolations", "LineSearches", "LinearAlgebra", "LoopVectorization", "Noise", "Optim", "Requires", "Statistics", "StatsBase", "Tullio", "Zygote"]
 path = "../.."
 uuid = "03e7cd2f-1a03-4ea9-b59b-760a446df67f"
 version = "0.4.1"
@@ -482,6 +482,18 @@ deps = ["Base64", "Dates", "IniFile", "Logging", "MbedTLS", "NetworkOptions", "S
 git-tree-sha1 = "44e3b40da000eab4ccb1aecdc4801c040026aeb5"
 uuid = "cd3eb016-35fb-5094-929b-558a96fad6f3"
 version = "0.9.13"
+
+[[Hwloc]]
+deps = ["Hwloc_jll"]
+git-tree-sha1 = "92d99146066c5c6888d5a3abc871e6a214388b91"
+uuid = "0e44f5e4-bd66-52a0-8798-143a42290a1d"
+version = "2.0.0"
+
+[[Hwloc_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
+git-tree-sha1 = "3395d4d4aeb3c9d31f5929d32760d8baeee88aaf"
+uuid = "e33a78d0-f292-5ffc-b300-72abe9b543c8"
+version = "2.5.0+0"
 
 [[IJulia]]
 deps = ["Base64", "Conda", "Dates", "InteractiveUtils", "JSON", "Libdl", "Markdown", "MbedTLS", "Pkg", "Printf", "REPL", "Random", "SoftGlobalScope", "Test", "UUIDs", "ZMQ"]
@@ -817,6 +829,12 @@ version = "0.2.5"
 [[Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 
+[[LoopVectorization]]
+deps = ["ArrayInterface", "DocStringExtensions", "IfElse", "LinearAlgebra", "OffsetArrays", "Polyester", "Requires", "SLEEFPirates", "Static", "StrideArraysCore", "ThreadingUtilities", "UnPack", "VectorizationBase"]
+git-tree-sha1 = "6643933c619b292cb1fe566f5a411dddddec3db9"
+uuid = "bdcacae8-1622-11e9-2a5c-532679323890"
+version = "0.12.63"
+
 [[Lz4_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "5d494bc6e85c4c9b626ee0cab05daa4085486ab1"
@@ -834,6 +852,11 @@ deps = ["Markdown", "Random"]
 git-tree-sha1 = "0fb723cd8c45858c22169b2e42269e53271a6df7"
 uuid = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 version = "0.5.7"
+
+[[ManualMemory]]
+git-tree-sha1 = "9cb207b18148b2199db259adfa923b45593fe08e"
+uuid = "d125e4d3-2237-4719-b19c-fa641b8a4667"
+version = "0.1.6"
 
 [[MappedArrays]]
 git-tree-sha1 = "e8b359ef06ec72e8c030463fe02efe5527ee5142"
@@ -1050,6 +1073,12 @@ git-tree-sha1 = "44d018211a56626288b5d3f8c6497d28c26dc850"
 uuid = "e409e4f3-bfea-5376-8464-e040bb5c01ab"
 version = "0.4.0"
 
+[[Polyester]]
+deps = ["ArrayInterface", "IfElse", "ManualMemory", "Requires", "Static", "StrideArraysCore", "ThreadingUtilities", "VectorizationBase"]
+git-tree-sha1 = "81c59c2bed8c8a76843411ddb33e548bf2bcc9b2"
+uuid = "f517fe37-dbe3-4b94-8317-1923a5111588"
+version = "0.3.8"
+
 [[PositiveFactorizations]]
 deps = ["LinearAlgebra"]
 git-tree-sha1 = "17275485f373e6673f7e7f97051f703ed5b15b20"
@@ -1140,6 +1169,12 @@ version = "1.0.2"
 [[SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 
+[[SLEEFPirates]]
+deps = ["IfElse", "Static", "VectorizationBase"]
+git-tree-sha1 = "bfdf9532c33db35d2ce9df4828330f0e92344a52"
+uuid = "476501e8-09a2-5ece-8869-fb82de89a1fa"
+version = "0.6.25"
+
 [[Scratch]]
 deps = ["Dates"]
 git-tree-sha1 = "0b4b7f1393cff97c33891da2a0bf69c6ed241fda"
@@ -1228,6 +1263,12 @@ git-tree-sha1 = "fed1ec1e65749c4d96fc20dd13bea72b55457e62"
 uuid = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 version = "0.33.9"
 
+[[StrideArraysCore]]
+deps = ["ArrayInterface", "ManualMemory", "Requires", "ThreadingUtilities", "VectorizationBase"]
+git-tree-sha1 = "e1c37dd3022ba6aaf536541dd607e8d5fb534377"
+uuid = "7792a7ef-975c-4747-a70f-980b88e8d1da"
+version = "0.1.17"
+
 [[StringDistances]]
 deps = ["Distances"]
 git-tree-sha1 = "a4c05337dfe6c4963253939d2acbdfa5946e8e31"
@@ -1286,6 +1327,12 @@ git-tree-sha1 = "259804ebdbc5757ee1bee77860fa6070f9d7db62"
 uuid = "5e47fb64-e119-507b-a336-dd2b206d9990"
 version = "1.6.0"
 
+[[ThreadingUtilities]]
+deps = ["ManualMemory"]
+git-tree-sha1 = "03013c6ae7f1824131b2ae2fc1d49793b51e8394"
+uuid = "8290d209-cae3-49c0-8002-c8c24d57dab5"
+version = "0.4.6"
+
 [[TiffImages]]
 deps = ["ColorTypes", "DocStringExtensions", "FileIO", "FixedPointNumbers", "IndirectArrays", "Inflate", "OffsetArrays", "OrderedCollections", "PkgVersion", "ProgressMeter"]
 git-tree-sha1 = "03fb246ac6e6b7cb7abac3b3302447d55b43270e"
@@ -1326,6 +1373,12 @@ version = "1.0.2"
 
 [[Unicode]]
 uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
+
+[[VectorizationBase]]
+deps = ["ArrayInterface", "Hwloc", "IfElse", "Libdl", "LinearAlgebra", "Static"]
+git-tree-sha1 = "32a3252a00a8e4aa23129e2c36a237e812f71eeb"
+uuid = "3d5dd08c-fd9d-11e8-17fa-ed2836048c2f"
+version = "0.20.33"
 
 [[VersionParsing]]
 git-tree-sha1 = "80229be1f670524750d905f8fc8148e5a8c4537f"
