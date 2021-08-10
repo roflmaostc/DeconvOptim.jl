@@ -552,8 +552,6 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
         we compare them by the NCC, see \autoref{img:results}.
         The CPU versions were multi threaded (if possible). 
         \verb|DeconvolutionLab2|, \verb|Huygens| and \verb|GenericDeconv| were tested under Windows 10 and not Ubuntu.
-        \todo{anscombe norm speed}
-        \todo{Fix table }
         \begin{table}[h]
             \begin{tabular}{l l l}
                 & Loss & iterations \\ 
@@ -564,7 +562,7 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
             \verb|ThreeDeconv.jl|  & Gauss+Poisson& 300\\
             \verb|GenericDeconv|  & Poisson & 45\\
             \verb|GenericDeconv| TV & Poisson & 45 \\
-            \verb|Huygens| & & \\
+            \verb|Huygens| & Poisson & 25\\
             \verb|DeconvolutionLab2| LR & Poisson & 300\\
             \end{tabular}
             \caption{Overview which loss function (noise model) and number of iterations are used.}
@@ -645,7 +643,7 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
     initial idea for the metaprogramming regularizers based on \verb|Tullio.jl|. 
     Additionally, we want to thank Scientific Volume Imaging for providing a trial license for Huygens and especially Mark Koenis for advising
     us how to adjust the settings to get optimal performance. 
-
+\newpage
 \input{bib.tex}
 
 \end{document}
