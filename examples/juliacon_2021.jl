@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.14.8
+# v0.15.1
 
 using Markdown
 using InteractiveUtils
@@ -22,14 +22,32 @@ end
 # ╔═╡ 3310d2f7-450a-4cd1-9c3a-46d02d23a7c6
 using Revise
 
+# ╔═╡ 226f5316-3bfb-4ccc-b3e2-7efd0bae2456
+using TestImages, ImageShow, Plots, LinearAlgebra, IndexFunArrays, Noise, FourierTools, SpecialFunctions, FFTW, LaTeXStrings, PlutoUI, Images, Tullio
+
 # ╔═╡ d27b2d72-d264-11eb-0be5-13dcacfd2adc
-using DeconvOptim, TestImages, ImageShow, Plots, LinearAlgebra, IndexFunArrays, Noise, FourierTools, SpecialFunctions, FFTW, LaTeXStrings, PlutoUI, Images, Tullio
+using DeconvOptim
+
+# ╔═╡ 18a1b7e0-5619-40a7-b5f7-1915f4f5ebda
+
+
+# ╔═╡ aba859e7-be5a-43f8-8dd4-28fe966a9c98
+
+
+# ╔═╡ df685450-e964-11eb-1878-c5888e6932f0
+
+
+# ╔═╡ f6d583cb-18d5-4000-a5b3-bc22f5d3e52e
+
 
 # ╔═╡ 952b251c-207b-4412-b6e1-268fce1647d9
 begin
-	img = Float32.(testimage("fabio_gray"));
+	img = Float32.(testimage("resolution_512"));
 	img_1D = img[:, 200]
 end;
+
+# ╔═╡ a7606eb2-d7d9-4cd4-aa06-1379affe0785
+
 
 # ╔═╡ fa8cd9c9-a2fd-495c-8d22-ada7bb9c39f6
 otf(x, Δx=1) = begin
@@ -192,7 +210,7 @@ $(@bind iter Slider(0:50, show_value=true))
 regularizer = $(@bind reg_bool CheckBox())"
 
 # ╔═╡ 803368e6-53fd-4413-b3f5-ffe46ee8983e
-img_deconv, res_img = deconvolution(img, psf, regularizer=reg_bool ? reg : nothing, iterations=iter, λ=λ);
+img_deconv, res_img = deconvolution(img_blurry, psf, regularizer=reg_bool ? reg : nothing, iterations=iter, λ=λ);
 
 # ╔═╡ e58e1f63-2c81-48fb-866a-4bb70bd428a6
 Gray.(img_deconv)
@@ -239,9 +257,15 @@ md"* Flexible Image Deconvolution Software
 
 # ╔═╡ Cell order:
 # ╠═3310d2f7-450a-4cd1-9c3a-46d02d23a7c6
+# ╠═18a1b7e0-5619-40a7-b5f7-1915f4f5ebda
+# ╠═aba859e7-be5a-43f8-8dd4-28fe966a9c98
 # ╠═0507f8ed-8b64-48af-a6c4-ff7c4211b9e9
+# ╠═226f5316-3bfb-4ccc-b3e2-7efd0bae2456
+# ╠═df685450-e964-11eb-1878-c5888e6932f0
 # ╠═d27b2d72-d264-11eb-0be5-13dcacfd2adc
+# ╠═f6d583cb-18d5-4000-a5b3-bc22f5d3e52e
 # ╠═952b251c-207b-4412-b6e1-268fce1647d9
+# ╠═a7606eb2-d7d9-4cd4-aa06-1379affe0785
 # ╠═24fc86da-0b7c-493c-8977-2a19ef6dc133
 # ╠═3bda922d-552b-42ec-9055-33a141b5841a
 # ╟─fa8cd9c9-a2fd-495c-8d22-ada7bb9c39f6
@@ -250,10 +274,10 @@ md"* Flexible Image Deconvolution Software
 # ╠═b542187a-3ae7-4430-a81d-f968d9000427
 # ╠═88d83629-f1b2-4d69-928f-d4acfbc76b70
 # ╠═e58e1f63-2c81-48fb-866a-4bb70bd428a6
-# ╠═d6d0f436-48fd-4e8a-863c-3e9d3850cc91
+# ╟─d6d0f436-48fd-4e8a-863c-3e9d3850cc91
 # ╠═803368e6-53fd-4413-b3f5-ffe46ee8983e
-# ╠═5ae1a6a3-4505-4123-9f1e-8a1d4ac0b4e1
-# ╠═438a6639-bd35-464f-a81d-d98eb65e006e
+# ╟─5ae1a6a3-4505-4123-9f1e-8a1d4ac0b4e1
+# ╟─438a6639-bd35-464f-a81d-d98eb65e006e
 # ╟─061faf49-662c-4508-83b4-ddcf0970ed0d
 # ╟─23829201-9756-4ef8-90c9-3917b761fe4b
 # ╟─30f21bb8-6d09-4fce-9d2a-568bfaf3ff7a
@@ -271,9 +295,9 @@ md"* Flexible Image Deconvolution Software
 # ╟─4e84e739-9c59-4939-8b04-aec7dc069d67
 # ╟─9d9a5da2-14df-46e6-b7e6-5a33aade1754
 # ╟─15d54e5e-64f4-4a1d-8cc8-9334b2e3784f
-# ╟─7a16df73-95ad-47f5-907c-6fd23c6000cf
+# ╠═7a16df73-95ad-47f5-907c-6fd23c6000cf
 # ╟─5c8030b7-8805-4771-9329-23abb2744544
-# ╟─ff9af79c-f06c-42ac-9c8d-6f09d2ff4056
+# ╠═ff9af79c-f06c-42ac-9c8d-6f09d2ff4056
 # ╟─d8aee845-e922-41da-a17e-37ffa3e692f0
 # ╟─fc93fa3d-8599-463b-b9e6-8043b90e9d63
 # ╟─97c45bfd-d1ef-49ad-908d-7360c03b0170
