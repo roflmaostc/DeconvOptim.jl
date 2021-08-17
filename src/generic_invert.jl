@@ -58,7 +58,7 @@ function invert(measured, rec0, forward;
         end
     end
     
-    storage_μ = similar(measured)
+    storage_μ = deepcopy(measured)
     function total_loss(rec)
         # handle if there is a provided mapping function
         mf_rec = mf(rec) 

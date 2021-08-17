@@ -164,7 +164,14 @@ function ChainRulesCore.rrule(::typeof(p_conv_aux!), P, P_inv, u, v, u_ft_stor, 
                 conj(v)
             end
         end
-        ∇ = p_conv_aux!(P, P_inv, collect(eltype(u).(barx)), conj_v, u_ft_stor, out)
+        barx = let
+            if typeof(barx) <: FillArrays.Fill
+                collect(eltype(u).(barx))
+            else
+                barx
+            end
+        end
+        ∇ = p_conv_aux!(P, P_inv, barx, conj_v, u_ft_stor, copy(out))
         return NoTangent(), z, z, ∇, z, z, z
     end 
     return Y, conv_pullback
