@@ -25,6 +25,7 @@ using Interpolations
 using ChainRulesCore
 using LinearAlgebra
 
+using FillArrays
 
 gpu_or_cpu(x) = Array
 
