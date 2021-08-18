@@ -74,7 +74,7 @@ function ChainRulesCore.rrule(::typeof(conv), u::AbstractArray{T, N}, v::Abstrac
     Y = conv(u, v, dims)
     function conv_pullback(barx)
         z = zero(eltype(u))
-        return NoTangent(), conv(barx, conj(v), dims), z, z
+        return NoTangent(), conv(barx, conj(v), dims), NoTangent(), NoTangent()
     end 
     return Y, conv_pullback
 end
