@@ -23,12 +23,12 @@ end
  # define custom gradient for speed-up
  # ChainRulesCore offers the possibility to define a backward AD rule
  # which can be used by several different AD systems
-function ChainRulesCore.rrule(::typeof(poisson_aux), μ, meas, storage=similar(μ))
+function ChainRulesCore.rrule(::typeof(poisson_aux), μ, meas, storage)
     Y = poisson_aux(μ, meas, storage)
 
     function poisson_aux_pullback(xbar)
         storage .= xbar .* (one(eltype(μ)) .- meas ./ μ)
-        return NoTangent(), storage, NoTangent(), NoTangent() 
+        return NoTangent(), storage, ChainRulesCore.NotImplemented, ChainRulesCore.NotImplemented 
     end
 
     return Y, poisson_aux_pullback
@@ -60,10 +60,10 @@ function gauss_aux(μ, meas, storage=similar(μ))
 end
 
  # define custom gradient for speed-up
-function ChainRulesCore.rrule(::typeof(gauss_aux), μ, meas, storage=nothing)
+function ChainRulesCore.rrule(::typeof(gauss_aux), μ, meas, storage)
     Y = gauss_aux(μ, meas) 
     function gauss_aux_pullback(xbar)
-        return NoTangent(), 2 .* xbar .* (μ - meas), NoTangent(), NoTangent() 
+        return NoTangent(), 2 .* xbar .* (μ - meas), ChainRulesCore.NotImplemented, ChainRulesCore.NotImplemented 
     end
     return Y, gauss_aux_pullback
 end
@@ -97,12 +97,12 @@ function scaled_gauss_aux(μ, meas, storage=similar(μ); read_var=0)
 end
 
  # define custom gradient for speed-up
-function ChainRulesCore.rrule(::typeof(scaled_gauss_aux), μ, meas, storage=nothing; read_var=0)
+function ChainRulesCore.rrule(::typeof(scaled_gauss_aux), μ, meas, storage; read_var=0)
     Y = scaled_gauss_aux(μ, meas) 
     function scaled_gauss_aux_pullback(xbar)
         ∇ = xbar .* (μ.^2 .- meas.^2 .+ μ .+ read_var.*(1 .- 2 .* (meas .- µ)))./((μ .+read_var).^2)
         ∇[μ .<= 1f-8] .= 0 
-        return NoTangent(), ∇, zero(eltype(μ)), NoTangent(), NoTangent() 
+        return NoTangent(), ∇, zero(eltype(μ)), ChainRulesCore.NotImplemented, ChainRulesCore.NotImplemented 
     end
     return Y, scaled_gauss_aux_pullback
 end
@@ -144,11 +144,11 @@ end
  # define custom gradient for speed-up
  # ChainRulesCore offers the possibility to define a backward AD rule
  # which can be used by several different AD systems
-function ChainRulesCore.rrule(::typeof(anscombe_aux), μ, meas, storage=similar(μ); b=1)
+function ChainRulesCore.rrule(::typeof(anscombe_aux), μ, meas, storage; b=1)
     Y = anscombe_aux(μ, meas, storage, b=b)
     function anscombe_aux_pullback(xbar)
             storage .= xbar .* (one(eltype(μ)) .- sqrt.((meas .+ b) ./ (μ.+b)))
-        return NoTangent(), storage, NoTangent(), NoTangent(), NoTangent(), NoTangent() 
+        return NoTangent(), storage, ChainRulesCore.NotImplemented, ChainRulesCore.NotImplemented, ChainRulesCore.NotImplemented, ChainRulesCore.NotImplemented 
     end
 
     return Y, anscombe_aux_pullback
