@@ -28,7 +28,7 @@ function ChainRulesCore.rrule(::typeof(poisson_aux), μ, meas, storage)
 
     function poisson_aux_pullback(xbar)
         storage .= xbar .* (one(eltype(μ)) .- meas ./ μ)
-        return NoTangent(), storage, ChainRulesCore.NotImplemented, ChainRulesCore.NotImplemented 
+        return NoTangent(), storage, (ChainRulesCore.@not_implemented "Save computation"), (ChainRulesCore.@not_implemented "Save computation") 
     end
 
     return Y, poisson_aux_pullback
@@ -63,7 +63,7 @@ end
 function ChainRulesCore.rrule(::typeof(gauss_aux), μ, meas, storage)
     Y = gauss_aux(μ, meas) 
     function gauss_aux_pullback(xbar)
-        return NoTangent(), 2 .* xbar .* (μ - meas), ChainRulesCore.NotImplemented, ChainRulesCore.NotImplemented 
+        return NoTangent(), 2 .* xbar .* (μ - meas), (ChainRulesCore.@not_implemented "Save computation"), (ChainRulesCore.@not_implemented "Save computation") 
     end
     return Y, gauss_aux_pullback
 end
@@ -102,7 +102,7 @@ function ChainRulesCore.rrule(::typeof(scaled_gauss_aux), μ, meas, storage; rea
     function scaled_gauss_aux_pullback(xbar)
         ∇ = xbar .* (μ.^2 .- meas.^2 .+ μ .+ read_var.*(1 .- 2 .* (meas .- µ)))./((μ .+read_var).^2)
         ∇[μ .<= 1f-8] .= 0 
-        return NoTangent(), ∇, zero(eltype(μ)), ChainRulesCore.NotImplemented, ChainRulesCore.NotImplemented 
+        return NoTangent(), ∇, (ChainRulesCore.@not_implemented "Save computation"), (ChainRulesCore.@not_implemented "Save computation"), (ChainRulesCore.@not_implemented "Save computation")
     end
     return Y, scaled_gauss_aux_pullback
 end
@@ -148,7 +148,7 @@ function ChainRulesCore.rrule(::typeof(anscombe_aux), μ, meas, storage; b=1)
     Y = anscombe_aux(μ, meas, storage, b=b)
     function anscombe_aux_pullback(xbar)
             storage .= xbar .* (one(eltype(μ)) .- sqrt.((meas .+ b) ./ (μ.+b)))
-        return NoTangent(), storage, ChainRulesCore.NotImplemented, ChainRulesCore.NotImplemented, ChainRulesCore.NotImplemented, ChainRulesCore.NotImplemented 
+        return NoTangent(), storage, (ChainRulesCore.@not_implemented "Save computation"), (ChainRulesCore.@not_implemented "Save computation"), (ChainRulesCore.@not_implemented "Save computation")
     end
 
     return Y, anscombe_aux_pullback
