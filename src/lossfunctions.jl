@@ -28,7 +28,7 @@ function ChainRulesCore.rrule(::typeof(poisson_aux), μ, meas, storage=similar(�
 
     function poisson_aux_pullback(xbar)
         storage .= xbar .* (one(eltype(μ)) .- meas ./ μ)
-        return zero(eltype(μ)), storage, zero(eltype(μ)), zero(eltype(storage)) 
+        return NoTangent(), storage, NoTangent(), NoTangent() 
     end
 
     return Y, poisson_aux_pullback
@@ -63,7 +63,7 @@ end
 function ChainRulesCore.rrule(::typeof(gauss_aux), μ, meas, storage=nothing)
     Y = gauss_aux(μ, meas) 
     function gauss_aux_pullback(xbar)
-        return zero(eltype(μ)), 2 .* xbar .* (μ - meas), zero(eltype(μ)), zero(eltype(μ)) 
+        return NoTangent(), 2 .* xbar .* (μ - meas), NoTangent(), NoTangent() 
     end
     return Y, gauss_aux_pullback
 end
@@ -102,7 +102,7 @@ function ChainRulesCore.rrule(::typeof(scaled_gauss_aux), μ, meas, storage=noth
     function scaled_gauss_aux_pullback(xbar)
         ∇ = xbar .* (μ.^2 .- meas.^2 .+ μ .+ read_var.*(1 .- 2 .* (meas .- µ)))./((μ .+read_var).^2)
         ∇[μ .<= 1f-8] .= 0 
-        return zero(eltype(μ)), ∇, zero(eltype(μ)),  zero(eltype(μ)), zero(eltype(μ))
+        return NoTangent(), ∇, zero(eltype(μ)), NoTangent(), NoTangent() 
     end
     return Y, scaled_gauss_aux_pullback
 end
@@ -148,7 +148,7 @@ function ChainRulesCore.rrule(::typeof(anscombe_aux), μ, meas, storage=similar(
     Y = anscombe_aux(μ, meas, storage, b=b)
     function anscombe_aux_pullback(xbar)
             storage .= xbar .* (one(eltype(μ)) .- sqrt.((meas .+ b) ./ (μ.+b)))
-        return zero(eltype(μ)), storage, zero(eltype(μ)), zero(eltype(storage)), zero(eltype(b)), zero(eltype(μ))
+        return NoTangent(), storage, NoTangent(), NoTangent(), NoTangent(), NoTangent() 
     end
 
     return Y, anscombe_aux_pullback

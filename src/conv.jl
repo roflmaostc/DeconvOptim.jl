@@ -73,7 +73,6 @@ function ChainRulesCore.rrule(::typeof(conv), u::AbstractArray{T, N}, v::Abstrac
                               dims=ntuple(+, min(N, M))) where {T, D, N, M}
     Y = conv(u, v, dims)
     function conv_pullback(barx)
-        z = zero(eltype(u))
         return NoTangent(), conv(barx, conj(v), dims), NoTangent(), NoTangent()
     end 
     return Y, conv_pullback
@@ -156,7 +155,6 @@ end
 function ChainRulesCore.rrule(::typeof(p_conv_aux!), P, P_inv, u, v, u_ft_stor, out)
     Y = p_conv_aux!(P, P_inv, u, v, u_ft_stor, out)
     function conv_pullback(barx)
-        z = zero(eltype(u))
         conj_v = let
             if eltype(v) <: Real
                 v
@@ -172,7 +170,7 @@ function ChainRulesCore.rrule(::typeof(p_conv_aux!), P, P_inv, u, v, u_ft_stor, 
             end
         end
         ∇ = p_conv_aux!(P, P_inv, barx, conj_v, u_ft_stor, copy(out))
-        return NoTangent(), z, z, ∇, z, z, z
+        return NoTangent(), NoTangent(), NoTangent(), ∇, NoTangent(), NoTangent(), NoTangent()
     end 
     return Y, conv_pullback
 end
