@@ -26,7 +26,8 @@ regularizers and mappings.
 - `padding=0`: an float indicating the amount (fraction of the size in that dimension) 
         of padded regions around the reconstruction. Prevents wrap around effects of the FFT.
         A array with `size(arr)=(400, 400)` with `padding=0.05` would result in reconstruction size of 
-        `(440, 440)`. However, we only return the reconstruction cropped to the original size.
+        `(440, 440)`. However, if padding is >= 0.0, we only return the reconstruction cropped to the original size.
+        For negative paddings, the absolute value is used, but the result maintains the padded size.
         `padding=0` disables any padding.
 - `opt_package=Opt_Optim`: decides which backend for the optimizer is used.
 - `opt=LBFGS()`: The chosen optimizer which must fit to `opt_package` 
@@ -81,7 +82,7 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
             if ~iszero(padding)
                 # 2 * ensures symmetric padding
                 # minimum padding is 2 (4 in total) on each side
-                x = next_fast_fft_size(max(4, 2 * round(Int, size(measured)[i] * padding)))
+                x = next_fast_fft_size(max(4, 2 * round(Int, size(measured)[i] * abs(padding))))
             else
                 x = 0
             end
@@ -157,7 +158,9 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
 
     res_out .*= rescaling
     # since we do some padding we need to extract the center part
-    res_out = center_extract(res_out, size(measured))    
+    if padding > 0.0
+        res_out = center_extract(res_out, size(measured))    
+    end
     return res_out, res
 end
 
