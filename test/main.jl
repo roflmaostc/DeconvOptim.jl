@@ -70,7 +70,8 @@ end
     img_n = poisson(img_b, 300);
 
     reg = GR()
-    res = richardson_lucy_iterative(img_n, psf, regularizer=reg, iterations=200);
+    # don't provide argument to test for world age bugs
+    res = richardson_lucy_iterative(img_n, psf, iterations=200);
     res2, o = deconvolution(img_n, psf, regularizer=reg, iterations=30);
     @test ≈(res .+ 1, res2 .+ 1, rtol=0.003)
     
