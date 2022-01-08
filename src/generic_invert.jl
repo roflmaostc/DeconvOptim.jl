@@ -103,7 +103,7 @@ function invert(measured, rec0, forward;
     end
 
     if isa(opt_package, Type{Opt_Optim}) 
-        opt_options = Optim.Options(iterations=iterations)
+        # opt_options = Optim.Options(iterations=iterations)
         
         # do the optimization with LBGFS
         res = Optim.optimize(Optim.only_fg!(fg!), rec0, opt, opt_options)
