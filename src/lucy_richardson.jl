@@ -42,16 +42,17 @@ function richardson_lucy_iterative(measured, psf;
     rec = abs.(conv_temp(measured, otf))#ones(eltype(measured), size(measured))
     
     # buffer for gradient
-
+    # we need Base.invokelatest because of world age issues with generated
+    # regularizers
     buffer_grad =  let 
         if !isnothing(regularizer)
-            gradient(regularizer, rec)[1]
+            Base.invokelatest(gradient, regularizer, rec)[1]
         else
             nothing
         end
     end
 
-    ∇reg(x) = buffer_grad .= gradient(regularizer, x)[1]
+    ∇reg(x) = buffer_grad .= Base.invokelatest(gradient, regularizer, x)[1]
 
     buffer = copy(measured)
 
@@ -59,7 +60,7 @@ function richardson_lucy_iterative(measured, psf;
         buffer .= measured ./ (conv_temp(rec, otf))
         conv_temp(buffer, otf_conj)
     end
-    iter_with_reg(rec) = buffer .= (iter_without_reg(rec) .- λ .* Base.invokelatest(∇reg, rec))
+    iter_with_reg(rec) = buffer .= (iter_without_reg(rec) .- λ .* ∇reg(rec))
 
     iter = isnothing(regularizer) ? iter_without_reg : iter_with_reg
 
