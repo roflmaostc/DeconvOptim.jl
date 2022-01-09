@@ -187,7 +187,11 @@ function options_trace_deconv(ground_truth, iterations, mapping, every=1)
             end
             loss = tr[end].value
             push!(summary["losses"], loss)
-            img = mapping[1](tr[end].metadata["x"]) # currently best image
+            img = (mapping === nothing) ? tr[end].metadata["x"] : mapping[1](tr[end].metadata["x"]) # current image
+            # the line below is needed, since in the iterations, the measurement is rescaled to a mean of one.
+            # see deconvolution.jl.  This rescaling is only an estimate and does not affect the norms.
+            img *= mean(ground_truth)
+
             # @vr img
             ncc = DeconvOptim.normalized_cross_correlation(ground_truth, img)
             push!(summary["nccs"], ncc)
