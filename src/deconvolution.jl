@@ -18,8 +18,9 @@ regularizers and mappings.
 - `background=0`: A float indicating a background intensity level.
 - `mapping=Non_negative()`: Applies a mapping of the optimizer weight. Default is a 
               parabola which achieves a non-negativity constraint.
-- `iterations=20`: Specifies a number of iterations after the optimization.
-    definitely should stop.
+- `iterations=nothing`: Specifies a number of iterations after the optimization.
+    definitely should stop. By default 20 iterations will be selected by generic_invert.jl, 
+    if `nothing` is provided.
 - `conv_dims`: A tuple indicating over which dimensions the convolution should happen.
                per default `conv_dims=1:ndims(psf)`
 - `plan_fft=true`: Boolean whether plan_fft is used. Gives a slight speed improvement.
@@ -46,7 +47,7 @@ julia> img_b = conv(img, psf);
 
 julia> img_n = poisson(img_b, 300);
 
-julia> @time res, o = deconvolution(img_n, psf);
+julia> res, o = deconvolution(img_n, psf);
 ```
 """
 function deconvolution(measured::AbstractArray{T, N}, psf;
@@ -55,7 +56,7 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
         λ=T(0.05),
         background=zero(T),
         mapping=Non_negative(),
-        iterations=20,
+        iterations=nothing,
         conv_dims = ntuple(+, ndims(psf)), 
         padding=0.00,
         opt_options=nothing,

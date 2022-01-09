@@ -21,15 +21,15 @@ regularizers and mappings.
     respect to the global loss function
 - `mapping=Non_negative()`: Applies a mapping of the optimizer weight. Default is a 
               parabola which achieves a non-negativity constraint.
-- `iterations=10`: Specifies a number of iterations after the optimization.
-    definitely should stop. Will be overwritten if `opt_options` is provided.
+- `iterations=nothing`: Specifies a number of iterations after the optimization.
+    definitely should stop. Will be overwritten if `opt_options` is provided. Default: 20
 - `opt_package=Opt_Optim`: decides which backend for the optimizer is used.
 - `opt=LBFGS()`: The chosen optimizer which must fit to `opt_package`. 
 - `opt_options=nothing`: Can be a options file required by Optim.jl. Will overwrite iterations.
 - `debug_f=nothing`: A debug function which must take a single argument, the current reconstruction. 
 """
 function invert(measured, rec0, forward; 
-                iterations=10, λ=eltype(rec0)(0.05),
+                iterations=nothing, λ=eltype(rec0)(0.05),
                 regularizer=nothing,
                 opt=LBFGS(linesearch=LineSearches.BackTracking()),
                 opt_options=nothing,
@@ -40,9 +40,15 @@ function invert(measured, rec0, forward;
                 opt_package=Opt_Optim)
 
     # if not special options are given, just restrict iterations
-    if isa(opt_package, Opt_Optim) && opt_options == nothing
-        opt_options = Optim.Options(iterations=iterations)
+    if isa(opt_package, Opt_Optim) 
+        if opt_options == nothing
+            opt_options = Optim.Options(iterations=iterations)
+        elseif iterations !== nothing
+            error("If `opt_options` are provided you need to include the iterations as part of these instead of providing the `iterations` argument.")
+        end
     end
+
+    iterations = (iterations === nothing) ? 20 : iterations
     
     # Get the mapping functions to achieve constraints
     # like non negativity
@@ -103,8 +109,9 @@ function invert(measured, rec0, forward;
     end
 
     if isa(opt_package, Type{Opt_Optim}) 
-        # opt_options = Optim.Options(iterations=iterations)
-        
+        if opt_options===nothing
+            opt_options = Optim.Options(iterations=iterations)
+        end
         # do the optimization with LBGFS
         res = Optim.optimize(Optim.only_fg!(fg!), rec0, opt, opt_options)
         res_out = mf(Optim.minimizer(res))
