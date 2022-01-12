@@ -40,8 +40,8 @@ function invert(measured, rec0, forward;
                 opt_package=Opt_Optim)
 
     # if not special options are given, just restrict iterations
-    if isa(opt_package, Opt_Optim) 
-        if opt_options == nothing
+    if opt_package <: Opt_Optim
+        if opt_options === nothing
             opt_options = Optim.Options(iterations=iterations)
         elseif iterations !== nothing
             error("If `opt_options` are provided you need to include the iterations as part of these instead of providing the `iterations` argument.")

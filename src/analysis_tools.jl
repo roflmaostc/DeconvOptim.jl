@@ -98,16 +98,28 @@ Calculates the mean variance between two array, but normalizing arra a to the sa
 function normalized_variance(a, b)
     factor = sum(b)/sum(a)
     sum(abs2.(a.*factor .-b))./prod(size(a))
-    # sum(abs2.(a./sum(a).*sum(b) .-b))
 end
 
+function reset_summary!(summary)
+    summary["losses"] = []
+    summary["best_ncc"] = -Inf
+    summary["best_ncc_idx"] = 0
+    summary["best_ncc_img"] = []
+    summary["nccs"] = []
+    summary["best_nvar"] = Inf
+    summary["best_nvar_idx"] = 0
+    summary["best_nvar_img"] = []
+    summary["times"] = []
+    summary["step_sizes"] = []
+    summary["nvars"] = []
+end
 
 """
     options_trace_deconv(ground_truth, iterations, mapping, every=1)
 
     A useful routine to simplify performance checks of deconvolution on simulated data.
     Returns an Options structure to be used with the deconvolution routine as an argument to `opt_options` and 
-    a function that returns the summary dictionary with all the performance metrics calculated.
+    a summary dictionary with all the performance metrics calculated, which is resetted and updated during deconvolution.
     This can then be plotted or visualized.
     The summary dictionary has the following content:
 
@@ -123,10 +135,13 @@ end
 
     For an example of how to plot the results, see the file `` in the `examples` folder.
 # Arguments
-- `ground_truth`: The underlying ground truth data. Note that this scaling is unimportant due to the normalized norms used for comparison, whereas the relative offset matters. 
+- `ground_truth`: The underlying ground truth data. Note that this scaling is unimportant due to the normalized norms used for comparison, 
+                  whereas the relative offset matters. 
 - `iterations`: The maximal number of iterations to performance. If covergence is reached, the result may have less iterations
-- `mapping`: If mappings such as the positivity contraints (e.g. `NonNegative()`) are used in the deconvolution routing, they also need to be provided here. Otherwises select `nothing`.
-- `every`: This option allows to select every how many iterations the evaluation is performed. Note that the results will not keep track of this iteration number. 
+- `mapping`: If mappings such as the positivity contraints (e.g. `NonNegative()`) are used in the deconvolution routing, they also 
+             need to be provided here. Otherwises select `nothing`.
+- `every`: This option allows to select every how many iterations the evaluation is performed. Note that the results will not keep track 
+        of this iteration number. 
 
 # Example
 ```julia-repl
@@ -168,56 +183,47 @@ julia> @vt (ground_truth, best_ncc_img, best_nvar_img) = show_noreg(true)
 ```
 """
 function options_trace_deconv(ground_truth, iterations, mapping, every=1)
-    summary = Dict(
-        "losses" => [],
-        "best_ncc" => -Inf,
-        "best_ncc_idx" => 0,
-        "best_ncc_img" => [],
-        "nccs" => [],
-        "best_nvar" => Inf,
-        "best_nvar_idx" => 0,
-        "best_nvar_img" => [],
-        "nvars" => [] )
+    summary = Dict()
+    reset_summary!(summary)
     idx = 1
     cb = tr -> begin
-            if tr[end].iteration == 1
-                    summary["losses"] = [];summary["best_ncc"] = -Inf;summary["best_ncc_idx"] = 0;summary["best_ncc_img"] = [];summary["nccs"] = []
-                    summary["best_nvar"] = Inf;summary["best_nvar_idx"] = 0;summary["best_nvar_img"] = [];summary["nvars"] = []
-                    idx = 1
-            end
-            loss = tr[end].value
-            push!(summary["losses"], loss)
-            img = (mapping === nothing) ? tr[end].metadata["x"] : mapping[1](tr[end].metadata["x"]) # current image
-            # the line below is needed, since in the iterations, the measurement is rescaled to a mean of one.
-            # see deconvolution.jl.  This rescaling is only an estimate and does not affect the norms.
-            img *= mean(ground_truth)
+        # iteration always starts with index 0 (before 1st iteration)
+        if tr[end].iteration == 0
+            reset_summary!(summary)
+            idx = 1
+        end
+        loss = tr[end].value
+        push!(summary["losses"], loss)
+        push!(summary["times"], tr[end].metadata["time"])
+        push!(summary["step_sizes"], tr[end].metadata["Current step size"])
+        # current image:
+        img = (mapping === nothing) ? tr[end].metadata["x"] : mapping[1](tr[end].metadata["x"]) 
+        # the line below is needed, since in the iterations, the measurement is rescaled to a mean of one.
+        # see deconvolution.jl.  This rescaling is only an estimate and does not affect the norms.
+        img *= mean(ground_truth)
 
-            # @vr img
-            ncc = DeconvOptim.normalized_cross_correlation(ground_truth, img)
-            push!(summary["nccs"], ncc)
-            summary["best_ncc"], summary["best_ncc_img"], summary["best_ncc_idx"] = let
-                    if ncc > summary["best_ncc"]
-                            (ncc, img, idx) 
-                    else
-                            (summary["best_ncc"], summary["best_ncc_img"], summary["best_ncc_idx"])
-                    end
+        ncc = DeconvOptim.normalized_cross_correlation(ground_truth, img)
+        push!(summary["nccs"], ncc)
+        summary["best_ncc"], summary["best_ncc_img"], summary["best_ncc_idx"] = let
+            if ncc > summary["best_ncc"]
+                    (ncc, img, idx) 
+            else
+                    (summary["best_ncc"], summary["best_ncc_img"], summary["best_ncc_idx"])
             end
-            nvar = normalized_variance(img, ground_truth)
-            push!(summary["nvars"], nvar)
-            summary["best_nvar"], summary["best_nvar_img"], summary["best_nvar_idx"] = let 
-                    if nvar < summary["best_nvar"]
-                            (nvar, img, idx)
-                    else
-                            (summary["best_nvar"], summary["best_nvar_img"], summary["best_nvar_idx"])
-                    end
+        end
+        nvar = normalized_variance(img, ground_truth)
+        push!(summary["nvars"], nvar)
+        summary["best_nvar"], summary["best_nvar_img"], summary["best_nvar_idx"] = let 
+            if nvar < summary["best_nvar"]
+                    (nvar, img, idx)
+            else
+                    (summary["best_nvar"], summary["best_nvar_img"], summary["best_nvar_idx"])
             end
-            idx += 1
-            false
-            end
-    function get_summary()
-        return summary
+        end
+        idx += 1
+        false
     end
 
     opt_options = Optim.Options(callback = cb, iterations=iterations, show_every=every, store_trace=true, extended_trace=true)
-    return (opt_options, get_summary)
+    return (opt_options, summary)
 end

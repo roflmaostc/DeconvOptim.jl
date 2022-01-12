@@ -48,32 +48,26 @@ function show_loss!(summary, addCurves="", lowest_loss=minimum(summary["losses"]
         ylabel!("log loss")
 end
 
-opt_options, get_noreg = options_trace_deconv(obj, iterations, Non_negative());
+opt_options, noreg_summary = options_trace_deconv(obj, iterations, Non_negative());
 
 res_noreg = deconvolution(measured, psf;
-        regularizer=nothing, iterations=iterations, mapping=Non_negative(),
+        regularizer=nothing, mapping=Non_negative(),
         opt_options=opt_options, debug_f=nothing)
-noreg_summary = get_noreg()
 
-opt_grad, get_grad = options_trace_deconv(obj, iterations, Non_negative(), );
+opt_grad, grad_summary = options_trace_deconv(obj, iterations, Non_negative(), );
 res_grad = deconvolution(measured, psf;
-        regularizer=nothing, iterations=iterations, mapping=Non_negative(),
+        regularizer=nothing,  mapping=Non_negative(),
         opt=GradientDescent(), opt_options=opt_grad, debug_f=nothing)
-grad_summary = get_grad()
         
-opt_gr, get_gr = options_trace_deconv(obj, iterations, Non_negative());
-
+opt_gr, gr_summary = options_trace_deconv(obj, iterations, Non_negative());
 res_gr = deconvolution(measured, psf;
-        regularizer=DeconvOptim.GR(), λ=1e-3, iterations=iterations,
+        regularizer=DeconvOptim.GR(), λ=1e-3, 
         mapping=Non_negative(), opt_options=opt_gr, debug_f=nothing)
-gr_summary = get_gr()
 
-opt_tv, get_tv = options_trace_deconv(obj, iterations, Non_negative())
-
+opt_tv, tv_summary = options_trace_deconv(obj, iterations, Non_negative())
 res_tv = deconvolution(measured, psf;
-        regularizer=DeconvOptim.TV(), λ=1e-3, iterations=iterations,
+        regularizer=DeconvOptim.TV(), λ=1e-3, 
         mapping=Non_negative(), opt_options=opt_tv, debug_f=nothing)
-tv_summary = get_tv()
 
 plot()
 title!("Regularization")

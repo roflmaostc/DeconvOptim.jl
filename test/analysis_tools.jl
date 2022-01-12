@@ -15,16 +15,16 @@
         @test DeconvOptim.normalized_cross_correlation(x, x) == 1.0f0
     end
 
-    @testset "Normalized Cross Correlation" begin
+    @testset "Trace Deconvolution" begin
         sz = (10,10)
         x = rand(sz...)
         psf = rand(10,10)
         psf /= sum(psf)
-        y = conv(x,psf)
+        y = DeconvOptim.conv(x,psf)
         # test whether starting with the ground truth really yield the perfect reconstruction after 0 iterations
-        opt_options, get_summary = options_trace_deconv(x, 0, nothing)
+        opt_options, summary = options_trace_deconv(x, 0, nothing)
         res = deconvolution(y,psf; initial=x, mapping=nothing, padding=0.0, opt_options=opt_options)
-        summary = get_summary()
+
         @test summary["nccs"][1] > 0.999
         @test summary["nvars"][1] < 0.001
         @test (summary["best_nvar_img"] ≈ x)
