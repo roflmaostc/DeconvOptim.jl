@@ -112,7 +112,7 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     csize = isa(initial,AbstractArray) ? size(initial) : size(measured)
     one_arr = similar(measured, size(measured))
     fill!(one_arr, mean(measured))
-    center_set!(rec0, ones(csize) .* initial)
+    center_set!(rec0, one_arr .* initial)
     mf, mf_inv = get_mapping(mapping)
     rec0 = mf_inv(rec0)
     # psf_n is the psf with the same size as rec0 but only in that dimensions
