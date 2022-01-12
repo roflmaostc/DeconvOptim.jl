@@ -123,14 +123,17 @@ end
 
 
 """
-    anscombe_aux(μ, meas, storage=similar(μ); b=1)
+    anscombe_aux(μ, meas, storage=similar(μ); b=0)
 
 Calculates the Poisson loss using the Anscombe-based norm for `μ` and `meas`.
 `μ` can be of larger size than `meas`. In that case
 we extract a centered region from `μ` of the same size as `meas`.
-`b=1` is the optional parameter under the `√`.
+`b=0` is the optional parameter under the `√`.
+Note that the data will be normalized to the mean of the data, which means that you have to
+devide this parameter also by the mean of the data, i.e. b=3.0/8.0/mean(measured).
 """
-function anscombe_aux(μ, meas, storage=similar(μ); b=1)
+function anscombe_aux(μ, meas, storage=similar(μ); b=0)
+    # we cannot devide b here by meas, since meas is already normalized
     # due to numerical errors, μ can be negative or 0
     mm = minimum(μ)
     if mm <= 0
@@ -157,11 +160,11 @@ end
 
 
 """
-    Anscombe()
+    Anscombe(b=0)
 Returns a function to calculate Poisson loss using the Anscombe transform
 Check the help of `anscombe_aux`.
 """
 
-function Anscombe(b=1)
+function Anscombe(b=0)
     (μ, meas, storage=similar(μ)) -> anscombe_aux(μ, meas, storage, b=b)
 end

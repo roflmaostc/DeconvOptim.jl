@@ -29,7 +29,9 @@ function show_ncc!(summary, title="")
         plt = plot!(nccs, label=title*" NCC")
         col = plt[1][end].plotattributes[:markercolor]
         vline!([summary["best_ncc_idx"]], line=:dash, color=col, label=title*"_best NCC")
-end
+        xlabel!("iteration")
+        ylabel!("normalized cross correlation")
+    end
 
 function show_nvar!(summary, title="")
     nvars = summary["nvars"]
@@ -37,6 +39,8 @@ function show_nvar!(summary, title="")
     plt = plot!(nvars_norm, label=title*" NVAR")
     col = plt[1][end].plotattributes[:markercolor]
     vline!([summary["best_nvar_idx"]], line=:dash, color=col, label=title*"_best NVAR")
+    xlabel!("iteration")
+    ylabel!("normalized variance")
 end
 
 function show_loss!(summary, addCurves="", lowest_loss=minimum(summary["losses"]))
