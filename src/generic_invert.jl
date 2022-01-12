@@ -40,15 +40,16 @@ function invert(measured, rec0, forward;
                 opt_package=Opt_Optim)
 
     # if not special options are given, just restrict iterations
-    if opt_package <: Opt_Optim
-        if opt_options === nothing
-            opt_options = Optim.Options(iterations=iterations)
-        elseif iterations !== nothing
-            error("If `opt_options` are provided you need to include the iterations as part of these instead of providing the `iterations` argument.")
-        end
+    if opt_package <: Opt_Optim && opt_options !== nothing && iterations !== nothing
+        error("If `opt_options` are provided you need to include the iterations as part of these instead of providing the `iterations` argument.")
     end
-
     iterations = (iterations === nothing) ? 20 : iterations
+
+    if opt_package <: Opt_Optim 
+            if opt_options === nothing
+                opt_options = Optim.Options(iterations=iterations)
+            end
+    end
     
     # Get the mapping functions to achieve constraints
     # like non negativity
