@@ -22,7 +22,7 @@
         psf /= sum(psf)
         y = DeconvOptim.conv(x,psf)
         # test whether starting with the ground truth really yield the perfect reconstruction after 0 iterations
-        opt_options, summary = options_trace_deconv(x, 0, nothing)
+        opt_options, summary = DeconvOptim.options_trace_deconv(x, 0, nothing)
         res = deconvolution(y,psf; initial=x, mapping=nothing, padding=0.0, opt_options=opt_options)
 
         @test summary["nccs"][1] > 0.999

@@ -1,4 +1,3 @@
-export options_trace_deconv
 
 """
     relative_energy_regain(ground_truth, rec)
@@ -115,7 +114,7 @@ function reset_summary!(summary)
 end
 
 """
-    options_trace_deconv(ground_truth, iterations, mapping, every=1)
+    options_trace_deconv(ground_truth, iterations, mapping, every=1; more_options...)
 
     A useful routine to simplify performance checks of deconvolution on simulated data.
     Returns an Options structure to be used with the deconvolution routine as an argument to `opt_options` and 
@@ -132,7 +131,7 @@ end
     "nccs"          => the vector of normalized cross correlations calculated at each of `every` iterations.
     "best_ncc_idx"  => the corresponding index where this was achieved. `(best_ncc_idx-1)*every+1` approximated the iteration number.
     "nvars"         => the vector of normalized variances calculated at each of `every` iterations.
-
+    
     For an example of how to plot the results, see the file `` in the `examples` folder.
 # Arguments
 - `ground_truth`: The underlying ground truth data. Note that this scaling is unimportant due to the normalized norms used for comparison, 
@@ -142,6 +141,9 @@ end
              need to be provided here. Otherwises select `nothing`.
 - `every`: This option allows to select every how many iterations the evaluation is performed. Note that the results will not keep track 
         of this iteration number. 
+
+the argument list can be followed by a semicolon and any number of named arguments which will be passed to the option structure.
+E.g. `opt_noreg, show_noreg = options_trace_deconv(ground_truth, iterations, mapping; x_tol=0.001, f_tol=0.001, f_calls_limit=100);`
 
 # Example
 ```julia-repl
@@ -182,7 +184,8 @@ julia> using View5D
 julia> @vt (ground_truth, best_ncc_img, best_nvar_img) = show_noreg(true)
 ```
 """
-function options_trace_deconv(ground_truth, iterations, mapping, every=1)
+function options_trace_deconv(ground_truth, iterations, mapping, every=1; more_options...)
+    @show more_options
     summary = Dict()
     reset_summary!(summary)
     idx = 1
@@ -224,6 +227,6 @@ function options_trace_deconv(ground_truth, iterations, mapping, every=1)
         false
     end
 
-    opt_options = Optim.Options(callback = cb, iterations=iterations, show_every=every, store_trace=true, extended_trace=true)
+    opt_options = Optim.Options(callback = cb, iterations=iterations, show_every=every, store_trace=true, extended_trace=true; more_options...)
     return (opt_options, summary)
 end
