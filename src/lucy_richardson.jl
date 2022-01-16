@@ -12,7 +12,8 @@ Converges slower than the optimization approach of `deconvolution`
 - `λ=0.05`: A float indicating the total weighting of the regularizer with 
     respect to the global loss function
 - `iterations=100`: Specifies number of iterations.
-
+- `progress`: if not `nothing`, the progress will be monitored in a summary dictionary as obtained by
+              DeconvOptim.options_trace_deconv()
 
 # Example
 ```julia-repl
@@ -33,7 +34,8 @@ function richardson_lucy_iterative(measured, psf;
                                    regularizer=GR(),
                                    λ=0.05,
                                    iterations=100,
-                                   conv_dims=1:ndims(psf))
+                                   conv_dims=1:ndims(psf),
+                                   progress = nothing)
 
 
     otf, conv_temp = plan_conv(measured, psf, conv_dims) 
@@ -64,10 +66,26 @@ function richardson_lucy_iterative(measured, psf;
 
     iter = isnothing(regularizer) ? iter_without_reg : iter_with_reg
 
-    for i in 1:iterations
-        rec .*= iter(rec)
+    loss(myrec) = begin
+        fwd = conv_temp(myrec, otf)
+        return sum(fwd .- measured .* log.(fwd))
     end
 
+    tmp_time = 0.0
+    if progress !== nothing
+        record_progress!(progress, rec, 0, loss(rec), 0.0, 1.0)
+        tmp_time=time()
+    end
+    code_time = 0.0
+    for i in 1:iterations
+        rec .*= iter(rec)
+        if progress !== nothing
+            # do not count the time for evaluating the loss here.
+            code_time += time() .- tmp_time
+            record_progress!(progress, copy(rec), i, loss(rec), code_time, 1.0)
+            tmp_time=time()
+        end
+    end
 
     return rec
 end

@@ -188,45 +188,54 @@ function options_trace_deconv(ground_truth, iterations, mapping, every=1; more_o
     @show more_options
     summary = Dict()
     reset_summary!(summary)
+    summary["ground_truth"] = ground_truth # needs to be accesible
     idx = 1
     cb = tr -> begin
-        # iteration always starts with index 0 (before 1st iteration)
-        if tr[end].iteration == 0
-            reset_summary!(summary)
-            idx = 1
-        end
-        loss = tr[end].value
-        push!(summary["losses"], loss)
-        push!(summary["times"], tr[end].metadata["time"])
-        push!(summary["step_sizes"], tr[end].metadata["Current step size"])
-        # current image:
         img = (mapping === nothing) ? tr[end].metadata["x"] : mapping[1](tr[end].metadata["x"]) 
-        # the line below is needed, since in the iterations, the measurement is rescaled to a mean of one.
-        # see deconvolution.jl.  This rescaling is only an estimate and does not affect the norms.
-        img *= mean(ground_truth)
-
-        ncc = DeconvOptim.normalized_cross_correlation(ground_truth, img)
-        push!(summary["nccs"], ncc)
-        summary["best_ncc"], summary["best_ncc_img"], summary["best_ncc_idx"] = let
-            if ncc > summary["best_ncc"]
-                    (ncc, img, idx) 
-            else
-                    (summary["best_ncc"], summary["best_ncc_img"], summary["best_ncc_idx"])
-            end
-        end
-        nvar = normalized_variance(img, ground_truth)
-        push!(summary["nvars"], nvar)
-        summary["best_nvar"], summary["best_nvar_img"], summary["best_nvar_idx"] = let 
-            if nvar < summary["best_nvar"]
-                    (nvar, img, idx)
-            else
-                    (summary["best_nvar"], summary["best_nvar_img"], summary["best_nvar_idx"])
-            end
-        end
+        img *= mean(summary["ground_truth"])
+        record_progress!(summary, img, idx, tr[end].value, 
+                        tr[end].metadata["time"], tr[end].metadata["Current step size"])
         idx += 1
         false
     end
 
     opt_options = Optim.Options(callback = cb, iterations=iterations, show_every=every, store_trace=true, extended_trace=true; more_options...)
     return (opt_options, summary)
+end
+
+"""
+    record_progress!(summary, img, idx, loss, mytime, stepsize)
+    helper function for recording the iteration progress in a summary dictionary.
+"""
+function record_progress!(summary, img, idx, loss, mytime, stepsize)
+    # iteration always starts with index 0 (before 1st iteration)
+    if idx == 0
+        reset_summary!(summary)
+    end
+    push!(summary["losses"], loss)
+    push!(summary["times"], mytime)
+    push!(summary["step_sizes"], stepsize)
+    # current image:
+    # the line below is needed, since in the iterations, the measurement is rescaled to a mean of one.
+    # see deconvolution.jl.  This rescaling is only an estimate and does not affect the norms.
+
+    ground_truth = summary["ground_truth"]
+    ncc = DeconvOptim.normalized_cross_correlation(ground_truth, img)
+    push!(summary["nccs"], ncc)
+    summary["best_ncc"], summary["best_ncc_img"], summary["best_ncc_idx"] = let
+        if ncc > summary["best_ncc"]
+            (ncc, img, idx) 
+        else
+            (summary["best_ncc"], summary["best_ncc_img"], summary["best_ncc_idx"])
+        end
+    end
+    nvar = normalized_variance(img, ground_truth)
+    push!(summary["nvars"], nvar)
+    summary["best_nvar"], summary["best_nvar_img"], summary["best_nvar_idx"] = let 
+        if nvar < summary["best_nvar"]
+                (nvar, img, idx)
+        else
+                (summary["best_nvar"], summary["best_nvar_img"], summary["best_nvar_idx"])
+        end
+    end    
 end

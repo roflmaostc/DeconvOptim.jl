@@ -24,14 +24,20 @@ iterations = 100
 function get_data(summary)
     return (summary["best_ncc_img"], summary["best_nvar_img"])
 end
-function show_ncc!(summary, title="")
+
+function show_ncc!(summary, title="", dpi=300)
         nccs = summary["nccs"]
         plt = plot!(nccs, label=title*" NCC")
         col = plt[1][end].plotattributes[:markercolor]
-        vline!([summary["best_ncc_idx"]], line=:dash, color=col, label=title*"_best NCC")
+        vline!([summary["best_ncc_idx"]], line=:dash, color=col, label=title*"_best NCC", dpi=dpi)
+        println("best ncc index is $(summary["best_ncc_idx"])")
+        println("best ncc is $(summary["best_ncc"])")
+        println("best ncc loss is $(summary["losses"][summary["best_ncc_idx"]])")
+        println("final ncc is $(summary["nccs"][end])")
+        println("final loss is $(summary["losses"][end])")
         xlabel!("iteration")
         ylabel!("normalized cross correlation")
-    end
+end
 
 function show_nvar!(summary, title="")
     nvars = summary["nvars"]
@@ -39,6 +45,11 @@ function show_nvar!(summary, title="")
     plt = plot!(nvars_norm, label=title*" NVAR")
     col = plt[1][end].plotattributes[:markercolor]
     vline!([summary["best_nvar_idx"]], line=:dash, color=col, label=title*"_best NVAR")
+    println("best nvar index is $(summary["best_nvar_idx"])")
+    println("best nvar is $(summary["best_nvar"])")
+    println("best nvar loss is $(summary["losses"][summary["best_nvar_idx"]])")
+    println("final nvar is $(summary["nvars"][end])")
+    println("final loss is $(summary["losses"][end])")
     xlabel!("iteration")
     ylabel!("normalized variance")
 end
