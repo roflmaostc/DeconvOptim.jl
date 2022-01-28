@@ -18,8 +18,9 @@ regularizers and mappings.
 - `background=0`: A float indicating a background intensity level.
 - `mapping=Non_negative()`: Applies a mapping of the optimizer weight. Default is a 
               parabola which achieves a non-negativity constraint.
-- `iterations=20`: Specifies a number of iterations after the optimization.
-    definitely should stop.
+- `iterations=nothing`: Specifies a number of iterations after the optimization.
+    definitely should stop. By default 20 iterations will be selected by generic_invert.jl, 
+    if `nothing` is provided.
 - `conv_dims`: A tuple indicating over which dimensions the convolution should happen.
                per default `conv_dims=1:ndims(psf)`
 - `plan_fft=true`: Boolean whether plan_fft is used. Gives a slight speed improvement.
@@ -32,6 +33,8 @@ regularizers and mappings.
 - `opt_package=Opt_Optim`: decides which backend for the optimizer is used.
 - `opt=LBFGS()`: The chosen optimizer which must fit to `opt_package` 
 - `opt_options=nothing`: Can be a options file required by Optim.jl. Will overwrite iterations.
+- `initial=mean(measured)`: defines a value (or array) with the initial guess. This will be pulled through the inverse mapping function
+                     and extended with a mean value (if border regions are used).
 - `debug_f=nothing`: A debug function which must take a single argument, the current reconstruction.
 
 # Example
@@ -46,7 +49,7 @@ julia> img_b = conv(img, psf);
 
 julia> img_n = poisson(img_b, 300);
 
-julia> @time res, o = deconvolution(img_n, psf);
+julia> res, o = deconvolution(img_n, psf);
 ```
 """
 function deconvolution(measured::AbstractArray{T, N}, psf;
@@ -55,11 +58,12 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
         λ=T(0.05),
         background=zero(T),
         mapping=Non_negative(),
-        iterations=20,
+        iterations=nothing,
         conv_dims = ntuple(+, ndims(psf)), 
         padding=0.00,
         opt_options=nothing,
         opt=LBFGS(linesearch=BackTracking()),
+        initial=mean(measured),
         debug_f=nothing,
         opt_package=Opt_Optim) where {T, N}
 
@@ -90,11 +94,11 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
         end
     end
 
-
-
-    # we divide by the maximum to normalize
+    # we divide by the mean to normalize
     rescaling = mean(measured) 
     measured = measured ./ rescaling
+    initial = initial ./ rescaling
+    
     # create rec0 which will be the initial guess for the reconstruction
     rec0 = similar(measured, (size_padded)...)
     fill!(rec0, one(eltype(measured))) 
@@ -105,10 +109,10 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     # take the mean as the initial guess
     # therefore has the same total energy at the initial guess as
     # measured
+    csize = isa(initial,AbstractArray) ? size(initial) : size(measured)
     one_arr = similar(measured, size(measured))
-    fill!(one_arr, one(eltype(measured)))
-    center_set!(rec0, one_arr)
-    rec0 .*= mean(measured)
+    fill!(one_arr, mean(measured))
+    center_set!(rec0, one_arr .* initial)
     mf, mf_inv = get_mapping(mapping)
     rec0 = mf_inv(rec0)
     # psf_n is the psf with the same size as rec0 but only in that dimensions
