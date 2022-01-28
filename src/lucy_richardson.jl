@@ -66,17 +66,21 @@ function richardson_lucy_iterative(measured, psf;
 
     iter = isnothing(regularizer) ? iter_without_reg : iter_with_reg
 
+    # the loss function is only needed for logging, not for LR itself
     loss(myrec) = begin
         fwd = conv_temp(myrec, otf)
         return sum(fwd .- measured .* log.(fwd))
     end
 
+    # logging part
     tmp_time = 0.0
     if progress !== nothing
         record_progress!(progress, rec, 0, loss(rec), 0.0, 1.0)
         tmp_time=time()
     end
     code_time = 0.0
+
+    # do actual optimization
     for i in 1:iterations
         rec .*= iter(rec)
         if progress !== nothing
