@@ -12,7 +12,8 @@ regularizers and mappings.
 
 # Arguments
 - `loss=Poisson()`: the loss function taking a vector the same shape as measured. 
-- `regularizer=GR()`: A regularizer function, same form as `loss`.
+- `regularizer=nothing`: A regularizer function, same form as `loss`. 
+    See `GR`, `TV`, `Tikhonov` and the help page for different regularizers.
 - `λ=0.05`: A float indicating the total weighting of the regularizer with 
     respect to the global loss function
 - `background=0`: A float indicating a background intensity level.
