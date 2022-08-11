@@ -13,6 +13,10 @@
 \usepackage{siunitx}
 \usepackage{here}
 \newcommand\todo[1]{\textcolor{red}{\textbf{TODO: #1}}}
+
+%\usetikzlibrary{external}
+%\tikzexternalize[prefix=figures/]
+
 \begin{document}
 
 \input{header}
@@ -273,7 +277,7 @@ The reason is, that for values of $\mu(\mathbf r) = 0$ the equation is not defin
         In 2D TV is defined like: 
         \begin{equation}
         \begin{split}
-            \text{Reg}(S(\mathbf r)) = \sum_{x,y} \big[& |S(x + 1, y) - S(x, y)|^2 \\ 
+            \text{Reg}(S(\mathbf r)) = \sum_{x,y} \big[& |S(x + 1, y) - S(x, y)|^2 \\[-0.4cm] 
                                                 & + |S(x, y + 1) - S(x, y)|^2\big]^{\frac12}
         \end{split}
         \end{equation}
