@@ -65,7 +65,7 @@ The mathematical definition of a convolution is
     (h * S)(\mathbf r) = \int_{-\infty}^{\infty} h(\mathbf r - \mathbf x) \cdot S(\mathbf x) \, \mathrm d \mathbf x.
     \label{eq:conv}
 \end{equation}
-To obtain efficient deconvolution algorithms we also need a efficient way to calculate the convolution operations.
+To obtain efficient deconvolution algorithms we also need an efficient way to calculate the convolution operations.
 Today, convolution operations of spatially small kernels $h$ can be calculated on GPUs very efficiently in real space.
 However, often the blurring kernel $h$ is not spatially small and might be also multi-dimensional. In that case, FFT based convolutions
 outperform sliding kernels. In microscopy and astronomy that is often the case, since a defocus broadens the PSF.
@@ -313,7 +313,7 @@ julia> reg(randn((10,20,30,40)))
 
 \section{Experiments}
     In this section we show some experiments and compare parts of the software to other solutions.
-    All experiments were executed on Ubuntu 20.04 using a AMD Ryzen 5 5600X 6-Core processor (12 threads) with \SI{32}{GB} DDR4 RAM and Julia 1.6.1.
+All experiments were executed on Ubuntu 20.04 using a AMD Ryzen 5 5600X 6-Core processor (12 threads) with \SI{32}{GB} DDR4 RAM and Julia 1.6.2.
     If possible, all threads were used.
     As GPU accelerator we used a GeForce RTX 2060 SUPER with \SI{8}{GB} memory and CUDA 11.3 and CUDA.jl 3.3.1.
     Our experiments additionally made use of the following packages in Julia 1.6.2: ArrayInterface.jl\cite{DifferentialEquations.jl-2017}, 
@@ -340,7 +340,9 @@ julia> reg(randn((10,20,30,40)))
             \caption{1D data which has been convolved with a PSF and was degraded with additive Gaussian noise with $\sigma=1.0$. Note that for the deconvolution we have chosen a position interval which is well within the full series so that there are not wrap-around artifacts in the measurement.}
             \label{fig:1D_dataset}
         \end{figure}
-        On the right hand we can see the results of the following deconvolution:
+        On the right hand we can see the results of the following deconvolution.
+    The first statement applies a total padding of $1$ meaning that the size is doubled and therefore the measured data is padded.
+    As we can see, the blue curve in \autoref{fig:1D_datasetb} does not show these intense spikes at the boundaries as the green curve shows.
         \begin{lstlisting}[language=Julia]
 r_p, o = deconvolution(measured, psf, loss=Gauss(),
      iterations=12, regularizer=TV(num_dims=1),
@@ -349,8 +351,6 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
      iterations=12, regularizer=TV(num_dims=1),
      λ=0.05, padding=0)
         \end{lstlisting}
-    The first statement applies a total padding of $1$ meaning that the size is doubled and therefore the measured data is padded.
-    As we can see, the blue curve in \autoref{fig:1D_datasetb} does not show these intense spikes at the boundaries as the green curve shows.
     Also we notice that the deconvolved data in \autoref{fig:1D_datasetb} does not show all the details which are visible in the ground truth.
     The reason is that the PSF is a low pass filter and therefore only frequencies which have been passed through the filter 
     can be enhanced in terms of contrast in a deconvolved result.
@@ -359,43 +359,52 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
         In this part we want to demonstrate the influence of the regularizer.
         \autoref{fig:fabioa} is a simulated imaged which has been affected by Poisson shot noise and blurring by a PSF.
         \begin{figure}[h]
-            \begin{subfigure}[b]{.25\textwidth}
+            \begin{subfigure}[b]{.16\textwidth}
                 \centering
-                \includegraphics[width=0.75\textwidth]{figures/resolution_test_chart_blurry.png}
-                \caption{Measured with Poisson noise}
+                \includegraphics[width=0.99\textwidth]{figures/resolution_test_512.png}
+                %\caption{Ground truth.}
+                \caption{}
+                \label{fig:gt}
+            \end{subfigure}%
+            \begin{subfigure}[b]{.16\textwidth}
+                \centering
+                \includegraphics[width=.99\textwidth]{figures/resolution_test_chart_blurry.png}
+                %\caption{Measured with Poisson noise}
+                \caption{}
                 \label{fig:fabioa}
             \end{subfigure}%
-            \hfill
-            \begin{subfigure}[b]{.25\textwidth}
+            \begin{subfigure}[b]{.16\textwidth}
                 \centering
-                \includegraphics[width=0.75\textwidth]{figures/resolution_test_chart_no_reg_iter_50.png}
-                \caption{Without regularizer $N=50$}
+                \includegraphics[width=.99\textwidth]{figures/resolution_test_chart_no_reg_iter_50.png}
+                %\caption{Without regularizer $N=50$}
+                \caption{}
                 \label{fig:fabiob}
             \end{subfigure}%
             \hfill
-            \begin{subfigure}[b]{.25\textwidth}
+            \begin{subfigure}[b]{.16\textwidth}
                 \centering
-                \includegraphics[width=0.75\textwidth]{figures/resolution_test_chart_no_reg_iter_10.png}
-                \caption{Without regularizer $N=10$}
+                \includegraphics[width=0.99\textwidth]{figures/resolution_test_chart_no_reg_iter_10.png}
+                %\caption{Without regularizer $N=10$}
+                \caption{}
                 \label{fig:fabioc}
             \end{subfigure}%            
-            \hfill
-            \begin{subfigure}[b]{.25\textwidth}
+            \begin{subfigure}[b]{.16\textwidth}
                 \centering
-                \includegraphics[width=0.75\textwidth]{figures/resolution_test_chart_regularizer_008_iter_21.png}
-                \caption{With regularizer $N=24$.}
+                \includegraphics[width=0.99\textwidth]{figures/resolution_test_chart_regularizer_008_iter_21.png}
+                %\caption{With regularizer $N=24$.}
+                \caption{}
                 \label{fig:fabiod}
             \end{subfigure}%            
-            \caption{a) has been convolved with a PSF and affected by Poisson shot noise (100 photons expected for the brightest pixel). 
-                        Deconvolved b) for 50 iterations without a regularizer c) for 10 iterations without a regularizer d) with Good's roughness regularizer and 
-                            converged after 24 iterations with $\lambda=0.03$.}
+            \caption{a) is the ground truth image. b) has been convolved with a PSF and affected by Poisson shot noise (100 photons expected for the brightest pixel). 
+            c) is deconvolved for 50 iterations without a regularizer, d) for 10 iterations without a regularizer. e) converged with Good's roughness regularizer and 
+                            after 24 iterations with $\lambda=0.03$.}
             \label{fig:image}
         \end{figure}
 
         This test chart is suited to judge the resolution of a reconstruction since the pieces of the Siemens star
         have decreasing spacing towards its middle which is equivalent to higher spatial frequencies.
-        \autoref{fig:fabioc} shows the result after 50 iterations of the deconvolution. 
-        We see that the image is heavily affected by some artifacts which usually occur after too many iterations without a regularizer.
+        \autoref{fig:fabiob} shows the result after 50 iterations of the deconvolution. 
+        We see that the image is heavily affected by some artifacts (the dotted patterns) which usually occur after too many iterations without a regularizer.
         Additionally, we notice that the core in the Siemens star is denser 
         requiring higher spatial resolution to resolve. 
         \autoref{fig:fabioc} shows the results after 10 iterations of the deconvolution without a regularizer.
@@ -449,7 +458,7 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
 
     \subsection{Multi-Dimensional Microscopy Data}
         To more completely demonstrate the features available in \verb|DeconvOptim.jl|,
-        we deconvolve a four dimensional dataset where the measured volume consists of a 3D datasets
+        we deconvolve a four dimensional (three spatial dimensions and a color dimension) dataset where the measured volume consists of a 3D datasets
         with three different color channels, shown in \autoref{fig:result_3d}.
         Here we assumed a common single 3D PSF for all color channels.
         Julia's broadcast mechanism is able to understand that 
@@ -477,7 +486,7 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
             In \autoref{tab:reg} we can see the runtimes for different TV regularizer implementations. As we can see, \verb|Tullio.jl| outperforms a plain 
             Julia implementation by more than order of magnitude. Partially, that is caused by \verb|Tullio.jl|
             being able to 
-            use of all threads whereas Julia's built in broadcast mechanism is not multi threaded.
+            use of threads whereas Julia's built in broadcast mechanism is not multi threaded.
             By \textit{plain Julia} we are referring to an implementation which is written with standard Julia Base functions.
             The same plain Julia implementation was then used together with \verb|CUDA.jl|
             to make use of the GPU capabilities. We see that there is a minor benefit in using a GPU for the regularizer instead of 
@@ -496,7 +505,7 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
                 CPU & \SI{48}{\milli\second}   & \SI{364}{\milli\second}&   & \\
                 GPU & \SI{0.887}{\milli\second}   & \SI{10.2}{\milli\second}&   &
                 \end{tabular}
-                \caption{Runtimes of a single Total Variation regularizer calculation for different Julia versions and JAX. 
+                \caption{Runtimes of a single Total Variation regularizer calculation for different Julia versions and JAX. $\nabla$ indicates the gradient calculation. 
                     We used a 3 dimensional Float32 array with size $300 \times 300 \times 300$.  }
                 \label{tab:reg}
             \end{table}
@@ -631,7 +640,7 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
     many other packages which have been written with hand-optimized gradients.
     Furthermore, our toolbox is not restricted in dimensionality and has mechanism to prevent wrap-around artifacts which
     occur with FFT based convolutions.
-    Julia's metaprogramming capabilities together with \verb|Tullio.jl| allow to generate regularizer which have high performance
+    Julia's metaprogramming capabilities together with \verb|Tullio.jl| allow to generate regularizers which have high performance
     and are easy to adapt.
     In future, we want to support more regularizers on GPUs since they can not be handled efficiently with the current \verb|Tullio.jl| solution.
     Also we plan to extend the package to deconvolution of spatially varying kernels which are of importance in optical systems
