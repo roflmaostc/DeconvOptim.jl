@@ -11,7 +11,7 @@
 A package for microscopy image based deconvolution via Optim.jl. This package works with N dimensional Point Spread Functions and images.
 The package was created with microscopy in mind but since the code base is quite general it is possible to deconvolve different kernels as well. 
 
-We would be happy to deconvolve *real* data! File an issue if we can help deconvolving an image/stack. We would be also excited to adapt DeconvOptim.jl to your special needs!
+
 <br>
 
 | **Documentation**                       | **Build Status**                          | **Code Coverage**               |
@@ -80,6 +80,10 @@ And in the new cell then use:
 ```julia
 res, o = deconvolution(img_n, psf, regularizer=reg)
 ```
+
+## Development
+Feel free to file an issue regarding problems, suggestions or improvement ideas for this package!
+We would be happy to deconvolve *real* data! File an issue if we can help deconvolving an image/stack. We would be also excited to adapt DeconvOptim.jl to your special needs!
 
 
 ## Contributions
