@@ -9,7 +9,7 @@
 \usepackage{amsmath}
 \usepackage{tikz}
 \usepackage{pgfplots}
-% \pgfplotsset{compat=1.17}
+\pgfplotsset{compat=newest}
 \usepackage{siunitx}
 \usepackage{here}
 \newcommand\todo[1]{\textcolor{red}{\textbf{TODO: #1}}}
@@ -331,13 +331,13 @@ All experiments were executed on Ubuntu 20.04 using a AMD Ryzen 5 5600X 6-Core p
         \begin{figure}[H]
             \begin{subfigure}[b]{.25\textwidth}
                 \centering
-                \includegraphics[width=\textwidth]{figures/1d_plot_data_blurred.pdf}
+                \includegraphics[width=\textwidth]{figures/1d_plot_data_blurred.png}
                 \caption{}
                 \label{fig:1D_dataseta}
             \end{subfigure}%
             \begin{subfigure}[b]{.25\textwidth}
                 \centering
-                \includegraphics[width=\textwidth]{figures/1d_plot_data_res_pad_vs_nopad.pdf}
+                \includegraphics[width=\textwidth]{figures/1d_plot_data_res_pad_vs_nopad.png}
                 \caption{}
                 \label{fig:1D_datasetb}
             \end{subfigure}
@@ -427,14 +427,14 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
             \centering
             \begin{subfigure}[b]{.23\textwidth}
                 \centering
-                \includegraphics[width =\textwidth]{figures/test_chart_relative_energy_regain.pdf}
+                \includegraphics[width =\textwidth]{figures/test_chart_relative_energy_regain.png}
                 \caption{REG $G_\textrm{R}$ over different frequencies.}
                 \label{fig:rel_energy_regain}
             \end{subfigure}
             \hfill
             \begin{subfigure}[b]{.23\textwidth}
                 \centering
-                \includegraphics[width =1 \textwidth]{figures/test_chart_ncc.pdf}
+                \includegraphics[width =1 \textwidth]{figures/test_chart_ncc.png}
                 \caption{NCC over the number of iterations.}
                 \label{fig:ncc}
             \end{subfigure}
