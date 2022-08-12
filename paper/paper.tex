@@ -166,7 +166,7 @@ Since deconvolution is an ill-posed problem, we regularize the loss function wit
 Afterwards we calculate the gradient of the loss function with respect to the reconstruction $x(\mathbf r)$ via automatic differentiation (AD).
 The values of the total loss and the gradient are then used by an optimizer (to minimize the total loss) to apply a gradient descent optimization to get a proper reconstruction.\\
 
-As typical for Julia packages, except \verb|FFTW.jl| and \verb|CUDA.jl| \cite{besard2018juliagpu}, \cite{LLVM.jl-2017}, all code is written in Julia.
+As typical for Julia packages, except \verb|FFTW.jl| and \verb|CUDA.jl| \cite{besard2018juliagpu}, all code is written in Julia.
 Therefore it is easy to replace the forward model with any Julia code, as long as we can 
 automatically differentiate through the code. The gradient step is currently calculated with the reverse mode AD of \verb|Zygote.jl| \cite{Zygote.jl-2018}. 
 As default for the optimization we use the L-BFGS \cite{LBFGS} routine provided by \verb|Optim.jl| \cite{mogensen2018optim}.
