@@ -12,7 +12,6 @@ Random.seed!(42)
 
 
 @testset "Utils" begin
-    @test gpu_or_cpu(randn((2,2))) == Array
     include("utils.jl")
 end
 
