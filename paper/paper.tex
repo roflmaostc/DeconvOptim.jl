@@ -41,7 +41,7 @@ The assumption is that images are degraded by some kind of blur which can be des
 \begin{equation}
     I(\mathbf r) = (h * S)(\mathbf r)
 \end{equation}
-where $*$ denotes a convolution operation.
+where $*$ denotes a convolution operation. $I$ indicates the ideal measured image. $\mathbf r$ is the position vector or the pixel positions in the discrete case.
 $h$ is often called the point spread function (PSF) since it characterizes how the systems maps a point in the object to a blurred spot 
 in the image.
 Often this convolution operation is disturbed by different types of noise where the most common are additive Gaussian noise (e.g. due to the read out of the camera sensors) or Poisson shot noise (e.g. due to the quantum nature of photons):
@@ -87,7 +87,7 @@ outperform sliding kernels. In microscopy and astronomy that is often the case, 
         In Julia, \verb|FFTW.jl| offers a convenient interface to the FFTW library \cite{FFTW05}.
         The time complexity to calculate \autoref{eq:fftconv} is $\mathcal{O}(N \cdot \log N)$ for a one dimensional discretized dataset with $N$ samples.
         For a 2D dataset with size $N \times M$ it is $\mathcal{O}(N \cdot M \log(N \cdot M))$ and accordingly for higher dimensions.
-        Spatially based convolution kernels with size $K \times L$ applied on an image with
+        Real space based convolution kernels with size $K \times L$ applied on an image with
         $N \times M$ data points have a runtime of $\mathcal O(N \cdot M \cdot K \cdot L)$.
         It is clear that for larger kernel sizes ($K,L \gg 1$) the sliding method 
         has worse computational complexity than the FFT based convolutions. The many cores of a GPU can mitigate that to a certain extent
@@ -97,8 +97,8 @@ outperform sliding kernels. In microscopy and astronomy that is often the case, 
 
 \subsection{Wrap-Around Artifacts in FFT based Convolutions}
     One drawback of a FFT based convolution are wrap-around artifacts (see arrow in \autoref{fig:withoutpad}). The reason is, that the FFT operation calculates the discrete
-    Fourier transform (DFT) which inherently assumes periodic data. If one applies a FFT on a finite data set the assumption is that
-    this finite data set repeats itself. 
+    Fourier transform (DFT) which inherently assumes periodic data. If one applies a FFT on a finite object the assumption is that
+    this finite object repeats itself. 
     To weaken the wrap-around artifacts in the convolution one can zero or mean pad the image before convolution 
     and remove the padding afterwards. Such approaches still suffer from artifacts when boundary values do not fit
     to the mean or to zero as it can be observed in \autoref{fig:withpad} where the arrow is pointing to.
@@ -166,7 +166,7 @@ Since deconvolution is an ill-posed problem, we regularize the loss function wit
 Afterwards we calculate the gradient of the loss function with respect to the reconstruction $x(\mathbf r)$ via automatic differentiation (AD).
 The values of the total loss and the gradient are then used by an optimizer (to minimize the total loss) to apply a gradient descent optimization to get a proper reconstruction.\\
 
-As typical for Julia packages, except \verb|FFTW.jl| and \verb|CUDA.jl| \cite{besard2018juliagpu}, all code is written in Julia.
+Except \verb|FFTW.jl| and \verb|CUDA.jl| \cite{besard2018juliagpu}, the entire package is written in Julia.
 Therefore it is easy to replace the forward model with any Julia code, as long as we can 
 automatically differentiate through the code. The gradient step is currently calculated with the reverse mode AD of \verb|Zygote.jl| \cite{Zygote.jl-2018}. 
 As default for the optimization we use the L-BFGS \cite{LBFGS} routine provided by \verb|Optim.jl| \cite{mogensen2018optim}.
@@ -214,7 +214,7 @@ deconvolution minor.
 
 
 \section{Loss Function}
-    Apart from forward model, the loss function is the most critical part in the optimization.
+    Apart from the forward model, the loss function is the most critical part in the optimization.
     It has to account for the noise created by the measurement process or instrument. 
 
 \subsection{Poisson Data Term}
@@ -266,9 +266,9 @@ The reason is, that for values of $\mu(\mathbf r) = 0$ the equation is not defin
 \subsection{Regularizer}
     The regularizer is an additional part in the total loss to add some additional priors like sparsity and smoothness.
     Most real samples are smooth over large regions and such regularizers enhance the quality of the reconstruction.
-    In our toolbox we currently implement several regularizer like (smoothed) Total variation, Good's roughness \cite{Verveer:98}, \cite{Good:71} and Tikhonov. 
+    In our toolbox we currently implement several regularizer like (smoothed) Total Variation, Good's roughness \cite{Verveer:98}, \cite{Good:71} and Tikhonov. 
     \subsubsection{Total Variation as example}
-        As the name suggests, Total variation tries to penalize variation in the image intensity. Therefore it sums up the gradient strength at each point
+        As the name suggests, Total Variation tries to penalize variation in the image intensity. Therefore it sums up the gradient strength at each point
         of the image:
         \begin{equation}
             \text{Reg}(S(\mathbf r)) = \sum_r  |(\nabla S)(\mathbf r)|
@@ -281,13 +281,13 @@ The reason is, that for values of $\mu(\mathbf r) = 0$ the equation is not defin
                                                 & + |S(x, y + 1) - S(x, y)|^2\big]^{\frac12}
         \end{split}
         \end{equation}
-        In many frameworks such a regularizer is implemented via functions like \lstinline{circshift}. 
+        In many frameworks, such a regularizer is implemented via functions like \lstinline{circshift}. 
         However, such approaches create often several copies of the data. 
         We currently use \verb|Tullio.jl|\cite{michael_abbott_2021_5047410} to create efficient functions 
         calculating the regularizer and the gradient. For simple expressions
         such as below, \verb|Tullio.jl| registers an analytical gradient and therefore allows to apply the same efficient mechanisms 
         to the gradient calculation which have been used for the regularizer evaluation itself.
-        A (smoothed) Total variation with \verb|Tullio.jl| is defined here:
+        A (smoothed) Total Variation with \verb|Tullio.jl| is defined here:
         \begin{lstlisting}[language = Julia]
 function total_variation(arr, ϵ=eltype(arr)(1e-8))
     @tullio r = sqrt(ϵ + 
