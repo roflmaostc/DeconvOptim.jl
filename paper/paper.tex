@@ -498,19 +498,32 @@ r, o = deconvolution(measured, psf, loss=Gauss(),
             we could not achieve reasonable results with it.
             \begin{table}[h]
                 \begin{tabular}{l l l l l}
-                    & plain & $\nabla$ plain & \verb|Tullio.jl| & $\nabla$ \verb|Tullio.jl| \\
+                a) & plain & $\nabla$ plain & \verb|Tullio.jl| & $\nabla$ \verb|Tullio.jl| \\
                 \hline
-                CPU & \SI{83.9}{\milli\second} & \SI{7180}{\milli\second} & \SI{5.53}{\milli\second}  & \SI{119.8}{\milli\second}   \\ 
-                GPU & \SI{2.5}{\milli\second}  & \SI{22.9}{\milli\second}& \SI{4.00}{\milli\second}  & \SI{12530}{\milli\second} \\
+                CPU & \SI{84}{\milli\second} & \SI{1.1}{\second} & \SI{4.8}{\milli\second}  & \SI{117}{\milli\second}   \\ 
+                GPU & \SI{3.2}{\milli\second}  & \SI{30}{\milli\second}& \SI{3.4}{\milli\second}  & \SI{13.7}{\second} \\
                 \hline
                 \hline
                     & JAX & $\nabla$ JAX && \\
                 \hline
-                CPU & \SI{48}{\milli\second}   & \SI{364}{\milli\second}&   & \\
-                GPU & \SI{0.887}{\milli\second}   & \SI{10.2}{\milli\second}&   &
+                CPU & \SI{49}{\milli\second}   & \SI{360}{\milli\second}&   & \\
+                GPU & \SI{1.06}{\milli\second}   & \SI{11.4}{\milli\second}&   \\
+                \hline
+                &&&&\\
+                b)    & plain & $\nabla$ plain & \verb|Tullio.jl| & $\nabla$ \verb|Tullio.jl| \\
+                \hline
+                CPU & \SI{390}{\micro\second} & \SI{2.7}{\milli\second} & \SI{19.5}{\micro\second}  & \SI{533}{\micro\second}   \\ 
+                GPU & \SI{45}{\micro\second}  & \SI{470}{\micro\second}& \SI{51.0}{\micro\second}  & \SI{450}{\micro\second} \\
+                \hline
+                \hline
+                    & JAX & $\nabla$ JAX && \\
+                \hline
+                CPU & \SI{150}{\micro\second}   & \SI{1.31}{\milli\second}&   & \\
+                GPU & \SI{26}{\micro\second}   & \SI{885}{\micro\second}&   &
+
                 \end{tabular}
                 \caption{Runtimes of a single Total Variation regularizer calculation for different Julia versions and JAX. $\nabla$ indicates the gradient calculation. 
-                    We used a 3 dimensional Float32 array with size $300 \times 300 \times 300$.  }
+                    For a) we used a 3 dimensional Float32 array with size $300 \times 300 \times 300$. For b) the size was $512 \times 512$.}
                 \label{tab:reg}
             \end{table}
             We also compare the performance to an implementation written in Python with the Framework JAX \cite{jax2018github}. 
