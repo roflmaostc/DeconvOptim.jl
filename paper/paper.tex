@@ -320,9 +320,8 @@ julia> reg(randn((10,20,30,40)))
 All experiments were executed on Ubuntu 20.04 using a AMD Ryzen 5 5600X 6-Core processor (12 threads) with \SI{32}{GB} DDR4 RAM and Julia 1.6.2.
     If possible, all threads were used.
     As GPU accelerator we used a GeForce RTX 2060 SUPER with \SI{8}{GB} memory and CUDA 11.3 and CUDA.jl 3.3.1.
-    Our experiments additionally made use of the following packages in Julia 1.6.2: ArrayInterface.jl\cite{DifferentialEquations.jl-2017}, 
-    BenchmarkTools.jl\cite{BenchmarkTools.jl-2016}, FFTW.jl\cite{FFTW05}, LLVM.jl\cite{LLVM.jl-2017}, Optim.jl\cite{mogensen2018optim}
-    and  Zygote.jl\cite{Zygote.jl-2018}. 
+    Our experiments were done in Julia 1.6.2 under the use of BenchmarkTools.jl\cite{BenchmarkTools.jl-2016}.
+
     \subsection{One-Dimensional Time Series}
         First, we want to demonstrate the deconvolution of an artificial one dimensional dataset blurred with a certain PSF.
         Additionally, we want to demonstrate the mechanism to reduce wrap-around artifacts in the deconvolution.
