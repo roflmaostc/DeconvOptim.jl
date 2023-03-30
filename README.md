@@ -90,7 +90,10 @@ We would be happy to deconvolve *real* data! File an issue if we can help deconv
 I would like to thank [Rainer Heintzmann](https://nanoimaging.de/) for the great support and discussions during development.
 Furthermore without [Tullio.jl](https://github.com/mcabbott/Tullio.jl) and [@mcabbott](https://github.com/mcabbott/) this package wouldn't be as fast as it is. His package and ideas are the basis for the implementations of the regularizers.
 
+## Related Packages
 
+* [ThreeDeconv](https://github.com/computational-imaging/ThreeDeconv.jl): works great, CPU performance is much slower, GPU performance is slower
+* [Deconvolution.jl](https://github.com/JuliaDSP/Deconvolution.jl): rather simple package with Wiener and Lucy Richardson deconvolution.
 
 [docs-dev-img]: https://img.shields.io/badge/docs-dev-orange.svg 
 [docs-dev-url]: https://roflmaostc.github.io/DeconvOptim.jl/dev/ 
