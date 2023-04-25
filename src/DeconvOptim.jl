@@ -27,7 +27,7 @@ using LinearAlgebra
 
 using FillArrays
 
-using SnoopPrecompile
+using PrecompileTools
 
 
 include("forward_models.jl")
@@ -48,11 +48,11 @@ using Zygote: gradient
 
 
 # doesn't save too much but a little
-@precompile_setup begin
+@setup_workload begin
     img = abs.(randn((4,4,2)))
     psf = abs.(randn((4,4,2)))
 
-    @precompile_all_calls begin
+    @compile_workload begin
         deconvolution(Float32.(img), Float32.(psf), regularizer=TV(num_dims=3), iterations=2)
         deconvolution(img, psf, regularizer=TV(num_dims=3), iterations=2)
 
