@@ -4,7 +4,7 @@ In this section we show the workflow for deconvolution of 2D and 3D images using
 From these examples one can also understand the different effects of the regularizers.
 
 The picture below shows the general principle of DeconvOptim.jl.
-Since we interprete deconvolution as an optimization we initialize the reconstruction variables *rec*. 
+Since we interpret deconvolution as an optimization we initialize the reconstruction variables *rec*. 
 *rec* is a array of pixels which are the variables we are optimizing for.
 Then we can apply some mapping eg. to reconstruct only pixels having non-negative intensity values.
 Afterwards we compose the *total loss* functions. It consists of a regularizing part (weighted with $\lambda$) and a *loss* part.
@@ -19,4 +19,4 @@ In most cases changing the regularizer or the number of iterations is enough.
 ![](../assets/tex/pipeline.svg)
 
 For all options, see the function references.
-Via the help of Julia (typing `]` in the REPL) we can also access extensive help.
+Via the help of Julia (typing `?` in the REPL) we can also access extensive help.

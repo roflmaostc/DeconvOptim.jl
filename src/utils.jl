@@ -30,7 +30,7 @@ julia> ds([1 2; 3 5; 5 6; 7 8])
 function generate_downsample(num_dim, downsample_dims, factor)
     @assert num_dim ≥ length(downsample_dims)
     # create unit cell with Cartesian Index 
-    # dims_units containts every where a 1 where the downsampling should happen
+    # dims_units contains every where a 1 where the downsampling should happen
     dims_units = zeros(Int, num_dim)
     # here we set which dimensions should be downsamples
     dims_units[downsample_dims] .= 1

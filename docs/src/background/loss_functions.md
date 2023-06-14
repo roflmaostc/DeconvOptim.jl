@@ -7,8 +7,8 @@ One common loss function (especially in deep learning) is simply the $L^2$ norm 
 
 
 So far we provide three adapted loss functions with our package. However, it is relatively easy to incorporate
-custom defined loss functions or import them from packages like [Flux.ml](https://fluxml.ai/Flux.jl/stable/models/losses/).
-The interface from Flux.ml is the same as for our loss functions.
+custom defined loss functions or import them from packages like [Flux.jl](https://fluxml.ai/Flux.jl/stable/models/losses/).
+The interface from Flux.jl is the same as for our loss functions.
 
 
 ## Poisson Loss
@@ -44,7 +44,7 @@ The numerical evaluation of the Poisson loss can lead to issues. Since $\mu(r)=0
 
 ## Scaled Gaussian Loss
 It is well known that the Poisson density function behaves similar as a Gaussian density function for $\mu\gg 1$. This approximation is almost for all use cases in microscopy valid since regions of interest in an image usually consists of multiple photons and not to a single measured photon.
-Mathematically the Poisson probability can be approximately (using Stirling's formula in the derivation) expressed as:
+Mathematically the Poisson probability can be approximately (using [Stirling's formula](https://en.wikipedia.org/wiki/Stirling's_approximation) in the derivation) expressed as:
 
 $$p(Y(r)|\mu(r)) \approx \prod_r \frac{\exp \left(-\frac{(x-\mu(r) )^2}{2 \mu(r) }\right)}{\sqrt{2 \pi  \mu(r) }}$$
 
