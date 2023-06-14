@@ -2,7 +2,7 @@ module DeconvOptim
     
 export gpu_or_cpu
 
- # to check wether CUDA is enabled
+ # to check whether CUDA is enabled
 using Requires
 # for fast array regularizers
 using Tullio
