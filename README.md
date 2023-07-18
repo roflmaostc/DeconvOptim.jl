@@ -8,7 +8,7 @@
 </a>
 </div>
 <br>
-A package for microscopy image based deconvolution via Optim.jl. This package works with N dimensional [Point Spread Functions](https://github.com/RainerHeintzmann/PointSpreadFunctions.jl) and images.
+A package for microscopy image based deconvolution via Optim.jl. This package works with N dimensional <a href="https://github.com/RainerHeintzmann/PointSpreadFunctions.jl">Point Spread Functions</a> and images.
 The package was created with microscopy in mind but since the code base is quite general it is possible to deconvolve different kernels as well. 
 
 
