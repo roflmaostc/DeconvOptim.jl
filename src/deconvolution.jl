@@ -38,10 +38,6 @@ regularizers and mappings.
                      and extended with a mean value (if border regions are used).
 - `debug_f=nothing`: A debug function which must take a single argument, the current reconstruction.
 
-!!! note
-    If you want to provide your PSF model, ensure that it is not centered. You may need to use `fftshift` for a PSF
-    model or a measured PSF.
-
 # Example
 ```julia-repl
 julia> using DeconvOptim, TestImages, Colors, Noise;
