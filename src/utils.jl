@@ -256,10 +256,6 @@ Generation of an approximate 2D PSF.
 around the point [1, 1],
 `radius` indicates the pupil diameter in pixel from which the PSF is generated.
 
-!!! note
-    Returned 2D PSF is `fftshift`ed in contrast to models, you can find in 
-    literature.
-
 # Examples
 ```julia-repl
 julia> generate_psf([5, 5], 2)
