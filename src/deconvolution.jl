@@ -38,6 +38,10 @@ regularizers and mappings.
                      and extended with a mean value (if border regions are used).
 - `debug_f=nothing`: A debug function which must take a single argument, the current reconstruction.
 
+!!! note
+    If you want to provide your PSF model, ensure that centered around the first entry of the array (`psf[1]`).
+    You may need to use `ifftshift` for a PSF model or a measured PSF.
+
 # Example
 ```julia-repl
 julia> using DeconvOptim, TestImages, Colors, Noise;
@@ -80,7 +84,7 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
         # if the size of the i-th dimension is 1
         # don't do any padding because there won't be no
         # convolution in that dimension
-        if  size(measured)[i] == 1
+        if size(measured)[i] == 1
             push!(size_padded, 1)
         else
             # only pad, if padding is true
@@ -96,21 +100,21 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     end
 
     # we divide by the mean to normalize
-    rescaling = mean(measured) 
+    rescaling = mean(measured)
     measured = measured ./ rescaling
     initial = initial ./ rescaling
-    
+
     # create rec0 which will be the initial guess for the reconstruction
     rec0 = similar(measured, (size_padded)...)
-    fill!(rec0, one(eltype(measured))) 
-    
+    fill!(rec0, one(eltype(measured)))
+
     # alternative rec0_center, unused at the moment
     #rec0_center = m_invf(abs.(conv(measured, psf, conv_dims)))
     #
     # take the mean as the initial guess
     # therefore has the same total energy at the initial guess as
     # measured
-    csize = isa(initial,AbstractArray) ? size(initial) : size(measured)
+    csize = isa(initial, AbstractArray) ? size(initial) : size(measured)
     one_arr = similar(measured, size(measured))
     fill!(one_arr, mean(measured))
     center_set!(rec0, one_arr .* initial)
@@ -121,7 +125,7 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     # dimensions is still supported
     # we put the small psf into the new one
     # it is important to pad the PSF instead of the OTF
-    
+
     psf_new_size = Array{Int}(undef, 0)
     for i = 1:ndims(psf)
         push!(psf_new_size, size(rec0)[i])
@@ -136,20 +140,21 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     # the psf should be normalized to 1
     psf ./= sum(psf)
 
-    otf, conv_temp = plan_conv(rec0, psf, conv_dims) 
-    
+    otf, conv_temp = plan_conv(rec0, psf, conv_dims)
+
 
     # forward model is a convolution
     # due to numerics, we need to clip at 0
     # analytically it's a convolution psf ≥ 0 and image ≥ 0
     # so it must be conv(psf, image) ≥ 0
-    forward(x) = let 
-        if iszero(background)
-            center_extract((conv_aux(conv_temp, x, otf)), size(measured))
-        else
-            center_extract((conv_aux(conv_temp, x, otf) .+ background), size(measured))
+    forward(x) =
+        let
+            if iszero(background)
+                center_extract((conv_aux(conv_temp, x, otf)), size(measured))
+            else
+                center_extract((conv_aux(conv_temp, x, otf) .+ background), size(measured))
+            end
         end
-    end
     # pass to more general optimization
     res_out, res = invert(measured, rec0, forward;
                           iterations=iterations, λ=λ,
@@ -164,7 +169,7 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     # since we do some padding we need to extract the center part
     # for negative paddings, keep the large size.
     if padding > 0.0
-        res_out = center_extract(res_out, size(measured))    
+        res_out = center_extract(res_out, size(measured))
     end
     return res_out, res
 end
