@@ -8,7 +8,7 @@
 </a>
 </div>
 <br>
-A package for microscopy image based deconvolution via Optim.jl. This package works with N dimensional Point Spread Functions and images.
+A package for microscopy image based deconvolution via Optim.jl. This package works with N dimensional <a href="https://github.com/RainerHeintzmann/PointSpreadFunctions.jl">Point Spread Functions</a> and images.
 The package was created with microscopy in mind but since the code base is quite general it is possible to deconvolve different kernels as well. 
 
 
@@ -94,6 +94,7 @@ Furthermore without [Tullio.jl](https://github.com/mcabbott/Tullio.jl) and [@mca
 
 * [ThreeDeconv](https://github.com/computational-imaging/ThreeDeconv.jl): works great, CPU performance is much slower, GPU performance is slower
 * [Deconvolution.jl](https://github.com/JuliaDSP/Deconvolution.jl): rather simple package with Wiener and Lucy Richardson deconvolution.
+* [PointSpreadFunctions.jl](https://github.com/RainerHeintzmann/PointSpreadFunctions.jl): generates point spread functions for microscopy applications
 
 [docs-dev-img]: https://img.shields.io/badge/docs-dev-orange.svg 
 [docs-dev-url]: https://roflmaostc.github.io/DeconvOptim.jl/dev/ 
