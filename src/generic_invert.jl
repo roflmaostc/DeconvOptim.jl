@@ -35,7 +35,6 @@ function invert(measured, rec0, forward;
     opt_options=nothing,
     mapping=Non_negative(),
     loss=Poisson(),
-    real_gradient=true,
     debug_f=nothing,
     opt_package=Opt_Optim)
 
@@ -78,10 +77,6 @@ function invert(measured, rec0, forward;
     # nice precompilation before calling Zygote etc.
     Base.invokelatest(total_loss, rec0)
 
-    # see here https://github.com/FluxML/Zygote.jl/issues/342
-    take_real_or_not(g) = real_gradient ? real.(g) : g
-    take_real_or_not(g::AbstractArray{<:Real}) = g
-
     # this is the function which will be provided to Optimize
     # check Optim's documentation for the purpose of F and Get
     # but simply speaking F is the loss value and G it's gradient
@@ -100,7 +95,7 @@ function invert(measured, rec0, forward;
 
             y, back = Base.invokelatest(Zygote._pullback, total_loss, rec)
             # calculate gradient
-            G .= take_real_or_not(Base.invokelatest(back, 1)[2])
+            G .= Base.invokelatest(back, 1)[2]
             if F !== nothing
                 return y
             end

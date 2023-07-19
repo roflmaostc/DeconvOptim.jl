@@ -57,20 +57,20 @@ julia> img_n = poisson(img_b, 300);
 julia> res, o = deconvolution(img_n, psf);
 ```
 """
-function deconvolution(measured::AbstractArray{T, N}, psf;
-        loss=Poisson(),
-        regularizer=GR(),
-        λ=T(0.05),
-        background=zero(T),
-        mapping=Non_negative(),
-        iterations=nothing,
-        conv_dims = ntuple(+, ndims(psf)), 
-        padding=0.00,
-        opt_options=nothing,
-        opt=LBFGS(linesearch=BackTracking()),
-        initial=mean(measured),
-        debug_f=nothing,
-        opt_package=Opt_Optim) where {T, N}
+function deconvolution(measured::AbstractArray{T,N}, psf;
+    loss=Poisson(),
+    regularizer=GR(),
+    λ=T(0.05),
+    background=zero(T),
+    mapping=Non_negative(),
+    iterations=nothing,
+    conv_dims=ntuple(+, ndims(psf)),
+    padding=0.00,
+    opt_options=nothing,
+    opt=LBFGS(linesearch=BackTracking()),
+    initial=mean(measured),
+    debug_f=nothing,
+    opt_package=Opt_Optim) where {T,N}
 
 
     # rec0 will be an array storing the final reconstruction
@@ -157,13 +157,13 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
         end
     # pass to more general optimization
     res_out, res = invert(measured, rec0, forward;
-                          iterations=iterations, λ=λ,
-                          regularizer=regularizer,
-                          opt=opt,
-                          opt_options=opt_options,
-                          mapping=mapping,
-                          loss=loss,
-                          debug_f=debug_f, opt_package=opt_package)
+        iterations=iterations, λ=λ,
+        regularizer=regularizer,
+        opt=opt,
+        opt_options=opt_options,
+        mapping=mapping,
+        loss=loss,
+        debug_f=debug_f, opt_package=opt_package)
 
     res_out .*= rescaling
     # since we do some padding we need to extract the center part
