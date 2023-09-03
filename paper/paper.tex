@@ -282,24 +282,25 @@ The reason is, that for values of $\mu(\mathbf r) = 0$ the equation is not defin
         \end{split}
         \end{equation}
         In many frameworks, such a regularizer is implemented via functions like \lstinline{circshift}. 
-        However, such approaches create often several copies of the data. 
-        We currently use \verb|Tullio.jl|\cite{michael_abbott_2021_5047410} to create efficient functions 
-        calculating the regularizer and the gradient. For simple expressions
-        such as below, \verb|Tullio.jl| registers an analytical gradient and therefore allows to apply the same efficient mechanisms 
-        to the gradient calculation which have been used for the regularizer evaluation itself.
-        A (smoothed) Total Variation with \verb|Tullio.jl| is defined here:
-        \begin{lstlisting}[language = Julia]
+        \begin{lstlisting}[language = Julia, caption={Smoothed Total Variation \label{algo1}}]
 function total_variation(arr, ϵ=eltype(arr)(1e-8))
     @tullio r = sqrt(ϵ + 
                 abs2(arr[i,j] - arr[i+1,j]) +
                 abs2(arr[i,j] - arr[i,j+1]))
 end
         \end{lstlisting}
+        However, such approaches create often several copies of the data. 
+        We currently use \verb|Tullio.jl| \cite{michael_abbott_2021_5047410} to create efficient functions 
+        calculating the regularizer and the gradient. For simple expressions
+        such as below, \verb|Tullio.jl| registers an analytical gradient and therefore allows to apply the same efficient mechanisms 
+        to the gradient calculation which have been used for the regularizer evaluation itself.
+        A (smoothed) Total Variation with \verb|Tullio.jl| is defined in \autoref{algo1}.
         \lstinline{ϵ} is needed for regions where \lstinline{arr == 0} because otherwise the gradient returns infinite values.
         Note, that definition just demonstrates how the regularizer can be written down.
         In our toolbox we allow for much more options. Since \verb|Tullio.jl| cannot handle generic multi-dimensional data yet
         we create regularizers which can vary in step size, dimensionality and
         different weighting in dimensions via Julia's metaprogramming capability.
+
         A call like 
         \begin{lstlisting}[language = Julia]
 julia> using DeconvOptim
