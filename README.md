@@ -14,10 +14,9 @@ The package was created with microscopy in mind but since the code base is quite
 
 <br>
 
-| **Documentation**                       | **Build Status**                          | **Code Coverage**               |
-|:---------------------------------------:|:-----------------------------------------:|:-------------------------------:|
-| [![][docs-stable-img]][docs-stable-url] [![][docs-dev-img]][docs-dev-url] | [![][CI-img]][CI-url] | [![][codecov-img]][codecov-url] |
-
+| **Documentation**                       | **Build Status**                          | **Code Coverage**               | **Publication** |
+|:---------------------------------------:|:-----------------------------------------:|:-------------------------------:|:-----------------------:|
+| [![][docs-stable-img]][docs-stable-url] [![][docs-dev-img]][docs-dev-url] | [![][CI-img]][CI-url] | [![][codecov-img]][codecov-url] |[![DOI](https://proceedings.juliacon.org/papers/10.21105/jcon.00099/status.svg)](https://doi.org/10.21105/jcon.00099)|
 
 
 ## Installation
@@ -85,6 +84,22 @@ res, o = deconvolution(img_n, psf, regularizer=reg)
 Feel free to file an issue regarding problems, suggestions or improvement ideas for this package!
 We would be happy to deconvolve *real* data! File an issue if we can help deconvolving an image/stack. We would be also excited to adapt DeconvOptim.jl to your special needs!
 
+## Citation
+If you use this paper, please cite it:
+```bibtex
+@article{Wechsler2023,
+  doi = {10.21105/jcon.00099},
+  url = {https://doi.org/10.21105/jcon.00099},
+  year = {2023},
+  publisher = {The Open Journal},
+  volume = {1},
+  number = {1},
+  pages = {99},
+  author = {Felix Wechsler and Rainer Heintzmann},
+  title = {DeconvOptim.jl - Signal Deconvolution with Julia},
+  journal = {Proceedings of the JuliaCon Conferences}
+}
+```
 
 ## Contributions
 I would like to thank [Rainer Heintzmann](https://nanoimaging.de/) for the great support and discussions during development.
