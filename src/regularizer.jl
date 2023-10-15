@@ -326,6 +326,7 @@ julia> reg([1 2 3; 4 5 6; 7 8 9])
 """
 function TV(; num_dims=nothing, sum_dims=nothing, weights=nothing, step=1, mode="forward", ϵ=1f-8)
     
+    
  
     if mode == "central"
         total_var = @eval arr -> ($(generate_TV(num_dims, sum_dims, weights,
