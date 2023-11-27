@@ -4,9 +4,11 @@ using Documenter, DocumenterCitations, DeconvOptim
 cite_bib = CitationBibliography(joinpath(@__DIR__, "../paper/ref.bib"))
 
 DocMeta.setdocmeta!(DeconvOptim, :DocTestSetup, :(using DeconvOptim); recursive=true)
-makedocs(cite_bib, modules=[DeconvOptim],
+makedocs(modules=[DeconvOptim],
+         plugins=[cite_bib],
          sitename="DeconvOptim.jl",
          doctest = false,
+         warnonly=true,
          pages = Any[
                 "DeconvOptim.jl" => "index.md",
                 "Workflow" => Any[
