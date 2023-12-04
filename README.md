@@ -26,8 +26,8 @@ julia> ] add DeconvOptim
 ```
 
 ## Documentation
-The documentation of the latest release is [here](docs-stable-url).
-The documentation of current master is [here](docs-dev-url).
+The documentation of the latest release is [here](https://roflmaostc.github.io/DeconvOptim.jl/stable).
+The documentation of current master is [here](https://roflmaostc.github.io/DeconvOptim.jl/dev/).
 For a quick introduction you can also watch the presentation at the JuliaCon 2021.
 
 <a  href="https://www.youtube.com/watch?v=FodpnOhccis"><img src="docs/src/assets/julia_con.jpg"  width="300"></a>
