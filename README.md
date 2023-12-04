@@ -85,7 +85,7 @@ Feel free to file an issue regarding problems, suggestions or improvement ideas 
 We would be happy to deconvolve *real* data! File an issue if we can help deconvolving an image/stack. We would be also excited to adapt DeconvOptim.jl to your special needs!
 
 ## Citation
-If you use this paper, please cite it:
+If you use this paper, please cite it. Thes [PDF is linked here](https://proceedings.juliacon.org/papers/10.21105/jcon.00099).
 ```bibtex
 @article{Wechsler2023,
   doi = {10.21105/jcon.00099},
