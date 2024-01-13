@@ -10,9 +10,10 @@
 <br>
 A package for microscopy image based deconvolution via Optim.jl. This package works with N dimensional <a href="https://github.com/RainerHeintzmann/PointSpreadFunctions.jl">Point Spread Functions</a> and images.
 The package was created with microscopy in mind but since the code base is quite general it is possible to deconvolve different kernels as well. 
-
-
 <br>
+  
+Deconvolution of a dataset with size 512x256x128 took [2.2 seconds](https://proceedings.juliacon.org/papers/10.21105/jcon.00099) on a RTX 3060 GPU!
+
 
 | **Documentation**                       | **Build Status**                          | **Code Coverage**               | **Publication** |
 |:---------------------------------------:|:-----------------------------------------:|:-------------------------------:|:-----------------------:|
