@@ -24,9 +24,9 @@ $Y(r) = (S * \text{PSF})(r) + b$
 
 In frequency space (Fourier transforming the above equation) the equation with $b=0$ is:
 
-$\tilde Y(k) = (\tilde S * \tilde{\text{PSF}})(k)$
+$\tilde Y(k) = (\tilde S \cdot \tilde{\text{PSF}})(k),$
 
-where $k$ is the spatial frequency. From that equation it is clear why the green and blue line in the plot look very similar. The reason is, that the orange line is constant and we basically multiply the OTF with the orange line. 
+where $k$ is the spatial frequency and $\cdot$ represents term-wise multiplication (this is due to the [convolution theorem of the Fourier transform](https://en.wikipedia.org/wiki/Convolution_theorem)). From that equation it is clear why the green and blue line in the plot look very similar. The reason is, that the orange line is constant and we basically multiply the OTF with the orange line. 
 
 
 ## Noise Model
@@ -38,8 +38,8 @@ $Y(r) = (S * \text{PSF})(r) + N(r) = \mu(r) + N(r)$
 where $N$ being a noise term.
 In fluorescence microscopy the dominant noise is usually *Poisson shot noise* (see [Mertz:2019](@cite)).
 The origin of that noise is the quantum nature of photons. Since the measurement process spans over a time T only a discrete number of photons is detected (in real experiment the amount of photons per pixel is usually in the order of $10^1 - 10^3$). Note that this noise is not introduced by the sensor and is just a effect due to quantum nature of light. 
-We can interprete every sensor pixel as a discrete random variable $X$. The expected value of that pixel would be $\mu(r)$ (true specimen convolved with the $\text{PSF})$. Due to noise, the systems measures randomly a signal for $X$ according to the Poisson distribution:
+We can interpret every sensor pixel as a discrete random variable $X$. The expected value of that pixel would be $\mu(r)$ (true specimen convolved with the $\text{PSF})$. Due to noise, the systems measures randomly a signal for $X$ according to the Poisson distribution:
 
 $f(y, \mu) = \frac{\mu^y \exp(-\mu)}{\Gamma(y + 1)}$
 
-where $f$ is the probability density distribution, $y$ the measured value of the sensor, $\mu$ the expected value and $\Gamma$ the generalized factorial function.
+where $f$ is the probability density distribution, $y$ the measured value of the sensor, $\mu$ the expected value and $\Gamma$ the generalized factorial function ([Gamma function](https://en.wikipedia.org/wiki/Gamma_function)).

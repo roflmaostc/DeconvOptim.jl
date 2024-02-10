@@ -282,24 +282,25 @@ The reason is, that for values of $\mu(\mathbf r) = 0$ the equation is not defin
         \end{split}
         \end{equation}
         In many frameworks, such a regularizer is implemented via functions like \lstinline{circshift}. 
-        However, such approaches create often several copies of the data. 
-        We currently use \verb|Tullio.jl|\cite{michael_abbott_2021_5047410} to create efficient functions 
-        calculating the regularizer and the gradient. For simple expressions
-        such as below, \verb|Tullio.jl| registers an analytical gradient and therefore allows to apply the same efficient mechanisms 
-        to the gradient calculation which have been used for the regularizer evaluation itself.
-        A (smoothed) Total Variation with \verb|Tullio.jl| is defined here:
-        \begin{lstlisting}[language = Julia]
+        \begin{lstlisting}[language = Julia, caption={Smoothed Total Variation \label{algo1}}]
 function total_variation(arr, ϵ=eltype(arr)(1e-8))
     @tullio r = sqrt(ϵ + 
                 abs2(arr[i,j] - arr[i+1,j]) +
                 abs2(arr[i,j] - arr[i,j+1]))
 end
         \end{lstlisting}
+        However, such approaches create often several copies of the data. 
+        We currently use \verb|Tullio.jl| \cite{michael_abbott_2021_5047410} to create efficient functions 
+        calculating the regularizer and the gradient. For simple expressions
+        such as below, \verb|Tullio.jl| registers an analytical gradient and therefore allows to apply the same efficient mechanisms 
+        to the gradient calculation which have been used for the regularizer evaluation itself.
+        A (smoothed) Total Variation with \verb|Tullio.jl| is defined in \autoref{algo1}.
         \lstinline{ϵ} is needed for regions where \lstinline{arr == 0} because otherwise the gradient returns infinite values.
         Note, that definition just demonstrates how the regularizer can be written down.
         In our toolbox we allow for much more options. Since \verb|Tullio.jl| cannot handle generic multi-dimensional data yet
         we create regularizers which can vary in step size, dimensionality and
         different weighting in dimensions via Julia's metaprogramming capability.
+
         A call like 
         \begin{lstlisting}[language = Julia]
 julia> using DeconvOptim
@@ -320,9 +321,8 @@ julia> reg(randn((10,20,30,40)))
 All experiments were executed on Ubuntu 20.04 using a AMD Ryzen 5 5600X 6-Core processor (12 threads) with \SI{32}{GB} DDR4 RAM and Julia 1.6.2.
     If possible, all threads were used.
     As GPU accelerator we used a GeForce RTX 2060 SUPER with \SI{8}{GB} memory and CUDA 11.3 and CUDA.jl 3.3.1.
-    Our experiments additionally made use of the following packages in Julia 1.6.2: ArrayInterface.jl\cite{DifferentialEquations.jl-2017}, 
-    BenchmarkTools.jl\cite{BenchmarkTools.jl-2016}, FFTW.jl\cite{FFTW05}, LLVM.jl\cite{LLVM.jl-2017}, Optim.jl\cite{mogensen2018optim}
-    and  Zygote.jl\cite{Zygote.jl-2018}. 
+    Our experiments were done in Julia 1.6.2 under the use of \texttt{BenchmarkTools.jl}\cite{BenchmarkTools.jl-2016}.
+
     \subsection{One-Dimensional Time Series}
         First, we want to demonstrate the deconvolution of an artificial one dimensional dataset blurred with a certain PSF.
         Additionally, we want to demonstrate the mechanism to reduce wrap-around artifacts in the deconvolution.

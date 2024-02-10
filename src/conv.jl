@@ -84,7 +84,7 @@ end
     plan_conv(u, v [, dims])
 
 Pre-plan an optimized convolution for arrays shaped like `u` and `v` (based on pre-plan FFT)
-along the given dimenions `dims`.
+along the given dimensions `dims`.
 `dims = 1:ndims(u)` per default.
 The 0 frequency of `u` must be located at the first entry.
 We return two arguments: 

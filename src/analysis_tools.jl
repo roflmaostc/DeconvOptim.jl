@@ -17,26 +17,26 @@ function relative_energy_regain(ground_truth, rec)
 
     # a dict to store the values for certain frequencies
     # we store a list since some (rounded) frequencies occur more than once
-    ΔE_R_dict = Dict{T, Vector{T}}()
-    E_R_dict = Dict{T, Vector{T}}()
+    ΔE_R_dict = Dict{T,Vector{T}}()
+    E_R_dict = Dict{T,Vector{T}}()
 
     # round the frequencies to 4 digits, alternative would be to bin
     round4(x) = T(round(x, digits=3))
-    
-    
+
+
     # iterate over the frequencies and calculate the relative energy regain
     for (i₂, f₂) in enumerate(fftfreq(size(rec_fft, 2)))
         for (i₁, f₁) in enumerate(fftfreq(size(rec_fft, 1)))
             f_res = round4(√(f₁^2 + f₂^2))
-            Δ_E_R = abs2(ground_truth_fft[i₁, i₂] - rec_fft[i₁, i₂]) 
-            E_R = abs2(ground_truth_fft[i₁, i₂]) 
+            Δ_E_R = abs2(ground_truth_fft[i₁, i₂] - rec_fft[i₁, i₂])
+            E_R = abs2(ground_truth_fft[i₁, i₂])
 
             update_dict_list!(ΔE_R_dict, f_res, Δ_E_R)
             update_dict_list!(E_R_dict, f_res, E_R)
         end
     end
-    
-    
+
+
     # finally transform everything into a list of frequencies and 
     # a list of relative energy regains
     freqs = T[]
@@ -47,7 +47,7 @@ function relative_energy_regain(ground_truth, rec)
         mean_E_r = mean(E_R_dict[f])
         push!(G_R_list, (mean_E_r - mean_ΔE_r) / mean_E_r)
     end
-    
+
     return freqs, G_R_list
 end
 
@@ -95,8 +95,8 @@ end
 Calculates the mean variance between two array, but normalizing arra a to the same mean as array b.
 """
 function normalized_variance(a, b)
-    factor = sum(b)/sum(a)
-    sum(abs2.(a.*factor .-b))./prod(size(a))
+    factor = sum(b) / sum(a)
+    sum(abs2.(a .* factor .- b)) ./ prod(size(a))
 end
 
 function reset_summary!(summary)
@@ -118,7 +118,7 @@ end
 
     A useful routine to simplify performance checks of deconvolution on simulated data.
     Returns an Options structure to be used with the deconvolution routine as an argument to `opt_options` and 
-    a summary dictionary with all the performance metrics calculated, which is resetted and updated during deconvolution.
+    a summary dictionary with all the performance metrics calculated, which is reset and updated during deconvolution.
     This can then be plotted or visualized.
     The summary dictionary has the following content:
 
@@ -136,8 +136,8 @@ end
 # Arguments
 - `ground_truth`: The underlying ground truth data. Note that this scaling is unimportant due to the normalized norms used for comparison, 
                   whereas the relative offset matters. 
-- `iterations`: The maximal number of iterations to performance. If covergence is reached, the result may have less iterations
-- `mapping`: If mappings such as the positivity contraints (e.g. `NonNegative()`) are used in the deconvolution routing, they also 
+- `iterations`: The maximal number of iterations to performance. If convergence is reached, the result may have less iterations
+- `mapping`: If mappings such as the positivity constraints (e.g. `NonNegative()`) are used in the deconvolution routing, they also 
              need to be provided here. Otherwises select `nothing`.
 - `every`: This option allows to select every how many iterations the evaluation is performed. Note that the results will not keep track 
         of this iteration number. 
@@ -188,18 +188,18 @@ function options_trace_deconv(ground_truth, iterations, mapping, every=1; more_o
     @show more_options
     summary = Dict()
     reset_summary!(summary)
-    summary["ground_truth"] = ground_truth # needs to be accesible
+    summary["ground_truth"] = ground_truth # needs to be accessible
     idx = 1
     cb = tr -> begin
-        img = (mapping === nothing) ? tr[end].metadata["x"] : mapping[1](tr[end].metadata["x"]) 
+        img = (mapping === nothing) ? tr[end].metadata["x"] : mapping[1](tr[end].metadata["x"])
         img *= mean(summary["ground_truth"])
-        record_progress!(summary, img, idx, tr[end].value, 
-                        tr[end].metadata["time"], tr[end].metadata["Current step size"])
+        record_progress!(summary, img, idx, tr[end].value,
+            tr[end].metadata["time"], tr[end].metadata["Current step size"])
         idx += 1
         false
     end
 
-    opt_options = Optim.Options(callback = cb, iterations=iterations, show_every=every, store_trace=true, extended_trace=true; more_options...)
+    opt_options = Optim.Options(callback=cb, iterations=iterations, show_every=every, store_trace=true, extended_trace=true; more_options...)
     return (opt_options, summary)
 end
 
@@ -224,18 +224,18 @@ function record_progress!(summary, img, idx, loss, mytime, stepsize)
     push!(summary["nccs"], ncc)
     summary["best_ncc"], summary["best_ncc_img"], summary["best_ncc_idx"] = let
         if ncc > summary["best_ncc"]
-            (ncc, img, idx) 
+            (ncc, img, idx)
         else
             (summary["best_ncc"], summary["best_ncc_img"], summary["best_ncc_idx"])
         end
     end
     nvar = normalized_variance(img, ground_truth)
     push!(summary["nvars"], nvar)
-    summary["best_nvar"], summary["best_nvar_img"], summary["best_nvar_idx"] = let 
+    summary["best_nvar"], summary["best_nvar_img"], summary["best_nvar_idx"] = let
         if nvar < summary["best_nvar"]
-                (nvar, img, idx)
+            (nvar, img, idx)
         else
-                (summary["best_nvar"], summary["best_nvar_img"], summary["best_nvar_idx"])
+            (summary["best_nvar"], summary["best_nvar_img"], summary["best_nvar_idx"])
         end
-    end    
+    end
 end
