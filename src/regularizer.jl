@@ -157,7 +157,7 @@ julia> reg([1 2 3; 4 5 6; 7 8 9])
 ```
 """
 function Tikhonov(;num_dims=2, sum_dims=1:num_dims, weights=[1, 1], step=1, mode="laplace")
-    if weights == nothing
+    if isnothing(weights)
         weights = ones(Int, num_dims)
     end
     if mode == "laplace"
@@ -235,7 +235,7 @@ julia> reg([1 2 3; 4 5 6; 7 8 9])
 """
 function GR(; num_dims=2, sum_dims=1:num_dims, weights=[1, 1], step=1,
               mode="forward", ϵ=1f-8)
-    if weights == nothing
+    if isnothing(weights) 
         weights = ones(Int, num_dims)
     end
     if mode == "central"
@@ -273,7 +273,17 @@ indicating over which dimensions we must sum over.
 """
 function generate_TV(num_dims, sum_dims_arr, weights, ind1, ind2, ϵ=1f-8; debug=false)
     out, add = [], []
-    for (d, w) in zip(sum_dims_arr, weights)
+    # just for now. This should be changed to adapt to the number of dimensions present in `arr`
+    if isnothing(num_dims)
+        num_dims=2
+    end
+    if isnothing(sum_dims_arr)
+        sum_dims_arr = 1:num_dims
+    end
+    if isnothing(weights) 
+        weights = ones(Int, num_dims)
+    end
+   for (d, w) in zip(sum_dims_arr, weights)
         inds1, inds2 = generate_indices(num_dims, d, ind1, ind2) 
         push!(add, :($w * abs2(arr[$(inds1...)] - arr[$(inds2...)])))
     end
@@ -286,6 +296,8 @@ function generate_TV(num_dims, sum_dims_arr, weights, ind1, ind2, ϵ=1f-8; debug
     return out
 end
 
+# a hack to find out whether the input arr `arr` is a CuArray, without needing to import CuArray
+is_cuda_arr(arr) = startswith("$(typeof(arr))","CuArray")
 
 """
     TV(; <keyword arguments>)
@@ -312,12 +324,9 @@ julia> reg([1 2 3; 4 5 6; 7 8 9])
 12.649111f0
 ```
 """
-function TV(; num_dims=2, sum_dims=1:num_dims, weights=nothing, step=1, mode="forward", ϵ=1f-8)
+function TV(; num_dims=nothing, sum_dims=nothing, weights=nothing, step=1, mode="forward", ϵ=1f-8)
     
-    if weights == nothing
-        weights = ones(Int, num_dims)
-    end
-
+ 
     if mode == "central"
         total_var = @eval arr -> ($(generate_TV(num_dims, sum_dims, weights,
                                         step, (-1) * step, ϵ)...))
@@ -327,7 +336,10 @@ function TV(; num_dims=2, sum_dims=1:num_dims, weights=nothing, step=1, mode="fo
     else
         throw(ArgumentError("The provided mode is not valid."))
     end
-    return total_var
+
+    # ToDo: This needs more tweeking such that both methods have the same signature!
+    total_var_cuda = TV_cuda(num_dims=num_dims, weights=weights, ϵ=ϵ)
+    return arr -> is_cuda_arr(arr) ? total_var_cuda(arr) : total_var(arr)
 end
 
 
