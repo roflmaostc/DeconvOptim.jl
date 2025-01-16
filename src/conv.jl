@@ -73,7 +73,10 @@ function ChainRulesCore.rrule(::typeof(conv), u::AbstractArray{T, N}, v::Abstrac
                               dims=ntuple(+, min(N, M))) where {T, D, N, M}
     Y = conv(u, v, dims)
     function conv_pullback(barx)
-        return NoTangent(), conv(barx, conj(v), dims), NoTangent(), NoTangent()
+        # we had to introduce this in Zygote 0.7
+        barx2 = similar(u) 
+        barx2 .= barx
+        return NoTangent(), conv(barx2, conj(v), dims), NoTangent(), NoTangent()
     end 
     return Y, conv_pullback
 end
@@ -162,14 +165,11 @@ function ChainRulesCore.rrule(::typeof(p_conv_aux!), P, P_inv, u, v, u_ft_stor, 
                 conj(v)
             end
         end
-        barx = let
-            if typeof(barx) <: FillArrays.Fill
-                collect(eltype(u).(barx))
-            else
-                barx
-            end
+        if eltype(barx) <: Real
+            barx2 = similar(u, promote_type(eltype(u), eltype(barx)))
+            barx2 .= barx
         end
-        ∇ = p_conv_aux!(P, P_inv, barx, conj_v, u_ft_stor, copy(out))
+        ∇ = p_conv_aux!(P, P_inv, barx2, conj_v, u_ft_stor, copy(out))
         return NoTangent(), NoTangent(), NoTangent(), ∇, NoTangent(), NoTangent(), NoTangent()
     end 
     return Y, conv_pullback
