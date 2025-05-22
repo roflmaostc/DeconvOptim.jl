@@ -2,7 +2,7 @@ module DeconvOptim
     
 export gpu_or_cpu
 
- # to check wether CUDA is enabled
+ # to check whether CUDA is enabled
 using Requires
 # for fast array regularizers
 using Tullio
@@ -27,8 +27,7 @@ using LinearAlgebra
 
 using FillArrays
 
-gpu_or_cpu(x) = Array
-
+using PrecompileTools
 
 
 include("forward_models.jl")
@@ -46,6 +45,20 @@ include("analysis_tools.jl")
 
 # refresh Zygote to load the custom rrules defined with ChainRulesCore
 using Zygote: gradient
+
+
+# doesn't save too much but a little
+@setup_workload begin
+    img = abs.(randn((4,4,2)))
+    psf = abs.(randn((4,4,2)))
+
+    @compile_workload begin
+        deconvolution(Float32.(img), Float32.(psf), regularizer=TV(num_dims=3), iterations=2)
+        deconvolution(img, psf, regularizer=TV(num_dims=3), iterations=2)
+
+    end
+
+end
 
 
 # end module

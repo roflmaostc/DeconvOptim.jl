@@ -1,7 +1,7 @@
 # Performance Tips
 
 ## Regularizer
-The regularizers are built during calling with metaprogramming. Everytime you call `TV()` it creates a new version which is evaluated with
+The regularizers are built during calling with metaprogramming. Every time you call `TV()` it creates a new version which is evaluated with
 `eval`. In the first `deconvolution` routine it has to compile this piece of code.
 To prevent the compilation every time, define 
 ```julia

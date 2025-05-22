@@ -1,5 +1,5 @@
 export generate_psf
-export generate_downsample, my_interpolate 
+export generate_downsample, my_interpolate
 export center_extract, center_set!, get_indices_around_center, center_pos
 
 """
@@ -30,7 +30,7 @@ julia> ds([1 2; 3 5; 5 6; 7 8])
 function generate_downsample(num_dim, downsample_dims, factor)
     @assert num_dim ≥ length(downsample_dims)
     # create unit cell with Cartesian Index 
-    # dims_units containts every where a 1 where the downsampling should happen
+    # dims_units contains every where a 1 where the downsampling should happen
     dims_units = zeros(Int, num_dim)
     # here we set which dimensions should be downsamples
     dims_units[downsample_dims] .= 1
@@ -45,28 +45,28 @@ function generate_downsample(num_dim, downsample_dims, factor)
         i = Symbol(ind, di)
     end
 
-    
+
     # output list for the add commands
     add = []
     # via CartesianIndex we can loop over all rectangular neighbours
     # we loop only over the neighbours in the downsample_dims
-    for n = one:one * factor
+    for n = one:one*factor
         # for each index calculate the offset to the neighbour
         inds = map(1:num_dim) do di
-                i = Symbol(ind, di)
-                if n[di] == 0
-                    di = i
-                else
-                    expr = :($factor * $i)
-                    diff = -factor + n[di]
-                    di = :($expr + $diff)
-                end
+            i = Symbol(ind, di)
+            if n[di] == 0
+                di = i
+            else
+                expr = :($factor * $i)
+                diff = -factor + n[di]
+                di = :($expr + $diff)
             end
+        end
         # push this single neighbour to add list
         push!(add, :(arr[$(inds...)]))
     end
     # combine the different parts and divide for averaging
-    expr = [:(@tullio res[$(inds_out...)] := (+($(add...))) / $factor ^ $(length(downsample_dims)))]
+    expr = [:(@tullio res[$(inds_out...)] := (+($(add...))) / $factor^$(length(downsample_dims)))]
     #= return expr =#
     # evaluate to function
     @eval f = arr -> ($(expr...))
@@ -97,7 +97,7 @@ function my_interpolate(arr, size_n, interp_type=BSpline(Linear()))
     end
     # prepare the interpolation
     arr_n = interpolate(arr, Tuple(interp))
-   
+
     # interpolate introduces fractional indices 
     # via LinRange we access these fractional indices
     inds = []
@@ -121,13 +121,14 @@ stays at the center position.
 Works for both odd and even indices
 """
 function get_indices_around_center(i_in, i_out)
-    if (mod(i_in, 2) == 0 && mod(i_out, 2) == 0 
-     || mod(i_in, 2) == 1 && mod(i_out, 2) == 1) 
+    if (mod(i_in, 2) == 0 && mod(i_out, 2) == 0
+        ||
+        mod(i_in, 2) == 1 && mod(i_out, 2) == 1)
         x = (i_in - i_out) ÷ 2
         return 1 + x, i_in - x
     elseif mod(i_in, 2) == 1 && mod(i_out, 2) == 0
         x = (i_in - 1 - i_out) ÷ 2
-        return 1 + x, i_in - x - 1 
+        return 1 + x, i_in - x - 1
     elseif mod(i_in, 2) == 0 && mod(i_out, 2) == 1
         x = (i_in - (i_out - 1)) ÷ 2
         return 1 + x, i_in - (x - 1)
@@ -161,19 +162,19 @@ function center_extract(arr::AbstractArray, new_size_array)
     if size(arr) == new_size_array
         return arr
     end
-    
+
     new_size_array = collect(new_size_array)
 
     # we construct two lists
     # the reason is, that we don't change higher dimensions which are not 
     # specified in new_size_array
-    out_indices1 = [get_indices_around_center(size(arr)[x], new_size_array[x]) 
+    out_indices1 = [get_indices_around_center(size(arr)[x], new_size_array[x])
                     for x = 1:length(new_size_array)]
-    
+
     out_indices1 = [x[1]:x[2] for x = out_indices1]
-    
+
     # out_indices2 contains just ranges covering the full size of each dimension
-    out_indices2 = [1:size(arr)[i] for i = (1 + length(new_size_array)):ndims(arr)]
+    out_indices2 = [1:size(arr)[i] for i = (1+length(new_size_array)):ndims(arr)]
     return view(arr, out_indices1..., out_indices2...)
 end
 
@@ -182,7 +183,7 @@ function ChainRulesCore.rrule(::typeof(center_extract), arr, new_size_array)
 
     function aux_pullback(xbar)
         if size(arr) == new_size_array
-            return zero(eltype(arr)), xbar, zero(eltype(arr)) 
+            return zero(eltype(arr)), xbar, zero(eltype(arr))
         else
             ∇ = similar(arr, size(arr))
             fill!(∇, zero(eltype(arr)))
@@ -190,7 +191,7 @@ function ChainRulesCore.rrule(::typeof(center_extract), arr, new_size_array)
             fill!(o, one(eltype(arr)))
             o .*= xbar
             center_set!(∇, o)
-            return zero(eltype(arr)), ∇, zero(eltype(arr)) 
+            return zero(eltype(arr)), ∇, zero(eltype(arr))
         end
     end
 
@@ -225,7 +226,7 @@ function center_set!(arr_large, arr_small)
 
     #rest = ones(Int, ndims(arr_large) - 3)
     arr_large[out_is...] .= arr_small
-    
+
     return arr_large
 end
 
@@ -256,6 +257,10 @@ Generation of an approximate 2D PSF.
 around the point [1, 1],
 `radius` indicates the pupil diameter in pixel from which the PSF is generated.
 
+!!! note
+    Returned 2D PSF is `fftshift`ed in contrast to models, you can find in 
+    literature.
+
 # Examples
 ```julia-repl
 julia> generate_psf([5, 5], 2)
@@ -280,7 +285,7 @@ function rr_3D(s)
     for k = 1:s[3]
         for j = 1:s[2]
             for i = 1:s[1]
-                rarr[i, j, k] = sqrt( (i-center_pos(s[1]))^2 + (j-center_pos(s[2]))^2 + (k-center_pos(s[3]))^2)
+                rarr[i, j, k] = sqrt((i - center_pos(s[1]))^2 + (j - center_pos(s[2]))^2 + (k - center_pos(s[3]))^2)
             end
         end
     end
@@ -306,10 +311,10 @@ julia> DeconvOptim.rr_2D((6, 6))
 ```
 """
 function rr_2D(s)
-    rarr = zeros((s...)) 
+    rarr = zeros((s...))
     for j = 1:s[2]
         for i = 1:s[1]
-               rarr[i, j] = sqrt( (i - center_pos(s[1]))^2 + (j - center_pos(s[2]))^2)
+            rarr[i, j] = sqrt((i - center_pos(s[1]))^2 + (j - center_pos(s[2]))^2)
         end
     end
     return rarr
@@ -327,7 +332,7 @@ end
 
 
 function get_regularizer(reg, etype)
-    return reg 
+    return reg
 end
 
 function get_regularizer(reg::Nothing, etype)

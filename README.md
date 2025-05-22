@@ -8,16 +8,16 @@
 </a>
 </div>
 <br>
-A package for microscopy image based deconvolution via Optim.jl. This package works with N dimensional Point Spread Functions and images.
+A package for microscopy image based deconvolution via Optim.jl. This package works with N dimensional <a href="https://github.com/RainerHeintzmann/PointSpreadFunctions.jl">Point Spread Functions</a> and images.
 The package was created with microscopy in mind but since the code base is quite general it is possible to deconvolve different kernels as well. 
-
-We would be happy to deconvolve *real* data! File an issue if we can help deconvolving an image/stack. We would be also excited to adapt DeconvOptim.jl to your special needs!
 <br>
+  
+Deconvolution of a dataset with size 512x256x128 took [2.2 seconds](https://proceedings.juliacon.org/papers/10.21105/jcon.00099) on a RTX 3060 GPU!
 
-| **Documentation**                       | **Build Status**                          | **Code Coverage**               |
-|:---------------------------------------:|:-----------------------------------------:|:-------------------------------:|
-| [![][docs-stable-img]][docs-stable-url] [![][docs-dev-img]][docs-dev-url] | [![][CI-img]][CI-url] | [![][codecov-img]][codecov-url] |
 
+| **Documentation**                       | **Build Status**                          | **Code Coverage**               | **Publication** |
+|:---------------------------------------:|:-----------------------------------------:|:-------------------------------:|:-----------------------:|
+| [![][docs-stable-img]][docs-stable-url] [![][docs-dev-img]][docs-dev-url] | [![][CI-img]][CI-url] | [![][codecov-img]][codecov-url] |[![DOI](https://proceedings.juliacon.org/papers/10.21105/jcon.00099/status.svg)](https://doi.org/10.21105/jcon.00099)|
 
 
 ## Installation
@@ -27,8 +27,8 @@ julia> ] add DeconvOptim
 ```
 
 ## Documentation
-The documentation of the latest release is [here](docs-stable-url).
-The documentation of current master is [here](docs-dev-url).
+The documentation of the latest release is [here](https://roflmaostc.github.io/DeconvOptim.jl/stable).
+The documentation of current master is [here](https://roflmaostc.github.io/DeconvOptim.jl/dev/).
 For a quick introduction you can also watch the presentation at the JuliaCon 2021.
 
 <a  href="https://www.youtube.com/watch?v=FodpnOhccis"><img src="docs/src/assets/julia_con.jpg"  width="300"></a>
@@ -81,12 +81,36 @@ And in the new cell then use:
 res, o = deconvolution(img_n, psf, regularizer=reg)
 ```
 
+## Development
+Feel free to file an issue regarding problems, suggestions or improvement ideas for this package!
+We would be happy to deconvolve *real* data! File an issue if we can help deconvolving an image/stack. We would be also excited to adapt DeconvOptim.jl to your special needs!
+
+## Citation
+If you use this paper, please cite it. Thes [PDF is linked here](https://proceedings.juliacon.org/papers/10.21105/jcon.00099).
+```bibtex
+@article{Wechsler2023,
+  doi = {10.21105/jcon.00099},
+  url = {https://doi.org/10.21105/jcon.00099},
+  year = {2023},
+  publisher = {The Open Journal},
+  volume = {1},
+  number = {1},
+  pages = {99},
+  author = {Felix Wechsler and Rainer Heintzmann},
+  title = {DeconvOptim.jl - Signal Deconvolution with Julia},
+  journal = {Proceedings of the JuliaCon Conferences}
+}
+```
 
 ## Contributions
 I would like to thank [Rainer Heintzmann](https://nanoimaging.de/) for the great support and discussions during development.
 Furthermore without [Tullio.jl](https://github.com/mcabbott/Tullio.jl) and [@mcabbott](https://github.com/mcabbott/) this package wouldn't be as fast as it is. His package and ideas are the basis for the implementations of the regularizers.
 
+## Related Packages
 
+* [ThreeDeconv](https://github.com/computational-imaging/ThreeDeconv.jl): works great, CPU performance is much slower, GPU performance is slower
+* [Deconvolution.jl](https://github.com/JuliaDSP/Deconvolution.jl): rather simple package with Wiener and Lucy Richardson deconvolution.
+* [PointSpreadFunctions.jl](https://github.com/RainerHeintzmann/PointSpreadFunctions.jl): generates point spread functions for microscopy applications
 
 [docs-dev-img]: https://img.shields.io/badge/docs-dev-orange.svg 
 [docs-dev-url]: https://roflmaostc.github.io/DeconvOptim.jl/dev/ 
