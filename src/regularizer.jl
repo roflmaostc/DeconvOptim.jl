@@ -326,8 +326,6 @@ julia> reg([1 2 3; 4 5 6; 7 8 9])
 """
 function TV(; num_dims=nothing, sum_dims=nothing, weights=nothing, step=1, mode="forward", ϵ=1f-8)
     
-    
- 
     if mode == "central"
         total_var = @eval arr -> ($(generate_TV(num_dims, sum_dims, weights,
                                         step, (-1) * step, ϵ)...))
@@ -367,7 +365,10 @@ function TH(; num_dims=2, ϵ=1f-8)
                                               abs2(x[i,j+1] + x[i, j-1] - 2* x[i, j]) + 
                                               2 * abs2(x[i+1, j+1] - x[i+1, j] - x[i, j+1]  + x[i, j]))
         return reg_HES
+    elseif num_dims == 1 
+        reg_HES = x -> @tullio res = sqrt(ϵ + abs2(x[i+1] + x[i-1] - 2* x[i]))
+        return reg_HES
     else
-        throw(ArgumentError("num_dims must be 2 or 3"))
+        throw(ArgumentError("num_dims must be 1, 2 or 3"))
     end
 end

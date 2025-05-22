@@ -29,11 +29,17 @@ function TV_cuda(; num_dims=nothing, weights=nothing, ϵ=1f-8)
         return arr -> TV_3D_view(arr, weights, ϵ)
     elseif num_dims == 2
         return arr -> TV_2D_view(arr, weights, ϵ)
+    elseif num_dims == 1
+        return arr -> TV_1D_view(arr, weights, ϵ)
     else
         throw(ArgumentError("num_dims must be nothing or 2 or 3 "))
     end
     
     return reg_TV
+end
+
+function TV_view(arr::AbstractArray{T, 1}, weights=nothing, ϵ=1f-8) where {T}
+    return TV_1D_view(arr, weights, ϵ)
 end
 
 function TV_view(arr::AbstractArray{T, 2}, weights=nothing, ϵ=1f-8) where {T}
@@ -42,6 +48,17 @@ end
 
 function TV_view(arr::AbstractArray{T, 3}, weights=nothing, ϵ=1f-8) where {T}
     return TV_3D_view(arr, weights, ϵ)
+end
+
+function TV_1D_view(arr::AbstractArray{T, N}, weights=nothing, ϵ=1f-8) where {T, N}
+    if isnothing(weights)
+        weights = ones(Float32, ndims(arr))
+    end
+    as = ntuple(i -> axes(arr, i), Val(N))
+    rs = map(x -> first(x):last(x)-1, as)
+    arr0 = view(arr, f_inds(rs, 0)...)
+    arr1 = view(arr, f_inds(rs, 1)...)
+    return @fastmath sum(sqrt.(ϵ .+ weights[1] .* (arr1 .- arr0).^2))
 end
 
 function TV_2D_view(arr::AbstractArray{T, N}, weights=nothing, ϵ=1f-8) where {T, N}
