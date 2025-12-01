@@ -69,7 +69,7 @@ function generate_downsample(num_dim, downsample_dims, factor)
     expr = [:(@tullio res[$(inds_out...)] := (+($(add...))) / $factor^$(length(downsample_dims)))]
     #= return expr =#
     # evaluate to function
-    @eval f = arr -> ($(expr...))
+    f = @eval arr -> ($(expr...))
     return f
 end
 
