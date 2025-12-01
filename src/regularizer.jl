@@ -125,7 +125,7 @@ over n dimensions.
 """
 function generate_spatial_grad_square(num_dims, sum_dims_arr, weights)
     expr(inds1, inds2, w) = :($w * abs2(arr[$(inds1...)] - arr[$(inds2...)]))
-    @eval x = arr -> ($(create_Ndim_regularizer(expr, num_dims, sum_dims_arr, 
+    x = @eval arr -> ($(create_Ndim_regularizer(expr, num_dims, sum_dims_arr, 
                         weights, 1, -1)...))
     return x
 end
