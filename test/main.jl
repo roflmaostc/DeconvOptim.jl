@@ -8,9 +8,9 @@
     res = [2.4393835034275493 0.013696697097634842 0.0002833052222499294; 0.07541628019133978 1.0066536888249171 0.02222160874466724; 0.0004945773667781262 0.008547708184955495 3.717245734531717] 
 
     #@show deconvolution(img, psf, λ=0.01)[1]
-    @test all(≈(res, deconvolution(img, psf, λ=0.01)[1], rtol=0.1))
-    @test all(≈(res, deconvolution(img, psf, λ=0.01)[1], rtol=0.1))
-    @test all(≈(res, deconvolution(img, psf, λ=0.01, iterations=20)[1], rtol=0.1))
+    @test all(≈(res, deconvolution(img, psf, regularizer=GR(), λ=0.01)[1], rtol=0.1))
+    @test all(≈(res, deconvolution(img, psf, regularizer=GR(),λ=0.01)[1], rtol=0.1))
+    @test all(≈(res, deconvolution(img, psf, regularizer=GR(),λ=0.01, iterations=20)[1], rtol=0.1))
 
     # testing regularizer
     res2 = [4.188270526990536 5.999388400251461e-10 2.8299849680327642e-8; 1.725273124171714e-7 2.54195544512864 2.0216187854619135e-9; 9.594324085846738e-10 1.2000166997002865e-8 0.7863126081711094] 
