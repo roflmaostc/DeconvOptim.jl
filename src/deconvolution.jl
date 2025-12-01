@@ -59,7 +59,7 @@ julia> res, o = deconvolution(img_n, psf);
 """
 function deconvolution(measured::AbstractArray{T, N}, psf;
         loss=Poisson(),
-        regularizer=GR(),
+        regularizer=nothing,
         λ=T(0.05),
         background=zero(T),
         mapping=Non_negative(),
