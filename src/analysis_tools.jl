@@ -190,11 +190,13 @@ function options_trace_deconv(ground_truth, iterations, mapping, every=1; more_o
     reset_summary!(summary)
     summary["ground_truth"] = ground_truth # needs to be accessible
     idx = 1
-    cb = tr -> begin
-        img = (mapping === nothing) ? tr[end].metadata["x"] : mapping[1](tr[end].metadata["x"])
+    function cb(os) 
+        # img = (mapping === nothing) ? tr[end].metadata["x"] : mapping[1](tr[end].metadata["x"])
+        img = (mapping === nothing) ? os.x : mapping[1](os.x)
         img *= mean(summary["ground_truth"])
-        record_progress!(summary, img, idx, tr[end].value,
-            tr[end].metadata["time"], tr[end].metadata["Current step size"])
+        record_progress!(summary, img, idx, 
+        os.f_x, missing, os.dx) # There is no more time argument here. This is the previously used state information:
+        # tr[end].value, tr[end].metadata["time"], tr[end].metadata["Current step size"])
         idx += 1
         false
     end

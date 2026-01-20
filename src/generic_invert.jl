@@ -109,8 +109,10 @@ function invert(measured, rec0, forward;
         if opt_options === nothing
             opt_options = Optim.Options(iterations=iterations)
         end
-        # do the optimization with LBGFS
-        res = Optim.optimize(Optim.only_fg!(fg!), rec0, opt, opt_options)
+        # do the optimization with LBGFS using modern Optim API (f, g!)
+        f(x) = fg!(true, nothing, x)
+        g!(G, x) = fg!(nothing, G, x)
+        res = Optim.optimize(f, g!, rec0, opt, opt_options)
         res_out = mf(Optim.minimizer(res))
         # supports a different interface as for example used in OptimPackNextGen for the function 'vmlmb!'
     elseif isa(opt_package, Type{Opt_OptimPackNextGen})
