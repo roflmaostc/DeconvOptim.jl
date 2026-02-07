@@ -185,18 +185,22 @@ julia> @vt (ground_truth, best_ncc_img, best_nvar_img) = show_noreg(true)
 ```
 """
 function options_trace_deconv(ground_truth, iterations, mapping, every=1; more_options...)
-    @show more_options
     summary = Dict()
     reset_summary!(summary)
     summary["ground_truth"] = ground_truth # needs to be accessible
     idx = 1
     function cb(os) 
-        # img = (mapping === nothing) ? tr[end].metadata["x"] : mapping[1](tr[end].metadata["x"])
-        img = (mapping === nothing) ? os.x : mapping[1](os.x)
-        img *= mean(summary["ground_truth"])
-        record_progress!(summary, img, idx, 
-        os.f_x, missing, os.dx) # There is no more time argument here. This is the previously used state information:
-        # tr[end].value, tr[end].metadata["time"], tr[end].metadata["Current step size"])
+        if (!isa(os, Vector)) # Optimize V2
+            img = (mapping === nothing) ? os.x : mapping[1](os.x)
+            img *= mean(summary["ground_truth"])
+            record_progress!(summary, img, idx, 
+            os.f_x, missing, os.dx) # There is no more time argument here. This is the previously used state information:
+        else # Optimize V1
+            img = (mapping === nothing) ? os[end].metadata["x"] : mapping[1](os[end].metadata["x"])
+            img *= mean(summary["ground_truth"])
+            record_progress!(summary, img, idx, os[end].value,
+                os[end].metadata["time"], os[end].metadata["Current step size"])
+        end
         idx += 1
         false
     end
