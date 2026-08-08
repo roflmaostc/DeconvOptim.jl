@@ -144,8 +144,8 @@ This function returns a function to calculate the Tikhonov regularizer
 of a n-dimensional array. 
 
 # Arguments
-- `num_dims=2`: 
-- `sum_dims=[1, 2]`: A array containing the dimensions we want to sum over
+- `num_dims=nothing`: Dimension of the array that should be regularized. When `nothing`, it is inferred from the array upon use.
+- `sum_dims=nothing`: A array containing the dimensions we want to sum over. Defaults to all dimensions (`1:N`).
 - `weights=nothing`: A array containing weights to weight the contribution of 
     different dimensions. If `weights=nothing` all dimensions are weighted equally.
 - `step=1`: A integer indicating the step width for the array indexing
@@ -162,23 +162,51 @@ julia> reg([1 2 3; 4 5 6; 7 8 9])
 285
 ```
 """
-function Tikhonov(;num_dims=2, sum_dims=1:num_dims, weights=[1, 1], step=1, mode="laplace")
-    if isnothing(weights)
-        weights = ones(Int, num_dims)
-    end
+function make_tikhonov_closure(num_dims, s_dims, ws, step, mode)
     if mode == "laplace"
-        Γ = @eval arr -> ($(generate_laplace(num_dims, sum_dims, weights)...))
+        return @eval arr -> ($(generate_laplace(num_dims, s_dims, ws)...))
     elseif mode == "spatial_grad_square"
         expr(inds1, inds2, w) = :($w * abs2(arr[$(inds1...)] - arr[$(inds2...)]))
-        Γ = @eval arr -> ($(create_Ndim_regularizer(expr, num_dims, sum_dims, 
-                            weights, step, (-1) * step)...))
-    elseif mode == "identity"
-        Γ = arr -> sum(abs2.(arr))
+        return @eval arr -> ($(create_Ndim_regularizer(expr, num_dims, s_dims,
+                                                       ws, step, (-1) * step)...))
     else
         throw(ArgumentError("The provided mode is not valid."))
     end
+end
 
-    return Γ
+function Tikhonov(; num_dims=nothing, sum_dims=nothing, weights=nothing, step=1, mode="laplace")
+    if mode == "identity"
+        return arr -> sum(abs2.(arr))
+    elseif !(mode in ("laplace", "spatial_grad_square"))
+        throw(ArgumentError("The provided mode is not valid."))
+    end
+
+    if isnothing(num_dims)
+        Tikhonov_f_cuda = Tikhonov_cuda(num_dims=nothing, sum_dims=sum_dims,
+                                        weights=weights, step=step, mode=mode)
+        if isnothing(sum_dims) && isnothing(weights)
+            # automatic selection of `num_dims` based on the array upon use,
+            # with per-rank `@tullio` closures and a `view`/broadcast GPU fallback
+            regs = ntuple(N -> make_tikhonov_closure(N, collect(1:N), ones(Int, N),
+                                                     step, mode), NMAX)
+            return arr2 -> begin
+                N = ndims(arr2)
+                if N <= NMAX && !is_cuda_arr(arr2)
+                    return regs[N](arr2)
+                end
+                return Tikhonov_f_cuda(arr2)
+            end
+        else
+            return arr2 -> Tikhonov_f_cuda(arr2)
+        end
+    else
+        s_dims = isnothing(sum_dims) ? collect(1:num_dims) : sum_dims
+        ws = isnothing(weights) ? ones(Int, num_dims) : weights
+        reg = make_tikhonov_closure(num_dims, s_dims, ws, step, mode)
+        reg_cuda = Tikhonov_cuda(num_dims=num_dims, sum_dims=s_dims, weights=ws,
+                                 step=step, mode=mode)
+        return arr2 -> is_cuda_arr(arr2) ? reg_cuda(arr2) : reg(arr2)
+    end
 end
 
 

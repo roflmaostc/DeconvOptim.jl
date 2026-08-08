@@ -67,10 +67,10 @@ function generate_downsample(num_dim, downsample_dims, factor)
     end
     # combine the different parts and divide for averaging
     expr = [:(@tullio res[$(inds_out...)] := (+($(add...))) / $factor^$(length(downsample_dims)))]
-    #= return expr =#
-    # evaluate to function
-    @eval f = arr -> ($(expr...))
-    return f
+    # evaluate to a closure holding it in a local (avoids the world-age
+    # problem of `@eval f = ...` creating a too-new global binding `f`,
+    # which `return f` in this function would have read from an older world)
+    return Core.eval(@__MODULE__, :(arr -> ($(expr...))))
 end
 
 """

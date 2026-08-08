@@ -21,7 +21,32 @@ end
     reg = Tikhonov(num_dims=1, mode="identity")
     @test 190 ≈ reg(x)
 
+    arr = abs.(randn(Float64, (7, 6, 5)))
 
+    # Tikhonov_cuda (view-based) matches the CPU @tullio kernel for all modes
+    # (build into a variable first, to avoid the @eval world-age flake)
+    tk1 = Tikhonov(num_dims=1, sum_dims=[1], weights=[1])
+    tk1c = Tikhonov_cuda(num_dims=1, sum_dims=[1], weights=[1])
+    @test tk1c(x) ≈ tk1(x)
+
+    arr2d = abs.(randn(Float64, (7, 6)))
+
+    tk2 = Tikhonov(num_dims=2, sum_dims=[1, 2], weights=[1, 2], mode="spatial_grad_square", step=2)
+    tk2c = Tikhonov_cuda(num_dims=2, sum_dims=[1, 2], weights=[1, 2], mode="spatial_grad_square", step=2)
+    @test tk2c(arr2d) ≈ tk2(arr2d)
+
+    tk3 = Tikhonov(num_dims=3, weights=[1.0, 2.0, 3.0], step=2)
+    tk3c = Tikhonov_cuda(num_dims=3, weights=[1.0, 2.0, 3.0], step=2)
+    @test tk3c(arr) ≈ tk3(arr)
+
+    tk4 = Tikhonov(num_dims=3, sum_dims=[1, 3], weights=[1.0, 3.0], mode="spatial_grad_square")
+    tk4c = Tikhonov_cuda(num_dims=3, sum_dims=[1, 3], weights=[1.0, 3.0], mode="spatial_grad_square")
+    @test tk4c(arr) ≈ tk4(arr)
+
+    # identity mode is the same on CPU and CUDA
+    tk5 = Tikhonov(num_dims=3, mode="identity")
+    tk5c = Tikhonov_cuda(num_dims=3, mode="identity")
+    @test tk5(arr) ≈ tk5c(arr)
 end
 
 @testset "Good's roughness" begin
@@ -208,9 +233,29 @@ end
     thw3_cuda = TH_cuda(num_dims=3, weights=[1.0, 2.0, 3.0])
     @test thw3_cuda(x3) ≈ thw3_cpu(x3)
 
+    # Tikhonov: num_dims=nothing selects the same explicit config on CPU
+    tk_auto = Tikhonov()
+    tk_auto_c = Tikhonov(mode="spatial_grad_square", step=2)
+    tk_cpu1 = Tikhonov(num_dims=1, weights=[1])
+    tk_cpu2 = Tikhonov(num_dims=2, weights=[1, 1])
+    tk_cpu3 = Tikhonov(num_dims=3, weights=[1, 1, 1])
+    tk_cpu3g = Tikhonov(num_dims=3, weights=[1, 1, 1], mode="spatial_grad_square", step=2)
+    @test tk_auto(x1) ≈ tk_cpu1(x1)
+    @test tk_auto(x2) ≈ tk_cpu2(x2)
+    @test tk_auto(x3) ≈ tk_cpu3(x3)
+    @test tk_auto_c(x3) ≈ tk_cpu3g(x3)
+
+    # Tikhonov CPU auto == CUDA (view) auto path
+    @test tk_auto(x2) ≈ Tikhonov_cuda(num_dims=nothing)(x2)
+    @test tk_auto(x3) ≈ Tikhonov_cuda(num_dims=nothing)(x3)
+    @test Tikhonov_cuda(num_dims=nothing)(x1) ≈ Tikhonov_cuda(num_dims=1)(x1)
+    @test Tikhonov_cuda(num_dims=nothing)(x4) ≈ Tikhonov_cuda(num_dims=4)(x4)
+
     # unsupported cases throw
     @test_throws ArgumentError GR(mode="bogus")
     @test_throws ArgumentError GR_cuda(mode="bogus")
+    @test_throws ArgumentError Tikhonov(mode="bogus")
+    @test_throws ArgumentError Tikhonov_cuda(mode="bogus")
     @test_throws ArgumentError th_auto(x4)
     @test_throws ArgumentError th_cuda_auto(x4)
     @test_throws ArgumentError DeconvOptim.TH_view(x4)

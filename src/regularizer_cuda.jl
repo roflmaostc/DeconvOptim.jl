@@ -1,4 +1,4 @@
-export TV_cuda, GR_cuda, TH_cuda
+export TV_cuda, GR_cuda, TH_cuda, Tikhonov_cuda
 
 f_inds(rs, b) = ntuple(i -> i == b ? rs[i] .+ 1 : rs[i], length(rs))
 
@@ -295,4 +295,57 @@ function TH_3D_view(arr::AbstractArray{T, N}, weights=nothing, ϵ=1f-8) where {T
            2 * weights[1] * weights[3] * abs2.(a101 .- a100 .- a001 .+ a000) .+
            2 * weights[2] * weights[3] * abs2.(a011 .- a001 .- a010 .+ a000)
     return sum(sqrt.(ϵ .+ term))
+end
+
+function Tikhonov_cuda(; num_dims=nothing, sum_dims=nothing, weights=nothing,
+                       step=1, mode="laplace")
+    if !(mode in ("laplace", "spatial_grad_square", "identity"))
+        throw(ArgumentError("The provided mode is not valid."))
+    end
+    if isnothing(num_dims)
+        return arr -> Tikhonov_view(arr, sum_dims, weights, step, mode)
+    else
+        s_dims = isnothing(sum_dims) ? collect(1:num_dims) : collect(sum_dims)
+        ws = isnothing(weights) ? ones(Int, num_dims) : weights
+        return arr -> Tikhonov_view(arr, s_dims, ws, step, mode)
+    end
+end
+
+function Tikhonov_view(arr::AbstractArray{T, N}, sum_dims=nothing, weights=nothing,
+                       step=1, mode="laplace") where {T, N}
+    if isnothing(sum_dims)
+        sum_dims = collect(1:N)
+    end
+    if isnothing(weights)
+        weights = ones(Float32, N)
+    end
+    if mode == "identity"
+        return sum(abs2.(arr))
+    end
+    off = mode == "spatial_grad_square" ? step : 1
+    rs = ntuple(N) do d
+        if d in sum_dims
+            (first(axes(arr, d)) .+ off):(last(axes(arr, d)) .- off)
+        else
+            axes(arr, d)
+        end
+    end
+    a0 = view(arr, rs...)
+    if mode == "laplace"
+        term = -2 .* sum(weights) .* a0
+        for (d, w) in zip(sum_dims, weights)
+            term = term .+ w .* view(arr, shift_inds(rs, d, 1)...)
+            term = term .+ w .* view(arr, shift_inds(rs, d, -1)...)
+        end
+        return sum(abs2.(term))
+    elseif mode == "spatial_grad_square"
+        term = zero(a0)
+        for (d, w) in zip(sum_dims, weights)
+            term = term .+ w .* abs2.(view(arr, shift_inds(rs, d, step)...) .-
+                                       view(arr, shift_inds(rs, d, (-1) * step)...))
+        end
+        return sum(term)
+    else
+        throw(ArgumentError("The provided mode is not valid."))
+    end
 end
