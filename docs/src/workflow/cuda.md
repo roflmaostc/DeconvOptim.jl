@@ -13,7 +13,12 @@ See also [our 3D example here](https://github.com/roflmaostc/DeconvOptim.jl/blob
 
 ## Issues with Regularizers
 
-However, our approach to express the regularizers with [Tullio.jl](https://github.com/mcabbott/Tullio.jl) is currently not performant with GPUs.
-Therefore, to use `CuArray`s with regularizers, you need to choose [`TV_cuda`](@ref).
-Other regularizers are not yet supported since we hope that Tullio.jl will be one day mature enough to produce
-reasonable fast gradients for CUDA kernels as well.
+Our CPU regularizers are expressed with [Tullio.jl](https://github.com/mcabbott/Tullio.jl), which is currently not performant (and partly unsupported) with GPUs.
+Therefore [`TV()`](@ref), [`GR()`](@ref) and [`TH()`](@ref) automatically dispatch to GPU compliant view/broadcast based implementations when 
+called on a `CuArray`. You can also use the explicit variants [`TV_cuda`](@ref), [`GR_cuda`](@ref) and [`TH_cuda`](@ref).
+This ensures that the gradients are computed with reasonable fast Zygote kernels as well.
+
+All regularizers (both the Tullio and the view/broadcast based variants) accept `num_dims=nothing` in which case the number of dimensions
+is inferred from the array upon use. For [`GR()`](@ref)/[`TV()`](@ref) the CPU path then pre-compiles a `@tullio` kernel for each
+dimension `1:NMAX` (`NMAX = 10`) and dispatches on `ndims(arr)`; arrays with more dimensions or `CuArray`s fall back to the
+view/broadcast based kernels and automatically choose `num_dims`. [`TH()`](@ref)/[`TH_cuda`](@ref) additionally support per-dimension `weights`.
