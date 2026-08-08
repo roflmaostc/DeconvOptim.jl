@@ -337,7 +337,11 @@ function generate_TV(num_dims, sum_dims_arr, weights, ind1, ind2, ϵ=1f-8; debug
 end
 
 # a hack to find out whether the input arr `arr` is a CuArray, without needing to import CuArray
-is_cuda_arr(arr) = startswith("$(typeof(arr))","CuArray")
+# `nameof` gives the bare type name (no module prefix), which stays `CuArray`
+# also for the CUDA.jl >= 1.x layout where the type lives in the `CUDACore`
+# submodule and stringifies as `CUDACore.CuArray{...}` — a plain
+# `startswith(string(typeof(arr)), "CuArray")` would then be false.
+is_cuda_arr(arr) = startswith(string(nameof(typeof(arr))), "CuArray")
 
 """
     TV(; <keyword arguments>)
