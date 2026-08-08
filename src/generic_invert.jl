@@ -36,6 +36,7 @@ function invert(measured, rec0, forward;
     mapping=Non_negative(),
     loss=Poisson(),
     debug_f=nothing,
+    progress=nothing,
     opt_package=Opt_Optim)
 
     # if not special options are given, just restrict iterations
@@ -47,6 +48,34 @@ function invert(measured, rec0, forward;
     if opt_package <: Opt_Optim
         if opt_options === nothing
             opt_options = Optim.Options(iterations=iterations)
+        end
+        # progress reporting (Optim V2/V3 path): when the user passes a
+        # `progress`-compatible object, wrap the Optim callback so each callback
+        # invocation reports the de-mapped reconstruction, the current objective
+        # value, a cumulative elapsed timestamp and the current step. A
+        # self-managed iteration index (starting at 0, the initial state) is used
+        # instead of relying on Optim's `state.iteration`/`pseudo_iteration`
+        # internals, which have changed and differ between solvers. The user
+        # callback (if any) is chained, so behaviour is preserved.
+        if progress !== nothing
+            user_cb = opt_options.callback
+            _t0 = time()
+            _idx = Ref(0)
+            function _opt_cb(os)
+                try
+                    img = mf(os.x)  # de-mapped reconstruction
+                    elapsed = time() - _t0
+                    stepsize = hasproperty(os, :dx) ? os.dx : missing
+                    Base.invokelatest(record_progress!, progress, img, _idx[], os.f_x, elapsed, stepsize)
+                catch
+                end
+                _idx[] += 1
+                if user_cb !== nothing
+                    return user_cb(os)
+                end
+                return false
+            end
+            opt_options = Optim.Options(opt_options; callback=_opt_cb)
         end
     end
 

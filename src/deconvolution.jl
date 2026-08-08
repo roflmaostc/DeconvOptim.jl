@@ -70,6 +70,7 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
         opt=LBFGS(linesearch=BackTracking()),
         initial=mean(measured),
         debug_f=nothing,
+        progress=nothing,
         opt_package=Opt_Optim) where {T, N}
 
 
@@ -163,7 +164,7 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
                           opt_options=opt_options,
                           mapping=mapping,
                           loss=loss,
-                          debug_f=debug_f, opt_package=opt_package)
+                          debug_f=debug_f, progress=progress, opt_package=opt_package)
 
     res_out .*= rescaling
     # since we do some padding we need to extract the center part
