@@ -57,13 +57,13 @@ end
 
 @testset "Generate downsample" begin
     ds = generate_downsample(2, [1,2], 2)
-    @test [2.5] ≈ ds([1 2; 3 4]) 
+    @test [2.5] ≈ @invokelatest ds([1 2; 3 4]) 
     
     ds = generate_downsample(2, [2], 2)
-    @test [1.5; 3.5; 5.5; 7.5] ≈ ds([1 2; 3 4; 5 6; 7 8]) 
+    @test [1.5; 3.5; 5.5; 7.5] ≈ @invokelatest ds([1 2; 3 4; 5 6; 7 8]) 
     
     ds = generate_downsample(2, [1], 2)
-    @test [2.0 3.0; 6.0 7.0] ≈ ds([1 2; 3 4; 5 6; 7 8]) 
+    @test [2.0 3.0; 6.0 7.0] ≈ @invokelatest ds([1 2; 3 4; 5 6; 7 8]) 
 end
 
 
