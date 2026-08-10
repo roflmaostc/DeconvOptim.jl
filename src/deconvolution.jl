@@ -37,6 +37,11 @@ regularizers and mappings.
 - `initial=mean(measured)`: defines a value (or array) with the initial guess. This will be pulled through the inverse mapping function
                      and extended with a mean value (if border regions are used).
 - `debug_f=nothing`: A debug function which must take a single argument, the current reconstruction.
+- `normalize_data` : If true, the data is normalized (mean is one) prior to deconvolution, default: true, 
+                    for a psf which can be positive and negative, you may want to set this to `false`
+  `normalize_psf` : If true, the psf is normalized (sum is one) prior to deconvolution, default: true, 
+                    for a psf which can be positive and negative, you may want to set this to `false`
+
 
 !!! note
     If you want to provide your PSF model, ensure that centered around the first entry of the array (`psf[1]`).
@@ -69,6 +74,8 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
         opt_options=nothing,
         opt=LBFGS(linesearch=BackTracking()),
         initial=mean(measured),
+        normalize_data = true,
+        normalize_psf = true,
         debug_f=nothing,
         progress=nothing,
         opt_package=Opt_Optim) where {T, N}
@@ -101,10 +108,11 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     end
 
     # we divide by the mean to normalize
-    rescaling = mean(measured)
-    measured = measured ./ rescaling
-    initial = initial ./ rescaling
-
+    if (normalize_data)
+        rescaling = mean(measured)
+        measured = measured ./ rescaling
+        initial = initial ./ rescaling
+    end
     # create rec0 which will be the initial guess for the reconstruction
     rec0 = similar(measured, (size_padded)...)
     fill!(rec0, one(eltype(measured)))
@@ -139,7 +147,9 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
     psf = ifftshift(psf_n)
 
     # the psf should be normalized to 1
-    psf ./= sum(psf)
+    if (normalize_psf)
+        psf ./= sum(psf)
+    end
 
     otf, conv_temp = plan_conv(rec0, psf, conv_dims)
 
@@ -166,7 +176,9 @@ function deconvolution(measured::AbstractArray{T, N}, psf;
                           loss=loss,
                           debug_f=debug_f, progress=progress, opt_package=opt_package)
 
-    res_out .*= rescaling
+    if (normalize_data)
+        res_out .*= rescaling
+    end
     # since we do some padding we need to extract the center part
     # for negative paddings, keep the large size.
     if padding > 0.0
