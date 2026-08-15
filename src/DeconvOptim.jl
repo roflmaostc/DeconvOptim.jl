@@ -26,6 +26,7 @@ using ChainRulesCore
 using LinearAlgebra
 
 using FillArrays
+using LazyArrays # @lazy to defer broadcasts
 
 using PrecompileTools
 
@@ -36,6 +37,7 @@ include("mappings.jl")
 # special CUDA regularizers
 include("regularizer_cuda.jl")
 include("regularizer.jl")
+# include("regularizer_ka.jl")  # is fully functional but not faster and therefor currently not included
 include("utils.jl")
 include("conv.jl")
 include("generic_invert.jl")
@@ -46,7 +48,6 @@ include("analysis_tools.jl")
 # refresh Zygote to load the custom rrules defined with ChainRulesCore
 using Zygote: gradient
 
-
 # doesn't save too much but a little
 @setup_workload begin
     img = abs.(randn((4,4,2)))
@@ -55,7 +56,6 @@ using Zygote: gradient
     @compile_workload begin
         deconvolution(Float32.(img), Float32.(psf), regularizer=TV(num_dims=3), iterations=2)
         deconvolution(img, psf, regularizer=TV(num_dims=3), iterations=2)
-
     end
 
 end

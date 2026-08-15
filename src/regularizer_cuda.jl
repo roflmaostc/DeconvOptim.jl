@@ -1,4 +1,3 @@
-export TV_cuda, GR_cuda, TH_cuda, Tikhonov_cuda
 
 f_inds(rs, b) = ntuple(i -> i == b ? rs[i] .+ 1 : rs[i], length(rs))
 
@@ -81,15 +80,18 @@ function TV_view(arr::AbstractArray{T, N}, sum_dims=nothing, weights=nothing,
     term = zero(arr0)
     if mode == "forward"
         for (d, w) in zip(sum_dims, weights)
-            term = term .+ w .* (view(arr, shift_inds(rs, d, step)...) .- arr0).^2
+            term = @~ (term .+ w .* (view(arr, shift_inds(rs, d, step)...) .- arr0).^2)
         end
     else
         for (d, w) in zip(sum_dims, weights)
-            term = term .+ w .* (view(arr, shift_inds(rs, d, step)...) .-
-                                 view(arr, shift_inds(rs, d, -step)...)).^2
+            term = @~ (term .+ w .* (view(arr, shift_inds(rs, d, step)...) .-
+                                 view(arr, shift_inds(rs, d, -step)...)).^2)
         end
     end
-    return @fastmath sum(sqrt.(ϵ .+ term))
+    expr = @~ (sqrt.(ϵ .+ term))
+    return @fastmath sum(expr)
+    # br_exp = Broadcast.instantiate(Broadcast.broadcasted(absdif, (@view a[2:end,:]), (@view a[1:end-1,:])));
+    # return @fastmath sum(sqrt.(ϵ .+ term))
 end
 
 function TV_1D_view(arr::AbstractArray{T, N}, weights=nothing, ϵ=1f-8) where {T, N}
@@ -193,16 +195,18 @@ function GR_cuda_apply(arr::AbstractArray{T, N}, s_dims, ws, step, mode, ϵ) whe
     term = zero(a0)
     if mode == "forward"
         for (d, w) in zip(s_dims, ws)
-            term = term .+ w .* (view(a, shift_inds(rs, d, step)...) .+ a0)
+            term = @~ (term .+ w .* (view(a, shift_inds(rs, d, step)...) .+ a0))
         end
     else
         for (d, w) in zip(s_dims, ws)
-            term = term .+ w .* (view(a, shift_inds(rs, d, step)...) .+
-                                 view(a, shift_inds(rs, d, -step)...))
+            term = @~ (term .+ w .* (view(a, shift_inds(rs, d, step)...) .+
+                                 view(a, shift_inds(rs, d, -step)...)))
         end
     end
     prefactor = mode == "forward" ? -4 / step : -2 / step
-    return prefactor * sum(a0 .* (term .- 2 * sum(ws) * a0))
+    sw = sum(ws)
+    expr = @~ (a0 .* (term .- ((2 * sw) .* a0)))
+    return @fastmath prefactor * sum(expr) # fused the sum with the broadcast
 end
 
 
@@ -253,7 +257,8 @@ function TH_1D_view(arr::AbstractArray{T, N}, weights=nothing, ϵ=1f-8) where {T
     a0 = view(arr, rs)
     am = view(arr, rs .- 1)
     ap = view(arr, rs .+ 1)
-    return sum(sqrt.(ϵ .+ weights[1]^2 .* abs2.(ap .+ am .- 2 .* a0)))
+    expr = @~ (sqrt.(ϵ .+ (weights[1]*weights[1]) .* abs2.(ap .+ am .- 2 .* a0)))
+    return @fastmath sum(expr) # fused the sum with the broadcast
 end
 
 function TH_2D_view(arr::AbstractArray{T, N}, weights=nothing, ϵ=1f-8) where {T, N}
@@ -267,10 +272,14 @@ function TH_2D_view(arr::AbstractArray{T, N}, weights=nothing, ϵ=1f-8) where {T
     a01 = view(arr, rs[1], rs[2] .+ 1)
     a0m = view(arr, rs[1], rs[2] .- 1)
     a11 = view(arr, rs[1] .+ 1, rs[2] .+ 1)
-    term = weights[1]^2 * abs2.(a10 .+ am0 .- 2 .* a00) .+
-           weights[2]^2 * abs2.(a01 .+ a0m .- 2 .* a00) .+
-           2 * weights[1] * weights[2] * abs2.(a11 .- a10 .- a01 .+ a00)
-    return sum(sqrt.(ϵ .+ term))
+    w11 = weights[1]*weights[1];
+    w22 = weights[2]*weights[2];
+    w12 = 2*weights[1]*weights[2];
+    term = @~ (w11 .* abs2.(a10 .+ am0 .- 2 .* a00) .+ 
+               w22 .* abs2.(a01 .+ a0m .- 2 .* a00)  .+
+               w12 .* abs2.(a11 .- a10 .- a01 .+ a00));
+    expr = @~ (sqrt.(ϵ .+ term))
+    return @fastmath sum(expr) # fused the sum with the broadcast
 end
 
 function TH_3D_view(arr::AbstractArray{T, N}, weights=nothing, ϵ=1f-8) where {T, N}
@@ -288,13 +297,20 @@ function TH_3D_view(arr::AbstractArray{T, N}, weights=nothing, ϵ=1f-8) where {T
     a110 = view(arr, rs[1] .+ 1, rs[2] .+ 1, rs[3])
     a101 = view(arr, rs[1] .+ 1, rs[2], rs[3] .+ 1)
     a011 = view(arr, rs[1], rs[2] .+ 1, rs[3] .+ 1)
-    term = weights[1]^2 * abs2.(a100 .+ am00 .- 2 .* a000) .+
-           weights[2]^2 * abs2.(a010 .+ a0m0 .- 2 .* a000) .+
-           weights[3]^2 * abs2.(a001 .+ a00m .- 2 .* a000) .+
-           2 * weights[1] * weights[2] * abs2.(a110 .- a100 .- a010 .+ a000) .+
-           2 * weights[1] * weights[3] * abs2.(a101 .- a100 .- a001 .+ a000) .+
-           2 * weights[2] * weights[3] * abs2.(a011 .- a001 .- a010 .+ a000)
-    return sum(sqrt.(ϵ .+ term))
+    w11 = weights[1]*weights[1];
+    w22 = weights[2]*weights[2];
+    w33 = weights[3]*weights[3];
+    w12 = 2*weights[1]*weights[2];
+    w13 = 2*weights[1]*weights[3];
+    w23 = 2*weights[2]*weights[3];
+    term = @~ (w11 .* abs2.(a100 .+ am00 .- 2 .* a000) .+
+           w22 .* abs2.(a010 .+ a0m0 .- 2 .* a000) .+
+           w33 .* abs2.(a001 .+ a00m .- 2 .* a000) .+
+           w12 .* abs2.(a110 .- a100 .- a010 .+ a000) .+
+           w13 .* abs2.(a101 .- a100 .- a001 .+ a000) .+
+           w23 .* abs2.(a011 .- a001 .- a010 .+ a000))
+    expr = @~ (sqrt.(ϵ .+ term))
+    return @fastmath sum(expr)  # fused the sum with the broadcast
 end
 
 function Tikhonov_cuda(; num_dims=nothing, sum_dims=nothing, weights=nothing,
@@ -332,19 +348,21 @@ function Tikhonov_view(arr::AbstractArray{T, N}, sum_dims=nothing, weights=nothi
     end
     a0 = view(arr, rs...)
     if mode == "laplace"
-        term = -2 .* sum(weights) .* a0
+        sw = -2 .* sum(weights)
+        term = @~ sw .* a0
         for (d, w) in zip(sum_dims, weights)
-            term = term .+ w .* view(arr, shift_inds(rs, d, 1)...)
-            term = term .+ w .* view(arr, shift_inds(rs, d, -1)...)
+            term = @~ (term .+ w .* view(arr, shift_inds(rs, d, 1)...))
+            term = @~ (term .+ w .* view(arr, shift_inds(rs, d, -1)...))
         end
-        return sum(abs2.(term))
+        expr = @~ abs2.(term)
+        return @fastmath sum(expr)
     elseif mode == "spatial_grad_square"
         term = zero(a0)
         for (d, w) in zip(sum_dims, weights)
-            term = term .+ w .* abs2.(view(arr, shift_inds(rs, d, step)...) .-
-                                       view(arr, shift_inds(rs, d, (-1) * step)...))
+            term = @~ (term .+ w .* abs2.(view(arr, shift_inds(rs, d, step)...) .-
+                                       view(arr, shift_inds(rs, d, (-1) * step)...)))
         end
-        return sum(term)
+        return @fastmath um(term)
     else
         throw(ArgumentError("The provided mode is not valid."))
     end
