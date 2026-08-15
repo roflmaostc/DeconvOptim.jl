@@ -362,7 +362,7 @@ function Tikhonov_view(arr::AbstractArray{T, N}, sum_dims=nothing, weights=nothi
             term = @~ (term .+ w .* abs2.(view(arr, shift_inds(rs, d, step)...) .-
                                        view(arr, shift_inds(rs, d, (-1) * step)...)))
         end
-        return @fastmath um(term)
+        return @fastmath sum(term)
     else
         throw(ArgumentError("The provided mode is not valid."))
     end

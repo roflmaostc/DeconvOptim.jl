@@ -26,26 +26,26 @@ end
     # Tikhonov_cuda (view-based) matches the CPU @tullio kernel for all modes
     # (build into a variable first, to avoid the @eval world-age flake)
     tk1 = Tikhonov(num_dims=1, sum_dims=[1], weights=[1])
-    tk1c = Tikhonov_cuda(num_dims=1, sum_dims=[1], weights=[1])
+    tk1c = DeconvOptim.Tikhonov_cuda(num_dims=1, sum_dims=[1], weights=[1])
     @test tk1c(x) ≈ tk1(x)
 
     arr2d = abs.(randn(Float64, (7, 6)))
 
     tk2 = Tikhonov(num_dims=2, sum_dims=[1, 2], weights=[1, 2], mode="spatial_grad_square", step=2)
-    tk2c = Tikhonov_cuda(num_dims=2, sum_dims=[1, 2], weights=[1, 2], mode="spatial_grad_square", step=2)
+    tk2c = DeconvOptim.Tikhonov_cuda(num_dims=2, sum_dims=[1, 2], weights=[1, 2], mode="spatial_grad_square", step=2)
     @test tk2c(arr2d) ≈ tk2(arr2d)
 
     tk3 = Tikhonov(num_dims=3, weights=[1.0, 2.0, 3.0], step=2)
-    tk3c = Tikhonov_cuda(num_dims=3, weights=[1.0, 2.0, 3.0], step=2)
+    tk3c = DeconvOptim.Tikhonov_cuda(num_dims=3, weights=[1.0, 2.0, 3.0], step=2)
     @test tk3c(arr) ≈ tk3(arr)
 
     tk4 = Tikhonov(num_dims=3, sum_dims=[1, 3], weights=[1.0, 3.0], mode="spatial_grad_square")
-    tk4c = Tikhonov_cuda(num_dims=3, sum_dims=[1, 3], weights=[1.0, 3.0], mode="spatial_grad_square")
+    tk4c = DeconvOptim.Tikhonov_cuda(num_dims=3, sum_dims=[1, 3], weights=[1.0, 3.0], mode="spatial_grad_square")
     @test tk4c(arr) ≈ tk4(arr)
 
     # identity mode is the same on CPU and CUDA
     tk5 = Tikhonov(num_dims=3, mode="identity")
-    tk5c = Tikhonov_cuda(num_dims=3, mode="identity")
+    tk5c = DeconvOptim.Tikhonov_cuda(num_dims=3, mode="identity")
     @test tk5(arr) ≈ tk5c(arr)
 end
 
@@ -66,37 +66,37 @@ end
 @testset "GR_cuda" begin
     x = [1,2,3,1,3,1,12.0,2,2,3,2.0]
     reg_cpu = GR(num_dims=1, sum_dims=[1], weights=[1])
-    reg_gpu = GR_cuda(num_dims=1, sum_dims=[1], weights=[1])
+    reg_gpu = DeconvOptim.GR_cuda(num_dims=1, sum_dims=[1], weights=[1])
     @test reg_gpu(x) ≈ reg_cpu(x)
 
     arr = abs.(randn(Float64, (6, 5, 7)))
 
     reg_cpu = GR(num_dims=3, sum_dims=[1, 2, 3], weights=[1, 1, 2], mode="forward", step=1)
-    reg_gpu = GR_cuda(num_dims=3, sum_dims=[1, 2, 3], weights=[1, 1, 2], mode="forward", step=1)
+    reg_gpu = DeconvOptim.GR_cuda(num_dims=3, sum_dims=[1, 2, 3], weights=[1, 1, 2], mode="forward", step=1)
     @test reg_gpu(arr) ≈ reg_cpu(arr)
 
     reg_cpu = GR(num_dims=3, sum_dims=[1, 2, 3], weights=[1, 1, 2], mode="central", step=1)
-    reg_gpu = GR_cuda(num_dims=3, sum_dims=[1, 2, 3], weights=[1, 1, 2], mode="central", step=1)
+    reg_gpu = DeconvOptim.GR_cuda(num_dims=3, sum_dims=[1, 2, 3], weights=[1, 1, 2], mode="central", step=1)
     @test reg_gpu(arr) ≈ reg_cpu(arr)
 
     reg_cpu = GR(num_dims=3, sum_dims=[1, 2, 3], weights=[1, 1, 2], mode="forward", step=2)
-    reg_gpu = GR_cuda(num_dims=3, sum_dims=[1, 2, 3], weights=[1, 1, 2], mode="forward", step=2)
+    reg_gpu = DeconvOptim.GR_cuda(num_dims=3, sum_dims=[1, 2, 3], weights=[1, 1, 2], mode="forward", step=2)
     @test reg_gpu(arr) ≈ reg_cpu(arr)
 
     # partial sum dimensions
     arr4 = abs.(randn(Float64, (3, 5, 4, 3)))
     reg_cpu = GR(num_dims=4, sum_dims=[1, 2], weights=[1, 1], mode="forward")
-    reg_gpu = GR_cuda(num_dims=4, sum_dims=[1, 2], weights=[1, 1], mode="forward")
+    reg_gpu = DeconvOptim.GR_cuda(num_dims=4, sum_dims=[1, 2], weights=[1, 1], mode="forward")
     @test reg_gpu(arr4) ≈ reg_cpu(arr4)
 
     # central mode and step>1 with non-uniform weights (view kernel == @tullio)
     reg_cpu = GR(num_dims=3, sum_dims=[1, 2, 3], weights=[1.0, 2.0, 3.0], mode="central", step=2)
-    reg_gpu = GR_cuda(num_dims=3, sum_dims=[1, 2, 3], weights=[1.0, 2.0, 3.0], mode="central", step=2)
+    reg_gpu = DeconvOptim.GR_cuda(num_dims=3, sum_dims=[1, 2, 3], weights=[1.0, 2.0, 3.0], mode="central", step=2)
     @test reg_gpu(arr) ≈ reg_cpu(arr)
 
     # explicit num_dims both forward and central match the view kernels
     reg_cpu = GR(num_dims=3, weights=[1.0, 2.0, 3.0], mode="central")
-    reg_gpu = GR_cuda(num_dims=3, weights=[1.0, 2.0, 3.0], mode="central")
+    reg_gpu = DeconvOptim.GR_cuda(num_dims=3, weights=[1.0, 2.0, 3.0], mode="central")
     @test reg_gpu(arr) ≈ reg_cpu(arr)
 end
 
@@ -107,8 +107,8 @@ end
     @test 31.00010002845424 ≈ reg(x)
 
     # tests would fail:
-    # @test TV_cuda(num_dims=2)(x) ≈ reg(x)
-    # @test TV_cuda(num_dims=3)(x) ≈ reg(x)
+    # @test DeconvOptim.TV_cuda(num_dims=2)(x) ≈ reg(x)
+    # @test DeconvOptim.TV_cuda(num_dims=3)(x) ≈ reg(x)
 
     x = generate_TV(4, [1,2], [5, 7], 1, -1, debug=true)
     @test x == Any[:(res = sqrt(5 * abs2(arr[i1 + 1, i2, i3, i4] - arr[i1 + -1, i2, i3, i4]) + 7 * abs2(arr[i1, i2 + 1, i3, i4] - arr[i1, i2 + -1, i3, i4]) + 1.0f-8))]
@@ -119,19 +119,19 @@ end
     # central mode, custom step and subset sum_dims
     # (build into a variable first, to avoid the @eval world-age flake)
     tv1 = TV(num_dims=3, mode="forward", step=2, weights=[1.0, 2.0, 3.0])
-    tv1c = TV_cuda(num_dims=3, mode="forward", step=2, weights=[1.0, 2.0, 3.0])
+    tv1c = DeconvOptim.TV_cuda(num_dims=3, mode="forward", step=2, weights=[1.0, 2.0, 3.0])
     @test tv1(arr) ≈ tv1c(arr)
 
     tv2 = TV(num_dims=3, mode="central", weights=[1.0, 2.0, 3.0])
-    tv2c = TV_cuda(num_dims=3, mode="central", weights=[1.0, 2.0, 3.0])
+    tv2c = DeconvOptim.TV_cuda(num_dims=3, mode="central", weights=[1.0, 2.0, 3.0])
     @test tv2(arr) ≈ tv2c(arr)
 
     tv3 = TV(num_dims=3, sum_dims=[1, 3], weights=[1.0, 3.0])
-    tv3c = TV_cuda(num_dims=3, sum_dims=[1, 3], weights=[1.0, 3.0])
+    tv3c = DeconvOptim.TV_cuda(num_dims=3, sum_dims=[1, 3], weights=[1.0, 3.0])
     @test tv3(arr) ≈ tv3c(arr)
 
     tv4 = TV(num_dims=3, mode="central", step=2)
-    tv4c = TV_cuda(num_dims=3, mode="central", step=2)
+    tv4c = DeconvOptim.TV_cuda(num_dims=3, mode="central", step=2)
     @test tv4(arr) ≈ tv4c(arr)
 
 end
@@ -140,17 +140,17 @@ end
 @testset "TH" begin
     a1 = abs.(randn(Float64, 7))
     th_cpu1 = TH(num_dims=1)
-    th_gpu1 = TH_cuda(num_dims=1)
+    th_gpu1 = DeconvOptim.TH_cuda(num_dims=1)
     @test th_gpu1(a1) ≈ th_cpu1(a1)
 
     a2 = abs.(randn(Float64, (7, 7)))
     th_cpu2 = TH(num_dims=2)
-    th_gpu2 = TH_cuda(num_dims=2)
+    th_gpu2 = DeconvOptim.TH_cuda(num_dims=2)
     @test th_gpu2(a2) ≈ th_cpu2(a2)
 
     a3 = abs.(randn(Float64, (7, 7, 7)))
     th_cpu3 = TH(num_dims=3)
-    th_gpu3 = TH_cuda(num_dims=3)
+    th_gpu3 = DeconvOptim.TH_cuda(num_dims=3)
     @test th_gpu3(a3) ≈ th_cpu3(a3)
 end
 
@@ -177,12 +177,12 @@ end
     @test gr_auto_c(x3) ≈ gr_cpu3c(x3)
 
     # GR CUDA auto path (view-based) matches explicit CUDA path
-    @test GR_cuda(num_dims=nothing)(x1) ≈ GR_cuda(num_dims=1)(x1)
-    @test GR_cuda(num_dims=nothing)(x2) ≈ GR_cuda(num_dims=2)(x2)
-    @test GR_cuda(num_dims=nothing)(x3) ≈ GR_cuda(num_dims=3)(x3)
-    @test GR_cuda(num_dims=nothing)(x4) ≈ GR_cuda(num_dims=4)(x4)
-    @test GR_cuda()(x2) ≈ gr_auto(x2)
-    @test GR_cuda()(x4) ≈ gr_auto(x4)
+    @test DeconvOptim.GR_cuda(num_dims=nothing)(x1) ≈ DeconvOptim.GR_cuda(num_dims=1)(x1)
+    @test DeconvOptim.GR_cuda(num_dims=nothing)(x2) ≈ DeconvOptim.GR_cuda(num_dims=2)(x2)
+    @test DeconvOptim.GR_cuda(num_dims=nothing)(x3) ≈ DeconvOptim.GR_cuda(num_dims=3)(x3)
+    @test DeconvOptim.GR_cuda(num_dims=nothing)(x4) ≈ DeconvOptim.GR_cuda(num_dims=4)(x4)
+    @test DeconvOptim.GR_cuda()(x2) ≈ gr_auto(x2)
+    @test DeconvOptim.GR_cuda()(x4) ≈ gr_auto(x4)
 
     # TV: num_dims=nothing selects the same explicit config on CPU
     tv_auto = TV()
@@ -197,8 +197,8 @@ end
     @test tv_auto_c(x3) ≈ tv_cpu3c(x3)
 
     # TV autoc PU == view kernel
-    @test tv_auto(x2) ≈ TV_cuda(num_dims=nothing)(x2)
-    @test tv_auto(x3) ≈ TV_cuda(num_dims=nothing)(x3)
+    @test tv_auto(x2) ≈ DeconvOptim.TV_cuda(num_dims=nothing)(x2)
+    @test tv_auto(x3) ≈ DeconvOptim.TV_cuda(num_dims=nothing)(x3)
 
     # TH: num_dims=nothing selects 1/2/3-D kernel automatically
     th_auto = TH()
@@ -210,10 +210,10 @@ end
     @test th_auto(x3) ≈ th_cpu3(x3)
 
     # TH CUDA auto path via TH_view
-    th_cuda_auto = TH_cuda(num_dims=nothing)
-    th_cuda1 = TH_cuda(num_dims=1)
-    th_cuda2 = TH_cuda(num_dims=2)
-    th_cuda3 = TH_cuda(num_dims=3)
+    th_cuda_auto = DeconvOptim.TH_cuda(num_dims=nothing)
+    th_cuda1 = DeconvOptim.TH_cuda(num_dims=1)
+    th_cuda2 = DeconvOptim.TH_cuda(num_dims=2)
+    th_cuda3 = DeconvOptim.TH_cuda(num_dims=3)
     @test th_cuda_auto(x1) ≈ th_cuda1(x1)
     @test th_cuda_auto(x2) ≈ th_cuda2(x2)
     @test th_cuda_auto(x3) ≈ th_cuda3(x3)
@@ -227,10 +227,10 @@ end
 
     # TH weights: CPU (@tullio) == CUDA (view) and explicit == what weights do
     thw_cpu = TH(num_dims=2, weights=[0.5, 2.0])
-    thw_cuda = TH_cuda(num_dims=2, weights=[0.5, 2.0])
+    thw_cuda = DeconvOptim.TH_cuda(num_dims=2, weights=[0.5, 2.0])
     @test thw_cuda(x2) ≈ thw_cpu(x2)
     thw3_cpu = TH(num_dims=3, weights=[1.0, 2.0, 3.0])
-    thw3_cuda = TH_cuda(num_dims=3, weights=[1.0, 2.0, 3.0])
+    thw3_cuda = DeconvOptim.TH_cuda(num_dims=3, weights=[1.0, 2.0, 3.0])
     @test thw3_cuda(x3) ≈ thw3_cpu(x3)
 
     # Tikhonov: num_dims=nothing selects the same explicit config on CPU
@@ -246,16 +246,16 @@ end
     @test tk_auto_c(x3) ≈ tk_cpu3g(x3)
 
     # Tikhonov CPU auto == CUDA (view) auto path
-    @test tk_auto(x2) ≈ Tikhonov_cuda(num_dims=nothing)(x2)
-    @test tk_auto(x3) ≈ Tikhonov_cuda(num_dims=nothing)(x3)
-    @test Tikhonov_cuda(num_dims=nothing)(x1) ≈ Tikhonov_cuda(num_dims=1)(x1)
-    @test Tikhonov_cuda(num_dims=nothing)(x4) ≈ Tikhonov_cuda(num_dims=4)(x4)
+    @test tk_auto(x2) ≈ DeconvOptim.Tikhonov_cuda(num_dims=nothing)(x2)
+    @test tk_auto(x3) ≈ DeconvOptim.Tikhonov_cuda(num_dims=nothing)(x3)
+    @test DeconvOptim.Tikhonov_cuda(num_dims=nothing)(x1) ≈ DeconvOptim.Tikhonov_cuda(num_dims=1)(x1)
+    @test DeconvOptim.Tikhonov_cuda(num_dims=nothing)(x4) ≈ DeconvOptim.Tikhonov_cuda(num_dims=4)(x4)
 
     # unsupported cases throw
     @test_throws ArgumentError GR(mode="bogus")
-    @test_throws ArgumentError GR_cuda(mode="bogus")
+    @test_throws ArgumentError DeconvOptim.GR_cuda(mode="bogus")
     @test_throws ArgumentError Tikhonov(mode="bogus")
-    @test_throws ArgumentError Tikhonov_cuda(mode="bogus")
+    @test_throws ArgumentError DeconvOptim.Tikhonov_cuda(mode="bogus")
     @test_throws ArgumentError th_auto(x4)
     @test_throws ArgumentError th_cuda_auto(x4)
     @test_throws ArgumentError DeconvOptim.TH_view(x4)
