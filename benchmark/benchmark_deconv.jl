@@ -1,5 +1,6 @@
 # here we compare various deconvolution options in terms of image quality
-using DeconvOptim, SyntheticObjects, BenchmarkTools, Random, Noise, NDTools
+# add SyntheticObjects, NDTools, CUDA
+using DeconvOptim, SyntheticObjects, Random, Noise, NDTools
 using CUDA
 using View5D
 
@@ -51,7 +52,7 @@ function main()
         # R = TV(num_dims=3) # num_dims=3
         CUDA.@time @CUDA.sync res_tv = deconvolution(measured, psf; mapping=Non_negative(), regularizer = R, iterations=iterations);
         @time res_tv = deconvolution(measured, psf; mapping=Non_negative(), regularizer = R, iterations=iterations);
-        # TV(): CUDA: 3.2 sec, CPU: 21.91 sec, CPU view version: 48.04 sec 
+        # TV(): CUDA: 2.9 sec, CPU: 21.91 sec, CPU view version: 48.04 sec 
         # OldV0.7.4, TV(): CUDA: 3.21 sec, CPU: 32.43 sec, CPU view version: 82.82 sec  (only with num_dims=3)
 
         CUDA.reclaim()
@@ -59,8 +60,17 @@ function main()
         R = TH()
         CUDA.@time @CUDA.sync res_th = deconvolution(measured, psf; mapping=Non_negative(), regularizer = R, iterations=iterations);
         @time res_th = deconvolution(measured, psf; mapping=Non_negative(), regularizer = R, iterations=iterations);
-        # TH(): CUDA: 5.68 sec, CPU: 23.78 sec, CPU view version: 88 sec
+        # TH(): CUDA: 4.9 sec, CPU: 23.78 sec, CPU view version: 88 sec
         # OldV0.7.4, TH(): CUDA: (error) sec, CPU: 31.11 sec, CPU view version: (not existing) sec  (only with num_dims=3)
+
+        CUDA.reclaim()
+        # R = TH(num_dims=3)
+        R = HS() # p=1
+        # R = DeconvOptim.HS_cuda()
+        CUDA.@time @CUDA.sync res_hs = deconvolution(measured, psf; mapping=Non_negative(), regularizer = R, iterations=iterations);
+        @time res_hs = deconvolution(measured, psf; mapping=Non_negative(), regularizer = R, iterations=iterations);
+        # HS(): CUDA: 4.23 sec, CPU: 68 sec, CPU view version: (not existing)
+        # OldV0.7.4, TH(): CUDA: (error) sec, CPU: 31.11 sec, CPU view version: (not existing) (only with num_dims=3)
 
         @vt obj
         @vt measured

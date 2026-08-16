@@ -5,15 +5,15 @@ export HS
 # * Lefkimmiatis, Stamatios, and Michael Unser. "Poisson image reconstruction with Hessian Schatten-norm regularization." IEEE transactions on image processing 22.11 (2013): 4314-4327.
 
 function Δr1r1(x)
-    return @tullio res[i, j] := x[i+2, j+0] - 2 * x[i+1, j] + x[i, j] (i in 1:size(x)[1]-2, j in 1:size(x)[2]-2)
+    return @tullio res[i+_, j+_] := x[i+1, j+0] - 2 * x[i+0, j+0] + x[i-1, j+0] (i in 2:size(x)[1]-1, j in 2:size(x)[2]-1)
 end
 
 function Δr2r2(x)
-    return @tullio res[i, j] := x[i+0, j+2] - 2 * x[i, j+1] + x[i, j] (i in 1:size(x)[1]-2, j in 1:size(x)[2]-2)
+    return @tullio res[i+_, j+_] := x[i+0, j+1] - 2 * x[i+0, j+0] + x[i+0, j-1] (i in 2:size(x)[1]-1, j in 2:size(x)[2]-1)
 end
 
 function Δr1r2(x)
-    return @tullio res[i, j] := x[i+1, j+1] - x[i+1, j] - x[i, j+1]  + x[i, j] (i in 1:size(x)[1]-2, j in 1:size(x)[2]-2)
+    return @tullio res[i+_, j+_] := 0.25f0 * (x[i+1, j+1] - x[i-1, j+1] - x[i+1, j-1] + x[i-1, j-1]) (i in 2:size(x)[1]-1, j in 2:size(x)[2]-1)
 end
 
 
@@ -34,8 +34,10 @@ limited to exactly two dimensions; passing more throws an `ArgumentError`.
 of dimension `d` enters with `weights[k]^2` and the cross entry between the
 two dimensions enters with `2 * weights[k] * weights[l]`.
 
-The computation is regularized by an internal smoothing constant `1f-8` (see
-`ϵ` in `TV`/`TH`), so that the norm is differentiable.
+The pixel-wise Hessian uses centered (symmetric) second-order stencils, so the
+norm has no preferred direction. The computation is regularized by an internal
+smoothing constant `1f-8` (see `ϵ` in `TV`/`TH`), so that the norm is
+differentiable.
 
 # Arguments
 - `p=1`: The order `p` of the Schatten norm. `p=1` uses a cheap fast path.
@@ -59,21 +61,30 @@ function HS1(arr; sum_dims=nothing, weights=nothing)
     if isnothing(sum_dims) && isnothing(weights) && ndims(arr) == 2
         H11 = Δr1r1(arr)
         H22 = Δr2r2(arr)
-        return schatten_norm_1(H11, H22)
+        H12 = Δr1r2(arr)
+        return schatten_norm_1(H11, H12, H22)
     end
     d1, d2 = hs_validate_sum_dims(arr, sum_dims)
     w = hs_weights(weights)
     H11 = hs_diag(arr, d1, (d1, d2))
     H22 = hs_diag(arr, d2, (d1, d2))
+    H12 = hs_cross(arr, d1, d2)
     w1sq = w[1] * w[1]
     w2sq = w[2] * w[2]
-    trace = @~ w1sq .* H11 .+ w2sq .* H22
-    return @fastmath sum(abs.(1f-8 .+ trace))
+    w12  = w[1] * w[2]
+    a = @~ w1sq .* H11
+    d = @~ w2sq .* H22
+    b = @~ w12 .* H12
+    λ1, λ2 = hs_eigvals(a, b, d)
+    expr = @~ abs.(1f-8 .+ λ1) .+ abs.(1f-8 .+ λ2)
+    return @fastmath sum(expr)
 end
 
-function schatten_norm_1(a, d)
-    @tullio A[i, j] := a[i, j] + d[i, j]
-    @tullio res = abs(1f-8 + A[i, j])
+# p=1 fast path over precomputed Hessian components (2D), in the same closed
+# form as the generic path so that both branches agree exactly
+function schatten_norm_1(a, b, d)
+    λ1, λ2 = eigvals_symmetric_tullio(a, b, d)
+    return @tullio res = abs(1f-8 + λ1[i, j]) + abs(1f-8 + λ2[i, j])
 end
 
 """
@@ -94,11 +105,13 @@ function HSp(arr; p=1, sum_dims=nothing, weights=nothing)
     H12 = hs_cross(arr, d1, d2)
     w1sq = w[1] * w[1]
     w2sq = w[2] * w[2]
+    w12  = w[1] * w[2]
     a = @~ w1sq .* H11
     d = @~ w2sq .* H22
-    b = @~ (w[1] * w[2]) .* H12
+    b = @~ w12 .* H12
     λ1, λ2 = hs_eigvals(a, b, d)
-    return @fastmath sum(abs.((1f-8 .+ λ1.^p .+ λ2.^p)).^(1 / p))
+    expr = @~ (abs.(1f-8 .+ λ1).^p .+ abs.(1f-8 .+ λ2).^p).^(1 / p)
+    return @fastmath sum(expr)
 end
 
 
@@ -127,21 +140,23 @@ function hs_validate_sum_dims(arr, sum_dims)
     return d
 end
 
-# positional weights aligned to `sum_dims`
+# positional weights aligned to `sum_dims`; written non-mutating so that
+# Zygote can differentiate through it when `weights` is a captured constant
 function hs_weights(weights)
     if isnothing(weights)
         return ones(Float32, 2)
     elseif length(weights) >= 2
-        return collect(Float32, weights[1:2])
+        return Float32.(weights[1:2])
     else
         return vcat(Float32.(weights), ones(Float32, 2 - length(weights)))
     end
 end
 
-# base index ranges: dims in `s_dims` are cropped by 2 (the finite-difference
-# stencils need two neighbours), all other dims keep their full range
+# base index ranges: dims in `s_dims` are cropped by 1 (the centered
+# finite-difference stencils need one neighbour on each side), all other dims
+# keep their full range
 function hs_ranges(arr, s_dims)
-    return ntuple(i -> i in s_dims ? Base.OneTo(size(arr, i) - 2) : axes(arr, i), ndims(arr))
+    return ntuple(i -> i in s_dims ? (2:(size(arr, i) - 1)) : axes(arr, i), ndims(arr))
 end
 
 # apply integer offsets to a (subset of) dims of an index range tuple
@@ -149,29 +164,30 @@ function hs_offs(rs, offs::Dict{Int,Int})
     return ntuple(i -> haskey(offs, i) ? (rs[i] .+ offs[i]) : rs[i], length(rs))
 end
 
-# second derivative along dim `d`: x[i+2] - 2 x[i+1] + x[i]
+# second derivative along dim `d`: x[i+1] - 2 x[i] + x[i-1]
 function hs_diag(arr, d, s_dims)
     rs = hs_ranges(arr, s_dims)
     a0 = view(arr, rs...)
     a1 = view(arr, hs_offs(rs, Dict(d => 1))...)
-    a2 = view(arr, hs_offs(rs, Dict(d => 2))...)
-    return a2 .- 2 .* a1 .+ a0
+    am1 = view(arr, hs_offs(rs, Dict(d => -1))...)
+    return @~ a1 .- 2 .* a0 .+ am1
 end
 
-# mixed derivative along dims `d` and `e`: x[i+1,j+1] - x[i+1,j] - x[i,j+1] + x[i,j]
+# mixed derivative along dims `d` and `e`:
+# 1/4 (x[i+1,j+1] - x[i-1,j+1] - x[i+1,j-1] + x[i-1,j-1])
 function hs_cross(arr, d, e)
     rs = hs_ranges(arr, (d, e))
-    a00 = view(arr, rs...)
-    a10 = view(arr, hs_offs(rs, Dict(d => 1))...)
-    a01 = view(arr, hs_offs(rs, Dict(e => 1))...)
     a11 = view(arr, hs_offs(rs, Dict(d => 1, e => 1))...)
-    return a11 .- a10 .- a01 .+ a00
+    am1_1 = view(arr, hs_offs(rs, Dict(d => -1, e => 1))...)
+    a1_m1 = view(arr, hs_offs(rs, Dict(d => 1, e => -1))...)
+    am1_m1 = view(arr, hs_offs(rs, Dict(d => -1, e => -1))...)
+    return @~ 0.25f0 .* (a11 .- am1_1 .- a1_m1 .+ am1_m1)
 end
 
 # eigenvalues of the weighted 2x2 pixel-wise Hessian [[a, b], [b, d]]
 function hs_eigvals(a, b, d)
-    A = a .+ d
-    B = sqrt.(1f-8 .+ (a .- d).^2 .+ 4 .* b.^2)
+    A = @~ a .+ d
+    B = @~ sqrt.(1f-8 .+ (a .- d).^2 .+ 4 .* b.^2)
     λ1 = @~ 0.5 .* (A .+ B)
     λ2 = @~ 0.5 .* (A .- B)
     return λ1, λ2
@@ -185,7 +201,7 @@ end
 
 function schatten_norm_tullio(H11, H12, H22, p)
     λ₁, λ₂ = eigvals_symmetric_tullio(H11, H12, H22)
-    return @tullio res = abs((1f-8 + λ₁[i, j]^p + λ₂[i, j]^p))^(1/p)
+    return @tullio res = (abs(1f-8 + λ₁[i, j])^p + abs(1f-8 + λ₂[i, j])^p)^(1/p)
 end
 
 """

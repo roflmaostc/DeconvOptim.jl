@@ -65,6 +65,6 @@ Smooth second order regularizers often lead to more natural reconstructions than
 # Hessian Schatten Norm (HS)
 The Hessian Schatten norm considers the eigenvalues of the pixel-wise Hessian matrix $H(r) = \nabla^2 S(r)$:
 
-$\text{Reg}(S(r)) = \sum_r \left( \sum_{l=1}^{n} \lambda_l(r)^p \right)^{1/p}$
+$\text{Reg}(S(r)) = \sum_r \left( \sum_{l=1}^{n} |\lambda_l(r)|^p \right)^{1/p}$
 
-where $\lambda_l(r)$ are the eigenvalues of the $2\times 2$ Hessian over the two dimensions selected by `sum_dims`. The Hessian is evaluated in closed form, so `sum_dims` must be exactly two dimensions; the remaining dimensions only take part in the summation.
+where $\lambda_l(r)$ are the eigenvalues of the $2\times 2$ Hessian over the two dimensions selected by `sum_dims`. The Hessian is evaluated in closed form, so `sum_dims` must be exactly two dimensions; the remaining dimensions only take part in the summation. The pixel-wise Hessian uses centered (symmetric) second-order stencils, so the norm has no preferred direction.
