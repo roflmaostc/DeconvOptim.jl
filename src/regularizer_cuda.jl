@@ -6,6 +6,21 @@ shift_inds(rs, d, off) = ntuple(i -> i == d ? rs[i] .+ off : rs[i], length(rs))
 
 
 """
+    HS_cuda(; p=1, sum_dims=nothing, weights=nothing)
+
+This function returns a function to calculate the Hessian Schatten norm
+of an n-dimensional array on CUDA (or CPU) arrays.
+
+Differentiable with `Zygote` on `CuArray`s because it avoids `Tullio` and only
+uses `view`/broadcast/`sum` operations. The math is identical to
+[`HS`](@ref) (see [`HS`](@ref) for a description of the arguments).
+"""
+function HS_cuda(; p=1, sum_dims=nothing, weights=nothing)
+    return arr -> HS_generic(arr, p, sum_dims, weights)
+end
+
+
+"""
     TV_cuda(; num_dims=nothing, sum_dims=nothing, weights=nothing, step=1, mode="forward", ϵ=1f-8)
 This function returns a function to calculate the Total Variation regularizer
 of a n-dimensional array.
@@ -221,7 +236,7 @@ Differentiable with `Zygote` on `CuArray`s. The math is identical to
 
 When `sum_dims` is given, the Hessian is only computed over the listed
 dimensions (the remaining dimensions are summed over); the generic
-[`TH_view`](@ref) fallback is used then.
+`TH_view` fallback is used then.
 """
 function TH_cuda(; num_dims=nothing, sum_dims=nothing, weights=nothing, ϵ=1f-8)
     if isnothing(sum_dims)
@@ -382,6 +397,16 @@ function TH_3D_view(arr::AbstractArray{T, N}, weights=nothing, ϵ=1f-8) where {T
     return @fastmath sum(expr)  # fused the sum with the broadcast
 end
 
+"""
+    Tikhonov_cuda(; num_dims=nothing, sum_dims=nothing, weights=nothing, step=1, mode="laplace")
+
+This function returns a function to calculate the Tikhonov regularizer
+of an n-dimensional array on CUDA (or CPU) arrays.
+
+Differentiable with `Zygote` on `CuArray`s because it avoids `Tullio` and only
+uses `view`/broadcast/`sum` operations. The math is identical to
+[`Tikhonov`](@ref) (see [`Tikhonov`](@ref) for a description of the arguments).
+"""
 function Tikhonov_cuda(; num_dims=nothing, sum_dims=nothing, weights=nothing,
                        step=1, mode="laplace")
     if !(mode in ("laplace", "spatial_grad_square", "identity"))

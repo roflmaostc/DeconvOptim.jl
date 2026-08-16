@@ -20,13 +20,14 @@ and returns a scalar. They support:
 
 ## CUDA
 
-The regularizers `TV()`, `GR()`, `TH()` and `Tikhonov()` automatically use the CUDA variants below when called on a `CuArray`.
+The regularizers `TV()`, `GR()`, `TH()`, `Tikhonov()` and `HS()` automatically use the CUDA variants below when called on a `CuArray`.
 All of them accept `num_dims=nothing`, which is also the default, in which case the number of dimensions is inferred from the array upon use.
 The CUDA variants support the same `sum_dims` and `weights` keyword arguments as their CPU counterparts.
 
 ```@docs
-DeconOptim.TV_cuda
-DeconOptim.GR_cuda
-DeconOptim.TH_cuda
-DeconOptim.Tikhonov_cuda
+DeconvOptim.TV_cuda
+DeconvOptim.GR_cuda
+DeconvOptim.TH_cuda
+DeconvOptim.Tikhonov_cuda
+DeconvOptim.HS_cuda
 ```

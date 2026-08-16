@@ -47,6 +47,10 @@ differentiable.
     positionally to `sum_dims`. If `nothing` all dimensions are weighted
     equally.
 """
+function HS(; p=1, sum_dims=nothing, weights=nothing)
+    return HessianSchattenNorm(p, sum_dims, weights)
+end
+
 # callable functor returned by `HS`.  Carries a ChainRules rrule that computes
 # the gradient analytically (see `hs_gradient`) instead of differentiating the
 # large broadcast tree of views, which made the reverse pass extremely slow and
@@ -57,12 +61,10 @@ struct HessianSchattenNorm{P, D, W}
     weights::W
 end
 
-function HS(; p=1, sum_dims=nothing, weights=nothing)
-    return HessianSchattenNorm(p, sum_dims, weights)
-end
-
 function (f::HessianSchattenNorm)(arr)
-    if isone(f.p)
+    if is_cuda_arr(arr)
+        return HS_cuda(p=f.p, sum_dims=f.sum_dims, weights=f.weights)(arr)
+    elseif isone(f.p)
         return HS1(arr, sum_dims=f.sum_dims, weights=f.weights)
     end
     return HSp(arr, p=f.p, sum_dims=f.sum_dims, weights=f.weights)
@@ -72,29 +74,13 @@ end
 Hessian schatten norm for p=1 efficiently with Tullio.
 """
 function HS1(arr; sum_dims=nothing, weights=nothing)
-    # the `@tullio` fast path uses `i+_` offset stencils which cannot run on a
-    # GPU; CUDA arrays fall back to the generic view/broadcast path below
-    # (same math, like the `_cuda` kernels of the other regularizers).
-    if !is_cuda_arr(arr) && isnothing(sum_dims) && isnothing(weights) && ndims(arr) == 2
+    if isnothing(sum_dims) && isnothing(weights) && ndims(arr) == 2
         H11 = Δr1r1(arr)
         H22 = Δr2r2(arr)
         H12 = Δr1r2(arr)
         return schatten_norm_1(H11, H12, H22)
     end
-    d1, d2 = hs_validate_sum_dims(arr, sum_dims)
-    w = hs_weights(weights)
-    H11 = hs_diag(arr, d1, (d1, d2))
-    H22 = hs_diag(arr, d2, (d1, d2))
-    H12 = hs_cross(arr, d1, d2)
-    w1sq = w[1] * w[1]
-    w2sq = w[2] * w[2]
-    w12  = w[1] * w[2]
-    a = @~ w1sq .* H11
-    d = @~ w2sq .* H22
-    b = @~ w12 .* H12
-    λ1, λ2 = hs_eigvals(a, b, d)
-    expr = abs.(1f-8 .+ λ1) .+ abs.(1f-8 .+ λ2)
-    return @fastmath sum(expr)
+    return HS_generic(arr, 1, sum_dims, weights)
 end
 
 # p=1 fast path over precomputed Hessian components (2D), in the same closed
@@ -109,12 +95,21 @@ Hessian schatten norm for p.
 But not as fast as p=1
 """
 function HSp(arr; p=1, sum_dims=nothing, weights=nothing)
-    if !is_cuda_arr(arr) && isnothing(sum_dims) && isnothing(weights) && ndims(arr) == 2
+    if isnothing(sum_dims) && isnothing(weights) && ndims(arr) == 2
         H11 = Δr1r1(arr)
         H22 = Δr2r2(arr)
         H12 = Δr1r2(arr)
         return sum(schatten_norm_tullio(H11, H12, H22, p))
     end
+    return HS_generic(arr, p, sum_dims, weights)
+end
+
+# generic view/broadcast implementation of the Hessian Schatten norm, used as
+# the fallback for non‑2D/weighted inputs on the CPU and for CUDA arrays (via
+# `HS_cuda`). Same math as the `@tullio` fast path, but composed of
+# `view`/broadcast/`sum` operations, which is differentiable with `Zygote` on
+# both `Array`s and `CuArray`s.
+function HS_generic(arr, p, sum_dims, weights)
     d1, d2 = hs_validate_sum_dims(arr, sum_dims)
     w = hs_weights(weights)
     H11 = hs_diag(arr, d1, (d1, d2))
@@ -127,7 +122,11 @@ function HSp(arr; p=1, sum_dims=nothing, weights=nothing)
     d = @~ w2sq .* H22
     b = @~ w12 .* H12
     λ1, λ2 = hs_eigvals(a, b, d)
-    expr = (abs.(1f-8 .+ λ1).^p .+ abs.(1f-8 .+ λ2).^p).^(1 / p)
+    if isone(p)
+        expr = abs.(1f-8 .+ λ1) .+ abs.(1f-8 .+ λ2)
+    else
+        expr = (abs.(1f-8 .+ λ1).^p .+ abs.(1f-8 .+ λ2).^p).^(1 / p)
+    end
     return @fastmath sum(expr)
 end
 

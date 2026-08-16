@@ -114,6 +114,23 @@ end
     @test_throws ArgumentError HS(sum_dims=(1, 4))(x3)
 end
 
+@testset "HS_cuda" begin
+    # view/broadcast kernel (HS_cuda) matches the CPU `@tullio` fast path and
+    # the generic path, for CPU and CUDA-style inputs alike.
+    x2 = abs.(randn(Float32, (8, 9))) .+ 0.1
+    x3 = abs.(randn(Float32, (6, 7, 8))) .+ 0.1
+
+    hs_cuda = DeconvOptim.HS_cuda()
+    @test hs_cuda(x2) ≈ HS()(x2) rtol = 1e-5
+    @test hs_cuda(x3) ≈ HS()(x3) rtol = 1e-5
+
+    hs_cuda_p2 = DeconvOptim.HS_cuda(p=2, sum_dims=(1, 2))
+    @test hs_cuda_p2(x3) ≈ HS(p=2, sum_dims=(1, 2))(x3) rtol = 1e-5
+
+    hs_cuda_w = DeconvOptim.HS_cuda(sum_dims=(1, 2), weights=[2.0, 1.0])
+    @test hs_cuda_w(x3) ≈ HS(sum_dims=(1, 2), weights=[2.0, 1.0])(x3) rtol = 1e-5
+end
+
 @testset "HS gradient (analytic rrule) matches the AD chain" begin
     # `HS()` now returns a functor with a ChainRules rrule that computes the
     # gradient analytically.  Check it against the gradient that Zygote derives
