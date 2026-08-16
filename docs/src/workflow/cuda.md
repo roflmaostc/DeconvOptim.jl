@@ -15,8 +15,7 @@ See also [our 3D example here](https://github.com/roflmaostc/DeconvOptim.jl/blob
 
 Our CPU regularizers are expressed with [Tullio.jl](https://github.com/mcabbott/Tullio.jl), which is currently not performant (and partly unsupported) with GPUs.
 Therefore [`TV()`](@ref), [`GR()`](@ref), [`TH()`](@ref) and [`Tikhonov()`](@ref) automatically dispatch to GPU compliant view/broadcast based implementations when 
-called on a `CuArray`. You can also use the explicit variants [`TV_cuda`](@ref), [`GR_cuda`](@ref), [`TH_cuda`](@ref) and [`Tikhonov_cuda`](@ref).
-This ensures that the gradients are computed with reasonable fast Zygote kernels as well.
+called on a `CuArray`. You can use the explicit variants [`DeconvOptim.TV_cuda`](@ref), [`DeconvOptim.GR_cuda`](@ref), [`DeconvOptim.TH_cuda`](@ref) and [`DeconvOptim.Tikhonov_cuda`](@ref), but this should not be necessary and is discouraged.
 
 All regularizers (both the Tullio and the view/broadcast based variants) accept `num_dims=nothing` in which case the number of dimensions
 is inferred from the array upon use. For [`GR()`](@ref)/[`TV()`](@ref)/[`Tikhonov()`](@ref) the CPU path then pre-compiles a `@tullio` kernel for each

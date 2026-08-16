@@ -66,9 +66,9 @@ Using regularizers together with a CUDA GPU is faster but unfortunately only a f
 For [3D](examples/cuda_3D.ipynb) the speed-up is larger.
 
 ## CUDA
-The regularizers `TV()`, `GR()` and `TH()` automatically dispatch to GPU implementations when they receive a `CuArray`.
-If you use a `CuArray` in `deconvolution`, use one of those regularizers (or the explicit `TV_cuda`, `GR_cuda`, `TH_cuda` variants). The reason is that the Tullio.jl based (`CPU`) implementations
-are currently not very fast with `CuArray`s and especially the derivative of such functions. The CUDA variants use only broadcast/`view` operations and hence work with `Zygote` on GPUs.
+The regularizers `TV()`, `GR()` and `TH()` automatically dispatch to separate GPU implementations with names ending with `_cuda()` when they receive a `CuArray`.
+These `_cuda()` variants can also be used directly, but their performance on CPU is significantly slower. 
+Deprecation notice: Variants such as `TV_cuda()` are now not any longer exported, as the users should use the general versions like `TV()` which automatically dispatch to the correct versions.
 
 ## Performance Tips
 ### Regularizers
