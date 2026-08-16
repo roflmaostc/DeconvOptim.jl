@@ -260,3 +260,57 @@ end
     @test_throws ArgumentError th_cuda_auto(x4)
     @test_throws ArgumentError DeconvOptim.TH_view(x4)
 end
+
+@testset "TH sum_dims" begin
+    x3 = abs.(randn(Float64, (6, 6, 6)))
+
+    # sum_dims requiring all dimensions equals the full regularizer
+    th_full = TH(num_dims=3)
+    th_sum123 = TH(num_dims=3, sum_dims=[1, 2, 3])
+    @test th_sum123(x3) ≈ th_full(x3)
+
+    # sum_dims with fewer dims == sum over the per-slice regularizer
+    th_sum12_2d = TH(num_dims=2, sum_dims=[1, 2])
+    th_sum12_3d = TH(num_dims=3, sum_dims=[1, 2])
+    @test th_sum12_3d(x3) ≈ sum(k -> th_sum12_2d(view(x3, :, :, k)), axes(x3, 3))
+
+    # sum_dims=[1,3] == sum over the per-slice regularizer on slices (:, j, :)
+    th13_2d = TH(num_dims=2, sum_dims=[1, 2])
+    th13_3d = TH(num_dims=3, sum_dims=[1, 3])
+    @test th13_3d(x3) ≈ sum(j -> th13_2d(view(x3, :, j, :)), axes(x3, 2))
+
+    # weights positional: weights[k] pairs with s_dims[k]
+    thw = TH(num_dims=3, sum_dims=[3], weights=[2.0])
+    rw = 0.0
+    for k in 2:5, j in axes(x3, 2), i in axes(x3, 1)
+        rw += sqrt(1f-8 + 4 * (x3[i, j, k+1] + x3[i, j, k-1] - 2 * x3[i, j, k])^2)
+    end
+    @test thw(x3) ≈ rw
+
+    # positional weights + cross terms: sum_dims=[1,2]
+    thw2 = TH(num_dims=2, sum_dims=[1, 2], weights=[2.0, 3.0])
+    x2 = abs.(randn(Float64, (6, 6)))
+    rw2 = 0.0
+    for j in 2:5, i in 2:5
+        rw2 += sqrt(1f-8 +
+            4 * (x2[i+1, j] + x2[i-1, j] - 2 * x2[i, j])^2 +
+            9 * (x2[i, j+1] + x2[i, j-1] - 2 * x2[i, j])^2 +
+            12 * (x2[i+1, j+1] - x2[i+1, j] - x2[i, j+1] + x2[i, j])^2)
+    end
+    @test thw2(x2) ≈ rw2
+
+    # CUDA (view-based) path parity on CPU arrays
+    th_cuda = DeconvOptim.TH_cuda(num_dims=3, sum_dims=[1, 2])
+    @test th_cuda(x3) ≈ th_sum12_3d(x3)
+    th_cuda_w = DeconvOptim.TH_cuda(num_dims=2, sum_dims=[1, 2], weights=[2.0, 3.0])
+    @test th_cuda_w(x2) ≈ thw2(x2)
+
+    # auto num_dims + sum_dims
+    th_auto = TH(sum_dims=[1, 2])
+    @test th_auto(x3) ≈ th_sum12_3d(x3)
+
+    # out of range / bad sum_dims throw
+    @test_throws ArgumentError TH(num_dims=2, sum_dims=[1, 3])(x3)
+    @test_throws ArgumentError TH(sum_dims=[4])(x3)
+    @test_throws ArgumentError DeconvOptim.TH_cuda(num_dims=2, sum_dims=[3])(x2)
+end

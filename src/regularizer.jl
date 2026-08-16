@@ -137,6 +137,18 @@ function generate_spatial_grad_square(num_dims, sum_dims_arr, weights)
 end
 
 
+function make_tikhonov_closure(num_dims, s_dims, ws, step, mode)
+    if mode == "laplace"
+        return @eval arr -> ($(generate_laplace(num_dims, s_dims, ws)...))
+    elseif mode == "spatial_grad_square"
+        expr(inds1, inds2, w) = :($w * abs2(arr[$(inds1...)] - arr[$(inds2...)]))
+        return @eval arr -> ($(create_Ndim_regularizer(expr, num_dims, s_dims,
+                                                       ws, step, (-1) * step)...))
+    else
+        throw(ArgumentError("The provided mode is not valid."))
+    end
+end
+
 """
     Tikhonov(; <keyword arguments>)
 
@@ -162,18 +174,6 @@ julia> reg([1 2 3; 4 5 6; 7 8 9])
 285
 ```
 """
-function make_tikhonov_closure(num_dims, s_dims, ws, step, mode)
-    if mode == "laplace"
-        return @eval arr -> ($(generate_laplace(num_dims, s_dims, ws)...))
-    elseif mode == "spatial_grad_square"
-        expr(inds1, inds2, w) = :($w * abs2(arr[$(inds1...)] - arr[$(inds2...)]))
-        return @eval arr -> ($(create_Ndim_regularizer(expr, num_dims, s_dims,
-                                                       ws, step, (-1) * step)...))
-    else
-        throw(ArgumentError("The provided mode is not valid."))
-    end
-end
-
 function Tikhonov(; num_dims=nothing, sum_dims=nothing, weights=nothing, step=1, mode="laplace")
     if mode == "identity"
         return arr -> sum(abs2.(arr))
@@ -242,32 +242,6 @@ function generate_GR(num_dims, sum_dims_arr, weights, ind1, ind2; debug=false)
 end
 
 
-"""
-    GR(; <keyword arguments>)
-
-This function returns a function to calculate the Good's roughness regularizer
-of a n-dimensional array. 
-# Arguments
-- `num_dims=nothing`: Dimension of the array that should be regularized. When `nothing`, it is inferred from the array upon use.
-- `sum_dims=nothing`: A array containing the dimensions we want to sum over. Defaults to all dimensions (`1:N`).
-- `weights=nothing`: A array containing weights to weight the contribution of 
-    different dimensions. If `weights=nothing` a weight of `1` is assumed for
-    each dimension.
-- `step=1`: A integer indicating the step width for the array indexing
-- `mode="forward"`: Either `"central"` or `"forward"` accounting for different
-    modes of the spatial gradient. Default is "forward".
-- `ϵ=1f-8` is a smoothness variable, to make it differentiable
-
-# Examples
-To create a regularizer for a 3D dataset where the third dimension
-has different contribution. For the derivative we use forward mode.
-```julia-repl
-julia> reg = GR(num_dims=2, sum_dims=[1, 2], weights=[1, 1], mode="forward");
-
-julia> reg([1 2 3; 4 5 6; 7 8 9])
--26.36561871738898
-```
-"""
 function make_gr_closure(num_dims, s_dims, ws, step, mode, ϵ)
     if mode == "central"
         return @eval arr2 -> begin
@@ -282,6 +256,35 @@ function make_gr_closure(num_dims, s_dims, ws, step, mode, ϵ)
     end
 end
 
+"""
+    GR(; <keyword arguments>)
+
+This function returns a function to calculate the Good's roughness regularizer
+of a n-dimensional array. 
+# Arguments
+- `num_dims=nothing`: Dimension of the array that should be regularized. When `nothing`, it is inferred from the array upon use.
+- `sum_dims=nothing`: A array containing the dimensions we want to sum over. Defaults to all dimensions (`1:N`).
+- `weights=nothing`: A array containing weights to weight the contribution of 
+    different dimensions. If `weights=nothing` a weight of `1` is assumed for
+    each dimension.
+- `step=1`: A integer indicating the step width for the array indexing
+- `mode="forward"`: Either `"central"` or `"forward"` accounting for different
+    modes of the spatial gradient. Default is "forward".
+- `ϵ=1f-8`: A constant which is added to the array before evaluating the
+    spatial gradient, so that the Good's roughness `sqrt.(x + ϵ)` is smoothly
+    differentiable everywhere. In the limit `ϵ → 0` the expression reduces to
+    the pure `sqrt.(x)`, while a larger `ϵ` smooths the transition.
+
+# Examples
+To create a regularizer for a 3D dataset where the third dimension
+has different contribution. For the derivative we use forward mode.
+```julia-repl
+julia> reg = GR(num_dims=2, sum_dims=[1, 2], weights=[1, 1], mode="forward");
+
+julia> reg([1 2 3; 4 5 6; 7 8 9])
+-26.36561871738898
+```
+"""
 function GR(; num_dims=nothing, sum_dims=nothing, weights=nothing, step=1,
               mode="forward", ϵ=1f-8)
     if !(mode in ("forward", "central"))
@@ -371,6 +374,16 @@ end
 # `startswith(string(typeof(arr)), "CuArray")` would then be false.
 is_cuda_arr(arr) = startswith(string(nameof(typeof(arr))), "CuArray")
 
+function make_tv_closure(num_dims, s_dims, ws, step, mode, ϵ)
+    if mode == "central"
+        return @eval arr -> ($(generate_TV(num_dims, s_dims, ws,
+                                        step, (-1) * step, ϵ)...))
+    else
+        return @eval arr -> ($(generate_TV(num_dims, s_dims, ws,
+                                        step, 0, ϵ)...))
+    end
+end
+
 """
     TV(; <keyword arguments>)
 
@@ -384,7 +397,12 @@ of a n-dimensional array.
 - `step=1`: A integer indicating the step width for the array indexing
 - `mode="forward"`: Either `"central"` or `"forward"` accounting for different
     modes of the spatial gradient. Default is "forward".
-- `ϵ=1f-8` is a smoothness variable, to make it differentiable
+- `ϵ=1f-8`: A constant which is added to the squared spatial gradient before
+    taking the square root, so that the Total Variation is smoothly
+    differentiable: `L = sqrt.(grad² + ϵ)`. In the limit `ϵ → 0` this reduces
+    to the pure gradient magnitude `sqrt.(grad²)` (i.e. `abs.(grad)`), while a
+    larger `ϵ` smoothly interpolates toward `grad`-squared (compare with
+    `Tikhonov(mode="spatial_grad_square")`).
 
 # Examples
 To create a regularizer for a 3D dataset where the third dimension
@@ -396,16 +414,6 @@ julia> reg([1 2 3; 4 5 6; 7 8 9])
 12.649111f0
 ```
 """
-function make_tv_closure(num_dims, s_dims, ws, step, mode, ϵ)
-    if mode == "central"
-        return @eval arr -> ($(generate_TV(num_dims, s_dims, ws,
-                                        step, (-1) * step, ϵ)...))
-    else
-        return @eval arr -> ($(generate_TV(num_dims, s_dims, ws,
-                                        step, 0, ϵ)...))
-    end
-end
-
 function TV(; num_dims=nothing, sum_dims=nothing, weights=nothing, step=1, mode="forward", ϵ=1f-8)
     if !(mode in ("forward", "central"))
         throw(ArgumentError("The provided mode is not valid."))
@@ -459,34 +467,68 @@ of a n-dimensional array.
 
 # Arguments
 - `num_dims=nothing`: Number of spatial dimensions (1, 2 or 3) of the array. When `nothing`, it is inferred from the array upon use.
-- `weights=nothing`: A array containing weights to weight the contribution of 
+- `sum_dims=nothing`: An array containing the dimensions over which the
+    Hessian is computed. Defaults to all dimensions (`1:num_dims`).
+    Dimensions not listed here only contribute to the summation over the
+    array (the `@tullio` reduction), but not to the Hessian itself.
+- `weights=nothing`: An array containing weights to weight the contribution of 
     different dimensions. If `weights=nothing` all dimensions are weighted equally.
-    A diagonal term of dimension `i` enters with `weights[i]^2` and the cross term
-    between dimensions `i` and `j` enters with `2 * weights[i] * weights[j]`.
-- `ϵ=1f-8` is a smoothness variable, to make it differentiable
+    The `weights` are matched positionally to `sum_dims`, i.e. the weight
+    `weights[k]` belongs to the dimension `sum_dims[k]`. A diagonal term of
+    dimension `i` enters with `weights[i]^2` and the cross term between
+    dimensions `i` and `j` enters with `2 * weights[i] * weights[j]`.
+- `ϵ=1f-8`: A constant which is added to the squared Hessian entries before
+    taking the square root, so that the Total Hessian norm is smoothly
+    differentiable at zero. In the limit `ϵ → 0` the expression reduces to
+    the pure Hessian norm `sqrt.(H²)`, while a larger `ϵ` smooths the
+    transition (compare with `TV`, where `ϵ` plays the same role).
 """
-function TH(; num_dims=nothing, weights=nothing, ϵ=1f-8)
+function TH(; num_dims=nothing, sum_dims=nothing, weights=nothing, ϵ=1f-8)
     if isnothing(num_dims)
-        # automatic selection of `num_dims` based on the array upon use
-        w1 = th_weights(weights, 1)
-        w2 = th_weights(weights, 2)
-        w3 = th_weights(weights, 3)
-        reg_HES_1 = make_th_closure(1, w1, ϵ)
-        reg_HES_2 = make_th_closure(2, w2, ϵ)
-        reg_HES_3 = make_th_closure(3, w3, ϵ)
-        reg_HES_cuda = TH_cuda(num_dims=nothing, weights=weights, ϵ=ϵ)
+        if isnothing(sum_dims)
+            # automatic selection of `num_dims` based on the array upon use
+            w1 = th_weights(weights, 1)
+            w2 = th_weights(weights, 2)
+            w3 = th_weights(weights, 3)
+            reg_HES_1 = make_th_closure(1, w1, ϵ)
+            reg_HES_2 = make_th_closure(2, w2, ϵ)
+            reg_HES_3 = make_th_closure(3, w3, ϵ)
+            reg_HES_cuda = TH_cuda(num_dims=nothing, weights=weights, ϵ=ϵ)
+            return arr -> begin
+                if is_cuda_arr(arr)
+                    return reg_HES_cuda(arr)
+                elseif ndims(arr) == 1
+                    return reg_HES_1(arr)
+                elseif ndims(arr) == 2
+                    return reg_HES_2(arr)
+                elseif ndims(arr) == 3
+                    return reg_HES_3(arr)
+                else
+                    throw(ArgumentError("TH only supports 1, 2 or 3 dimensions, got an array of $(ndims(arr)) dimensions."))
+                end
+            end
+        end
+        # automatic selection of `num_dims` based on the array upon use,
+        # with a custom `sum_dims`: pre-generate a generic `@tullio` closure
+        # for every rank that can host `sum_dims`.
+        s_dims = collect(sum_dims)
+        regs = Dict{Int, Any}()
+        for N in 1:3
+            s_dims_N = [d for d in s_dims if d <= N]
+            if !isempty(s_dims_N)
+                regs[N] = make_th_closure_generic(N, s_dims_N, weights, ϵ)
+            end
+        end
+        reg_HES_cuda = TH_cuda(num_dims=nothing, sum_dims=s_dims, weights=weights, ϵ=ϵ)
         return arr -> begin
+            N = ndims(arr)
+            if N > 3 || any(d -> d > N, s_dims)
+                throw(ArgumentError("sum_dims=$s_dims out of range for an array with $N dimensions."))
+            end
             if is_cuda_arr(arr)
                 return reg_HES_cuda(arr)
-            elseif ndims(arr) == 1
-                return reg_HES_1(arr)
-            elseif ndims(arr) == 2
-                return reg_HES_2(arr)
-            elseif ndims(arr) == 3
-                return reg_HES_3(arr)
-            else
-                throw(ArgumentError("TH only supports 1, 2 or 3 dimensions, got an array of $(ndims(arr)) dimensions."))
             end
+            return regs[N](arr)
         end
     elseif num_dims == 3
         reg_HES = make_th_closure(3, th_weights(weights, 3), ϵ)
@@ -498,8 +540,18 @@ function TH(; num_dims=nothing, weights=nothing, ϵ=1f-8)
         throw(ArgumentError("num_dims must be 1, 2 or 3"))
     end
 
-    reg_HES_cuda = TH_cuda(num_dims=num_dims, weights=weights, ϵ=ϵ)
-    return arr -> is_cuda_arr(arr) ? reg_HES_cuda(arr) : reg_HES(arr)
+    if isnothing(sum_dims)
+        reg_HES_cuda = TH_cuda(num_dims=num_dims, weights=weights, ϵ=ϵ)
+        return arr -> is_cuda_arr(arr) ? reg_HES_cuda(arr) : reg_HES(arr)
+    else
+        s_dims = collect(sum_dims)
+        if any(d -> d > num_dims, s_dims)
+            throw(ArgumentError("sum_dims entries out of range for num_dims=$num_dims: $s_dims"))
+        end
+        reg_HES_sum = make_th_closure_generic(num_dims, s_dims, weights, ϵ)
+        reg_HES_cuda = TH_cuda(num_dims=num_dims, sum_dims=s_dims, weights=weights, ϵ=ϵ)
+        return arr -> is_cuda_arr(arr) ? reg_HES_cuda(arr) : reg_HES_sum(arr)
+    end
 end
 
 function th_weights(weights, N)
@@ -510,6 +562,55 @@ function th_weights(weights, N)
     else
         return vcat(Float32.(weights), ones(Float32, N - length(weights)))
     end
+end
+
+# positional weights aligned to `sum_dims`: `weights[k]` pairs with `s_dims[k]`
+function th_weights_sum(weights, s_dims)
+    n = length(s_dims)
+    if isnothing(weights)
+        return ones(Float32, n)
+    elseif length(weights) >= n
+        return collect(Float32, weights[1:n])
+    else
+        return vcat(Float32.(weights), ones(Float32, n - length(weights)))
+    end
+end
+
+# offsets for a (subset of) dimensions, `offs::Dict{Int,Int}` maps a dimension
+# to an index offset; all other dimensions keep the plain index `i_d`.
+function generate_hessian_inds(num_dims, offs)
+    return map(1:num_dims) do di
+        i = Symbol(:i, di)
+        haskey(offs, di) ? :($i + $(offs[di])) : i
+    end
+end
+
+"""
+    make_th_closure_generic(num_dims, s_dims, weights, ϵ)
+
+Generate a `@tullio` closure computing the Total Hessian norm over the
+dimensions listed in `s_dims` of an array with `num_dims` dimensions.
+Dimensions not in `s_dims` only take part in the scalar reduction (summation).
+`weights` are matched positionally to `s_dims`.
+"""
+function make_th_closure_generic(num_dims, s_dims, weights, ϵ=1f-8)
+    w = th_weights_sum(weights, s_dims)
+    add = []
+    for (k, d) in enumerate(s_dims)
+        diag = generate_hessian_inds(num_dims, Dict(d => 0))
+        p1 = generate_hessian_inds(num_dims, Dict(d => 1))
+        m1 = generate_hessian_inds(num_dims, Dict(d => -1))
+        push!(add, :($(w[k]^2) * abs2(x[$(p1...)] + x[$(m1...)] - 2 * x[$(diag...)])))
+    end
+    for k in 1:length(s_dims), l in (k+1):length(s_dims)
+        d, e = s_dims[k], s_dims[l]
+        cross = generate_hessian_inds(num_dims, Dict(d => 0, e => 0))
+        p1p1 = generate_hessian_inds(num_dims, Dict(d => 1, e => 1))
+        p1p0 = generate_hessian_inds(num_dims, Dict(d => 1))
+        p0p1 = generate_hessian_inds(num_dims, Dict(e => 1))
+        push!(add, :($((2 * w[k] * w[l])) * abs2(x[$(p1p1...)] - x[$(p1p0...)] - x[$(p0p1...)] + x[$(cross...)])))
+    end
+    return @eval x -> @tullio res = sqrt($ϵ + $(add...))
 end
 
 function make_th_closure(N::Int, w::AbstractVector, ϵ)
