@@ -411,10 +411,10 @@ function TV(; num_dims=nothing, sum_dims=nothing, weights=nothing, step=1, mode=
         throw(ArgumentError("The provided mode is not valid."))
     end
 
+    NMAX = 10
+
     if isnothing(num_dims)
         # automatic selection of `num_dims` based on the array upon use.
-        # Note: the old `total_var = @eval arr -> ...` code silently defaulted
-        # to `num_dims=2` here via `generate_TV`; we now dispatch per-rank.
         total_var_cuda = TV_cuda(num_dims=nothing, sum_dims=sum_dims, weights=weights,
                                  step=step, mode=mode, ϵ=ϵ)
         if isnothing(sum_dims) && isnothing(weights)
@@ -441,7 +441,13 @@ function TV(; num_dims=nothing, sum_dims=nothing, weights=nothing, step=1, mode=
         total_var = make_tv_closure(num_dims, s_dims, ws, step, mode, ϵ)
         total_var_cuda = TV_cuda(num_dims=num_dims, sum_dims=sum_dims, weights=weights,
                                  step=step, mode=mode, ϵ=ϵ)
-        return arr -> is_cuda_arr(arr) ? total_var_cuda(arr) : total_var(arr)
+        return arr -> begin
+            N = ndims(arr)
+            if N <= num_dims && !is_cuda_arr(arr)
+                return total_var(arr)
+            end
+            return is_cuda_arr(arr) ? total_var_cuda(arr) : total_var(arr)
+        end
     end
 end
 
