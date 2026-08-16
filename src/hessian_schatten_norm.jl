@@ -47,18 +47,35 @@ differentiable.
     positionally to `sum_dims`. If `nothing` all dimensions are weighted
     equally.
 """
+# callable functor returned by `HS`.  Carries a ChainRules rrule that computes
+# the gradient analytically (see `hs_gradient`) instead of differentiating the
+# large broadcast tree of views, which made the reverse pass extremely slow and
+# allocation-heavy.
+struct HessianSchattenNorm{P, D, W}
+    p::P
+    sum_dims::D
+    weights::W
+end
+
 function HS(; p=1, sum_dims=nothing, weights=nothing)
-    if isone(p)
-        return arr -> HS1(arr, sum_dims=sum_dims, weights=weights)
+    return HessianSchattenNorm(p, sum_dims, weights)
+end
+
+function (f::HessianSchattenNorm)(arr)
+    if isone(f.p)
+        return HS1(arr, sum_dims=f.sum_dims, weights=f.weights)
     end
-    return arr -> HSp(arr, p=p, sum_dims=sum_dims, weights=weights)
+    return HSp(arr, p=f.p, sum_dims=f.sum_dims, weights=f.weights)
 end
 
 """
 Hessian schatten norm for p=1 efficiently with Tullio.
 """
 function HS1(arr; sum_dims=nothing, weights=nothing)
-    if isnothing(sum_dims) && isnothing(weights) && ndims(arr) == 2
+    # the `@tullio` fast path uses `i+_` offset stencils which cannot run on a
+    # GPU; CUDA arrays fall back to the generic view/broadcast path below
+    # (same math, like the `_cuda` kernels of the other regularizers).
+    if !is_cuda_arr(arr) && isnothing(sum_dims) && isnothing(weights) && ndims(arr) == 2
         H11 = Δr1r1(arr)
         H22 = Δr2r2(arr)
         H12 = Δr1r2(arr)
@@ -76,7 +93,7 @@ function HS1(arr; sum_dims=nothing, weights=nothing)
     d = @~ w2sq .* H22
     b = @~ w12 .* H12
     λ1, λ2 = hs_eigvals(a, b, d)
-    expr = @~ abs.(1f-8 .+ λ1) .+ abs.(1f-8 .+ λ2)
+    expr = abs.(1f-8 .+ λ1) .+ abs.(1f-8 .+ λ2)
     return @fastmath sum(expr)
 end
 
@@ -92,7 +109,7 @@ Hessian schatten norm for p.
 But not as fast as p=1
 """
 function HSp(arr; p=1, sum_dims=nothing, weights=nothing)
-    if isnothing(sum_dims) && isnothing(weights) && ndims(arr) == 2
+    if !is_cuda_arr(arr) && isnothing(sum_dims) && isnothing(weights) && ndims(arr) == 2
         H11 = Δr1r1(arr)
         H22 = Δr2r2(arr)
         H12 = Δr1r2(arr)
@@ -110,7 +127,7 @@ function HSp(arr; p=1, sum_dims=nothing, weights=nothing)
     d = @~ w2sq .* H22
     b = @~ w12 .* H12
     λ1, λ2 = hs_eigvals(a, b, d)
-    expr = @~ (abs.(1f-8 .+ λ1).^p .+ abs.(1f-8 .+ λ2).^p).^(1 / p)
+    expr = (abs.(1f-8 .+ λ1).^p .+ abs.(1f-8 .+ λ2).^p).^(1 / p)
     return @fastmath sum(expr)
 end
 
@@ -224,4 +241,99 @@ function eigvals_symmetric_tullio(a, b, d)
     @tullio λ₁[i, j] := 0.5 * (A[i, j] + B[i, j])
     @tullio λ₂[i, j] := 0.5 * (A[i, j] - B[i, j])
     return λ₁, λ₂
+end
+
+
+# ---------------------------------------------------------------------------
+# analytic gradient (used by the ChainRules rrule of `HessianSchattenNorm`)
+# ---------------------------------------------------------------------------
+
+# Loss of the pixel at `q` for the centered stencils (2nd deriv. along d1/d2
+# and mixed deriv.): the linear weights of x[q] inside the stencil are
+#   diag d:  x[q] -- -2, x[q ± e_d] -- +1
+#   cross:   x[q ± e1 ± e2] -- ±0.25  (sign of the product of the offsets)
+# so transporting the per-pixel Hessian gradient back onto the image amounts
+# to shifted, in-place accumulated broadcasts.
+function hs_gradient(arr, p, sum_dims, weights)
+    d1, d2 = hs_validate_sum_dims(arr, sum_dims)
+    w = hs_weights(weights)
+    w1sq = w[1] * w[1]
+    w2sq = w[2] * w[2]
+    w12  = w[1] * w[2]
+    T = float(eltype(arr))
+    eps = T(1e-8)
+    h05 = T(0.5)
+    hon = T(1)
+    htwo = T(2)
+    hfour = T(4)
+    hq = T(0.25)
+
+    # weighted pixel-wise Hessian entries (lazy broadcasts over shifted views)
+    h11 = hs_diag(arr, d1, (d1, d2))
+    h22 = hs_diag(arr, d2, (d1, d2))
+    h12 = hs_cross(arr, d1, d2)
+
+    # eigenvalues, same closed form as the forward pass (`hs_eigvals`):
+    #   λ1 = 0.5(tr+B), λ2 = 0.5(tr-B), tr = w1²H11 + w2²H22,
+    #   B   = sqrt(eps + (w1²H11 - w2²H22)² + 4 (w1 w2 H12)²)
+    diff = w1sq .* h11 .- w2sq .* h22
+    tr = w1sq .* h11 .+ w2sq .* h22
+    B = sqrt.(eps .+ diff .^ htwo .+ hfour .* (w12 .* h12) .^ htwo)
+
+    # derivative of the per-pixel loss w.r.t. the eigenvalues
+    if isone(p)
+        c1 = sign.(eps .+ h05 .* (tr .+ B))
+        c2 = sign.(eps .+ h05 .* (tr .- B))
+    else
+        q = 1 / p - 1
+        r = p - 1
+        u1 = abs.(eps .+ h05 .* (tr .+ B))
+        u2 = abs.(eps .+ h05 .* (tr .- B))
+        S = u1 .^ p .+ u2 .^ p
+        c1 = S .^ q .* u1 .^ r .* sign.(eps .+ h05 .* (tr .+ B))
+        c2 = S .^ q .* u2 .^ r .* sign.(eps .+ h05 .* (tr .- B))
+    end
+
+    # derivative w.r.t. the Hessian entries [[a, b], [b, d]]
+    gam = diff ./ B
+    da = h05 .* (c1 .* (hon .+ gam) .+ c2 .* (hon .- gam))
+    dd = h05 .* (c1 .* (hon .- gam) .+ c2 .* (hon .+ gam))
+    db = (htwo .* (w12 .* h12) ./ B) .* (c1 .- c2)
+
+    # transpose the centered finite-difference stencils back onto the full image
+    Tg = float(eltype(da))
+    gr = fill!(similar(arr, Tg), zero(Tg))
+    rs = hs_ranges(arr, (d1, d2))
+    # in-place fused accumulation (`.+=` on a SubArray would materialize a temp)
+    hs_acc!(gr, rs, T(-2) .* w1sq .* da)
+    hs_acc!(gr, hs_offs(rs, Dict(d1 => -1)), w1sq .* da)
+    hs_acc!(gr, hs_offs(rs, Dict(d1 => 1)), w1sq .* da)
+    hs_acc!(gr, rs, T(-2) .* w2sq .* dd)
+    hs_acc!(gr, hs_offs(rs, Dict(d2 => -1)), w2sq .* dd)
+    hs_acc!(gr, hs_offs(rs, Dict(d2 => 1)), w2sq .* dd)
+    c4 = hq .* w12
+    hs_acc!(gr, hs_offs(rs, Dict(d1 => 1, d2 => 1)), c4 .* db)
+    hs_acc!(gr, hs_offs(rs, Dict(d1 => -1, d2 => 1)), -c4 .* db)
+    hs_acc!(gr, hs_offs(rs, Dict(d1 => 1, d2 => -1)), -c4 .* db)
+    hs_acc!(gr, hs_offs(rs, Dict(d1 => -1, d2 => -1)), c4 .* db)
+    return gr
+end
+
+@inline function hs_acc!(gr, rng, val)
+    v = @view gr[rng...]
+    broadcast!(+, v, v, val)
+    return gr
+end
+
+# Zygote differentiates through the deep broadcast-of-views tree node by node,
+# materializing a gradient array per level (~770 MiB, ~20 s on a 128^3 Float32
+# array).  Replacing that chain with the analytic closed form above makes the
+# pullback a handful of fused in-place broadcasts on the precomputed grid.
+function ChainRulesCore.rrule(f::HessianSchattenNorm, arr::AbstractArray)
+    y = f(arr)
+    function hs_pullback(Δ)
+        gr = hs_gradient(arr, f.p, f.sum_dims, f.weights)
+        return ChainRulesCore.NoTangent(), Δ .* gr
+    end
+    return y, hs_pullback
 end

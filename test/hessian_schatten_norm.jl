@@ -113,3 +113,55 @@ end
     @test_throws ArgumentError HS(sum_dims=(1,))(x3)
     @test_throws ArgumentError HS(sum_dims=(1, 4))(x3)
 end
+
+@testset "HS gradient (analytic rrule) matches the AD chain" begin
+    # `HS()` now returns a functor with a ChainRules rrule that computes the
+    # gradient analytically.  Check it against the gradient that Zygote derives
+    # through the raw `HS1`/`HSp` expression tree.
+    configs = [
+        (1, nothing, nothing, (8, 9)),
+        (1, nothing, nothing, (6, 7, 8)),
+        (1, (1, 2), [2.0, 1.0], (6, 7, 8)),
+        (1, (2, 3), nothing, (6, 7, 8)),
+        (1, (3, 1), [1.0, 3.0], (6, 7, 8)),
+    ]
+    for (p, sd, w, sz) in configs
+        x = abs.(randn(Float64, sz)) .+ 0.1
+        g_chain = Zygote.gradient(x -> DeconvOptim.HS1(x, sum_dims=sd, weights=w), x)[1]
+        g_rr = Zygote.gradient(x -> HS(p=p, sum_dims=sd, weights=w)(x), x)[1]
+        g_dir = DeconvOptim.hs_gradient(x, p, sd, w)
+        @test g_rr ≈ g_chain rtol = 1e-10
+        @test g_dir ≈ g_chain rtol = 1e-10
+    end
+end
+
+@testset "HS gradient (p>1) matches finite differences" begin
+    # Zygote's chain through `HSp` is broken (the lazy `1/p` exponent), so use
+    # central finite differences of the forward value as reference.
+    function fd_grad(f, x; h = 1e-4)
+        g = zeros(float(eltype(x)), size(x))
+        for I in CartesianIndices(x)
+            xp = copy(x); xm = copy(x)
+            xp[I] += h; xm[I] -= h
+            g[I] = (f(xp) - f(xm)) / (2h)
+        end
+        return g
+    end
+    for (p, sd, w) in ((2, nothing, nothing), (3, (1, 2), nothing), (2, (2, 3), [2.0, 3.0]))
+        x = abs.(randn(Float64, (6, 7, 8))) .+ 0.1
+        f = HS(p=p, sum_dims=sd, weights=w)
+        g_dir = DeconvOptim.hs_gradient(x, p, sd, w)
+        g_fd = fd_grad(f, x)
+        @test g_dir ≈ g_fd rtol = 1e-4 atol = 1e-4
+    end
+end
+
+@testset "HS gradient is finite on random inputs" begin
+    for T in (Float32, Float64)
+        for (p, sd, w) in ((1, nothing, nothing), (1, (2, 3), [2.0, 1.0]), (2, (1, 2), nothing))
+            x = abs.(randn(T, (7, 8, 9)))
+            g = Zygote.gradient(x -> HS(p=p, sum_dims=sd, weights=w)(x), x)[1]
+            @test all(isfinite, g)
+        end
+    end
+end

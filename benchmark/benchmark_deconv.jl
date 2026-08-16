@@ -69,7 +69,8 @@ function main()
         # R = DeconvOptim.HS_cuda()
         CUDA.@time @CUDA.sync res_hs = deconvolution(measured, psf; mapping=Non_negative(), regularizer = R, iterations=iterations);
         @time res_hs = deconvolution(measured, psf; mapping=Non_negative(), regularizer = R, iterations=iterations);
-        # HS(): CUDA: 4.23 sec, CPU: 68 sec, CPU view version: (not existing)
+        # HS(): CUDA: 3.00 sec, CPU: 50 sec, CPU view version: (not existing)
+        # 44 sec 
         # OldV0.7.4, TH(): CUDA: (error) sec, CPU: 31.11 sec, CPU view version: (not existing) (only with num_dims=3)
 
         @vt obj
