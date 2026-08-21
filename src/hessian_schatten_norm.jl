@@ -336,3 +336,17 @@ function ChainRulesCore.rrule(f::HessianSchattenNorm, arr::AbstractArray)
     end
     return y, hs_pullback
 end
+
+# The `HS_cuda()` path returns a plain closure `arr -> HS_generic(arr, p, sum_dims, weights)`
+# rather than the `HessianSchattenNorm` functor, so it would bypass the functor's
+# analytic adjoint and make Zygote trace through the broadcast tree (large
+# allocations). Give `HS_generic` its own analytic adjoint reusing `hs_gradient`.
+function ChainRulesCore.rrule(::typeof(HS_generic), arr::AbstractArray, p, sum_dims, weights)
+    y = HS_generic(arr, p, sum_dims, weights)
+    function hsgen_pullback(Δ)
+        gr = hs_gradient(arr, p, sum_dims, weights)
+        return ChainRulesCore.NoTangent(), Δ .* gr, ChainRulesCore.NoTangent(),
+               ChainRulesCore.NoTangent(), ChainRulesCore.NoTangent()
+    end
+    return y, hsgen_pullback
+end

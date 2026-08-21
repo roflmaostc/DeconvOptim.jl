@@ -195,6 +195,85 @@ function TV_view(arr::AbstractArray{T, N}, sum_dims=nothing, weights=nothing,
     # return @fastmath sumbc()
 end
 
+# In-place fused accumulation of a lazy broadcast `val` into `g[rng...]`.
+# On the GPU a `g[rng...] .+= val` would materialise a temporary (each `.+=` on
+# a `SubArray` launches an extra copy kernel); `broadcast!` fuses the whole lazy
+# tree into a single kernel instead. This is the same trick `hs_acc!` uses for
+# the HS adjoint, and is what keeps the analytic adjoints fast.
+@inline function acc!(g, rng, val)
+    v = @view g[rng...]
+    broadcast!(+, v, v, val)
+    return g
+end
+
+# Analytic gradient of the TV regularizer (shared by `TV_view`'s custom adjoint).
+# Computed with a stencil loop over a single materialised `term` array instead of
+# letting Zygote trace through the fused lazy `Broadcasted` tree (which allocates
+# many full-size intermediates in the backward pass).
+function tv_view_gradient(arr::AbstractArray{T, N}, sum_dims=nothing, weights=nothing,
+                          step=1, mode="forward", ϵ=1f-8) where {T, N}
+    if isnothing(sum_dims)
+        sum_dims = collect(1:N)
+    end
+    if isnothing(weights)
+        weights = ones(Float32, N)
+    end
+    rs = ntuple(N) do d
+        if d in sum_dims
+            if mode == "forward"
+                (first(axes(arr, d))):(last(axes(arr, d)) .- step)
+            else
+                (first(axes(arr, d)) .+ step):(last(axes(arr, d)) .- step)
+            end
+        else
+            axes(arr, d)
+        end
+    end
+    arr0 = view(arr, rs...)
+    term = zero(arr0)
+    if mode == "forward"
+        for (d, w) in zip(sum_dims, weights)
+            term = @lazybc term .+ w .* abs2.(view(arr, shift_inds(rs, d, step)...) .- arr0)
+        end
+    else
+        for (d, w) in zip(sum_dims, weights)
+            term = @lazybc term .+ w .* abs2.(view(arr, shift_inds(rs, d, step)...) .-
+                                view(arr, shift_inds(rs, d, -step)...))
+        end
+    end
+    t = @lazybc sqrt.(ϵ .+ term)
+    g = similar(arr)
+    fill!(g, zero(eltype(arr)))
+    for (d, w) in zip(sum_dims, weights)
+        if mode == "forward"
+            diff = view(arr, shift_inds(rs, d, step)...) .- arr0
+            acc!(g, rs, (-w) .* (diff ./ t))
+            acc!(g, shift_inds(rs, d, step), w .* (diff ./ t))
+        else
+            diff = view(arr, shift_inds(rs, d, step)...) .-
+                   view(arr, shift_inds(rs, d, -step)...)
+            acc!(g, shift_inds(rs, d, step), w .* (diff ./ t))
+            acc!(g, shift_inds(rs, d, -step), (-w) .* (diff ./ t))
+        end
+    end
+    return g
+end
+
+# Custom adjoint for `TV_view` so Zygote does not trace through the fused lazy
+# broadcast tree (which causes large allocations in the backward pass). The
+# gradient is accumulated analytically into a single buffer.
+function ChainRulesCore.rrule(::typeof(TV_view), arr::AbstractArray{T, N},
+                              sum_dims=nothing, weights=nothing, step=1,
+                              mode="forward", ϵ=1f-8) where {T, N}
+    y = TV_view(arr, sum_dims, weights, step, mode, ϵ)
+    function tv_pullback(Δy)
+        ∇ = tv_view_gradient(arr, sum_dims, weights, step, mode, ϵ)
+        ∇ .*= Δy
+        return NoTangent(), ∇, NoTangent(), NoTangent(), NoTangent(), NoTangent(), NoTangent()
+    end
+    return y, tv_pullback
+end
+
 function TV_1D_view(arr::AbstractArray{T, N}, weights=nothing, ϵ=1f-8) where {T, N}
     if isnothing(weights)
         weights = ones(Float32, ndims(arr))
@@ -327,6 +406,66 @@ function GR_cuda_apply(arr::AbstractArray{T, N}, s_dims, ws, step, mode, ϵ) whe
     sw = sum(ws)
     expr = @lazybc (a0 .* (term .- ((2 * sw) .* a0)))
     return @fastmath prefactor * sumbc(expr) # fused the sum with the broadcast
+end
+
+# Analytic gradient of the Good's roughness regularizer (custom adjoint).
+# With `s = sqrt.(arr .+ ϵ)`, `a0 = s[rs]` and `A = Σ_d w_d·s[shift_d]`, the
+# forward is `L = prefactor · Σ a0 .* (A .- sw .* a0)` (forward mode). The
+# gradient is accumulated vectorised into a single buffer.
+function gr_cuda_gradient(arr::AbstractArray{T, N}, s_dims, ws, step, mode, ϵ) where {T, N}
+    rs = ntuple(N) do d
+        if d in s_dims
+            if mode == "forward"
+                (first(axes(arr, d))):(last(axes(arr, d)) .- step)
+            else
+                (first(axes(arr, d)) .+ step):(last(axes(arr, d)) .- step)
+            end
+        else
+            axes(arr, d)
+        end
+    end
+    s = sqrt.(arr .+ ϵ)
+    s0 = view(s, rs...)
+    prefactor = mode == "forward" ? -4 / step : -2 / step
+    sw = sum(ws)
+    g = similar(arr)
+    fill!(g, zero(eltype(arr)))
+    # contribution of `a0` (the "center" sqrt) to the gradient
+    A = zero(s0)
+    for (d, w) in zip(s_dims, ws)
+        A .+= w .* view(s, shift_inds(rs, d, step)...)
+    end
+    if mode == "central"
+        for (d, w) in zip(s_dims, ws)
+            A .+= w .* view(s, shift_inds(rs, d, -step)...)
+        end
+    end
+    # For forward mode `term` contains `s0` (via `a_p + a0`), giving
+    # `∂expr/∂a0 = A - 2·sw·s0`; in central mode `term` is only the neighbours,
+    # giving `∂expr/∂a0 = A - 4·sw·s0`.
+    swfactor = mode == "forward" ? 2 : 4
+    acc!(g, rs, prefactor .* (A .- (swfactor * sw) .* s0) ./ (2 .* s0))
+    # contributions of the shifted `sqrt` terms
+    for (d, w) in zip(s_dims, ws)
+        acc!(g, shift_inds(rs, d, step), prefactor .* s0 .* w ./ (2 .* view(s, shift_inds(rs, d, step)...)))
+        if mode == "central"
+            acc!(g, shift_inds(rs, d, -step), prefactor .* s0 .* w ./ (2 .* view(s, shift_inds(rs, d, -step)...)))
+        end
+    end
+    return g
+end
+
+# Custom adjoint for `GR_cuda_apply` to avoid Zygote tracing through the fused
+# lazy broadcast tree (large backward allocations).
+function ChainRulesCore.rrule(::typeof(GR_cuda_apply), arr::AbstractArray{T, N},
+                              s_dims, ws, step, mode, ϵ) where {T, N}
+    y = GR_cuda_apply(arr, s_dims, ws, step, mode, ϵ)
+    function gr_pullback(Δy)
+        ∇ = gr_cuda_gradient(arr, s_dims, ws, step, mode, ϵ)
+        ∇ .*= Δy
+        return NoTangent(), ∇, NoTangent(), NoTangent(), NoTangent(), NoTangent(), NoTangent()
+    end
+    return y, gr_pullback
 end
 
 
@@ -502,6 +641,196 @@ function TH_3D_view(arr::AbstractArray{T, N}, weights=nothing, ϵ=1f-8) where {T
     return @fastmath sumbc(expr)  # fused the sum with the broadcast
 end
 
+# ---------------------------------------------------------------------------
+# Analytic gradients of the TH (Total Hessian) regularizer, used by custom
+# adjoints so Zygote does not trace through the fused lazy broadcast tree
+# (which allocates many full-size intermediates in the backward pass).
+# Each stencil `LC` contributes `pref * LC / t` (t = sqrt(ϵ+term)) scattered
+# with the coefficients of its linear combination.
+# ---------------------------------------------------------------------------
+function th_1d_gradient(arr::AbstractArray, weights=nothing, ϵ=1f-8)
+    if isnothing(weights)
+        weights = ones(Float32, 1)
+    end
+    rs = (first(axes(arr, 1)) .+ 1):(last(axes(arr, 1)) .- 1)
+    a0 = view(arr, rs); am = view(arr, rs .- 1); ap = view(arr, rs .+ 1)
+    w1 = weights[1] * weights[1]
+    LC = ap .+ am .- 2 .* a0
+    t = sqrt.(ϵ .+ w1 .* abs2.(LC))
+    g = similar(arr); fill!(g, zero(eltype(arr)))
+    acc!(g, (rs,), (-2) .* w1 .* (LC ./ t))
+    acc!(g, (rs .+ 1,), w1 .* (LC ./ t))
+    acc!(g, (rs .- 1,), w1 .* (LC ./ t))
+    return g
+end
+
+function th_2d_gradient(arr::AbstractArray, weights=nothing, ϵ=1f-8)
+    if isnothing(weights)
+        weights = ones(Float32, 2)
+    end
+    rs = ntuple(i -> (first(axes(arr, i)) .+ 1):(last(axes(arr, i)) .- 1), 2)
+    a00 = view(arr, rs[1], rs[2]); a10 = view(arr, rs[1] .+ 1, rs[2]); am0 = view(arr, rs[1] .- 1, rs[2])
+    a01 = view(arr, rs[1], rs[2] .+ 1); a0m = view(arr, rs[1], rs[2] .- 1); a11 = view(arr, rs[1] .+ 1, rs[2] .+ 1)
+    w11 = weights[1] * weights[1]; w22 = weights[2] * weights[2]; w12 = 2 * weights[1] * weights[2]
+    t1 = a10 .+ am0 .- 2 .* a00
+    t2 = a01 .+ a0m .- 2 .* a00
+    t3 = a11 .- a10 .- a01 .+ a00
+    term = w11 .* abs2.(t1) .+ w22 .* abs2.(t2) .+ w12 .* abs2.(t3)
+    t = sqrt.(ϵ .+ term)
+    g = similar(arr); fill!(g, zero(eltype(arr)))
+    # t1: a10 + am0 - 2 a00
+    acc!(g, (rs[1] .+ 1, rs[2]), w11 .* (t1 ./ t))
+    acc!(g, (rs[1] .- 1, rs[2]), w11 .* (t1 ./ t))
+    acc!(g, (rs[1], rs[2]), (-2) .* w11 .* (t1 ./ t))
+    # t2: a01 + a0m - 2 a00
+    acc!(g, (rs[1], rs[2] .+ 1), w22 .* (t2 ./ t))
+    acc!(g, (rs[1], rs[2] .- 1), w22 .* (t2 ./ t))
+    acc!(g, (rs[1], rs[2]), (-2) .* w22 .* (t2 ./ t))
+    # t3: a11 - a10 - a01 + a00
+    acc!(g, (rs[1] .+ 1, rs[2] .+ 1), w12 .* (t3 ./ t))
+    acc!(g, (rs[1] .+ 1, rs[2]), (-1) .* w12 .* (t3 ./ t))
+    acc!(g, (rs[1], rs[2] .+ 1), (-1) .* w12 .* (t3 ./ t))
+    acc!(g, (rs[1], rs[2]), w12 .* (t3 ./ t))
+    return g
+end
+
+function th_3d_gradient(arr::AbstractArray, weights=nothing, ϵ=1f-8)
+    if isnothing(weights)
+        weights = ones(Float32, 3)
+    end
+    rs = ntuple(i -> (first(axes(arr, i)) .+ 1):(last(axes(arr, i)) .- 1), 3)
+    a000 = view(arr, rs[1], rs[2], rs[3]); a100 = view(arr, rs[1] .+ 1, rs[2], rs[3]); am00 = view(arr, rs[1] .- 1, rs[2], rs[3])
+    a010 = view(arr, rs[1], rs[2] .+ 1, rs[3]); a0m0 = view(arr, rs[1], rs[2] .- 1, rs[3])
+    a001 = view(arr, rs[1], rs[2], rs[3] .+ 1); a00m = view(arr, rs[1], rs[2], rs[3] .- 1)
+    a110 = view(arr, rs[1] .+ 1, rs[2] .+ 1, rs[3]); a101 = view(arr, rs[1] .+ 1, rs[2], rs[3] .+ 1); a011 = view(arr, rs[1], rs[2] .+ 1, rs[3] .+ 1)
+    w11 = weights[1]^2; w22 = weights[2]^2; w33 = weights[3]^2
+    w12 = 2 * weights[1] * weights[2]; w13 = 2 * weights[1] * weights[3]; w23 = 2 * weights[2] * weights[3]
+    t1 = a100 .+ am00 .- 2 .* a000
+    t2 = a010 .+ a0m0 .- 2 .* a000
+    t3 = a001 .+ a00m .- 2 .* a000
+    t4 = a110 .- a100 .- a010 .+ a000
+    t5 = a101 .- a100 .- a001 .+ a000
+    t6 = a011 .- a001 .- a010 .+ a000
+    term = w11 .* abs2.(t1) .+ w22 .* abs2.(t2) .+ w33 .* abs2.(t3) .+
+           w12 .* abs2.(t4) .+ w13 .* abs2.(t5) .+ w23 .* abs2.(t6)
+    t = sqrt.(ϵ .+ term)
+    g = similar(arr); fill!(g, zero(eltype(arr)))
+    # t1: a100 + am00 - 2 a000
+    acc!(g, (rs[1] .+ 1, rs[2], rs[3]), w11 .* (t1 ./ t))
+    acc!(g, (rs[1] .- 1, rs[2], rs[3]), w11 .* (t1 ./ t))
+    acc!(g, (rs[1], rs[2], rs[3]), (-2) .* w11 .* (t1 ./ t))
+    # t2: a010 + a0m0 - 2 a000
+    acc!(g, (rs[1], rs[2] .+ 1, rs[3]), w22 .* (t2 ./ t))
+    acc!(g, (rs[1], rs[2] .- 1, rs[3]), w22 .* (t2 ./ t))
+    acc!(g, (rs[1], rs[2], rs[3]), (-2) .* w22 .* (t2 ./ t))
+    # t3: a001 + a00m - 2 a000
+    acc!(g, (rs[1], rs[2], rs[3] .+ 1), w33 .* (t3 ./ t))
+    acc!(g, (rs[1], rs[2], rs[3] .- 1), w33 .* (t3 ./ t))
+    acc!(g, (rs[1], rs[2], rs[3]), (-2) .* w33 .* (t3 ./ t))
+    # t4: a110 - a100 - a010 + a000
+    acc!(g, (rs[1] .+ 1, rs[2] .+ 1, rs[3]), w12 .* (t4 ./ t))
+    acc!(g, (rs[1] .+ 1, rs[2], rs[3]), (-1) .* w12 .* (t4 ./ t))
+    acc!(g, (rs[1], rs[2] .+ 1, rs[3]), (-1) .* w12 .* (t4 ./ t))
+    acc!(g, (rs[1], rs[2], rs[3]), w12 .* (t4 ./ t))
+    # t5: a101 - a100 - a001 + a000
+    acc!(g, (rs[1] .+ 1, rs[2], rs[3] .+ 1), w13 .* (t5 ./ t))
+    acc!(g, (rs[1] .+ 1, rs[2], rs[3]), (-1) .* w13 .* (t5 ./ t))
+    acc!(g, (rs[1], rs[2], rs[3] .+ 1), (-1) .* w13 .* (t5 ./ t))
+    acc!(g, (rs[1], rs[2], rs[3]), w13 .* (t5 ./ t))
+    # t6: a011 - a001 - a010 + a000
+    acc!(g, (rs[1], rs[2] .+ 1, rs[3] .+ 1), w23 .* (t6 ./ t))
+    acc!(g, (rs[1], rs[2], rs[3] .+ 1), (-1) .* w23 .* (t6 ./ t))
+    acc!(g, (rs[1], rs[2] .+ 1, rs[3]), (-1) .* w23 .* (t6 ./ t))
+    acc!(g, (rs[1], rs[2], rs[3]), w23 .* (t6 ./ t))
+    return g
+end
+
+function th_view_generic_gradient(arr::AbstractArray{T, N}, sum_dims, weights=nothing,
+                                  ϵ=1f-8) where {T, N}
+    s_dims = collect(sum_dims)
+    if isnothing(weights)
+        weights = ones(Float32, length(s_dims))
+    else
+        weights = collect(Float32, weights)
+        if length(weights) < length(s_dims)
+            weights = vcat(weights, ones(Float32, length(s_dims) - length(weights)))
+        end
+    end
+    axes_all = ntuple(i -> axes(arr, i), N)
+    rs = ntuple(N) do i
+        if i in s_dims
+            (first(axes_all[i]) .+ 1):(last(axes_all[i]) .- 1)
+        else
+            axes_all[i]
+        end
+    end
+    a0 = view(arr, rs...)
+    term = zero(a0)
+    for (k, d) in enumerate(s_dims)
+        pref = weights[k] * weights[k]
+        ap = view(arr, shift_inds(rs, d, 1)...)
+        am = view(arr, shift_inds(rs, d, -1)...)
+        term .+= pref .* abs2.(ap .+ am .- 2 .* a0)
+    end
+    for k in 1:length(s_dims), l in (k+1):length(s_dims)
+        d, e = s_dims[k], s_dims[l]
+        pref = 2 * weights[k] * weights[l]
+        app = view(arr, shift_inds(f_inds(rs, e), d, 1)...)
+        a0p = view(arr, f_inds(rs, e)...)
+        ap0 = view(arr, f_inds(rs, d)...)
+        term .+= pref .* abs2.(app .- a0p .- ap0 .+ a0)
+    end
+    t = sqrt.(ϵ .+ term)
+    g = similar(arr); fill!(g, zero(eltype(arr)))
+    for (k, d) in enumerate(s_dims)
+        pref = weights[k] * weights[k]
+        ap = view(arr, shift_inds(rs, d, 1)...)
+        am = view(arr, shift_inds(rs, d, -1)...)
+        LC = ap .+ am .- 2 .* a0
+        acc!(g, shift_inds(rs, d, 1), pref .* (LC ./ t))
+        acc!(g, shift_inds(rs, d, -1), pref .* (LC ./ t))
+        acc!(g, rs, (-2) .* pref .* (LC ./ t))
+    end
+    for k in 1:length(s_dims), l in (k+1):length(s_dims)
+        d, e = s_dims[k], s_dims[l]
+        pref = 2 * weights[k] * weights[l]
+        app = view(arr, shift_inds(f_inds(rs, e), d, 1)...)
+        a0p = view(arr, f_inds(rs, e)...)
+        ap0 = view(arr, f_inds(rs, d)...)
+        LC = app .- a0p .- ap0 .+ a0
+        acc!(g, shift_inds(f_inds(rs, e), d, 1), pref .* (LC ./ t))
+        acc!(g, f_inds(rs, e), (-1) .* pref .* (LC ./ t))
+        acc!(g, f_inds(rs, d), (-1) .* pref .* (LC ./ t))
+        acc!(g, rs, pref .* (LC ./ t))
+    end
+    return g
+end
+
+for (fn, grad) in ((:TH_1D_view, :th_1d_gradient), (:TH_2D_view, :th_2d_gradient),
+                   (:TH_3D_view, :th_3d_gradient))
+    @eval function ChainRulesCore.rrule(::typeof($fn), arr::AbstractArray{T, N},
+                                        weights=nothing, ϵ=1f-8) where {T, N}
+        y = $fn(arr, weights, ϵ)
+        function th_pullback(Δy)
+            ∇ = $grad(arr, weights, ϵ)
+            ∇ .*= Δy
+            return NoTangent(), ∇, NoTangent(), NoTangent()
+        end
+        return y, th_pullback
+    end
+end
+
+function ChainRulesCore.rrule(::typeof(TH_view_generic), arr::AbstractArray{T, N},
+                              sum_dims, weights=nothing, ϵ=1f-8) where {T, N}
+    y = TH_view_generic(arr, sum_dims, weights, ϵ)
+    function thg_pullback(Δy)
+        ∇ = th_view_generic_gradient(arr, sum_dims, weights, ϵ)
+        ∇ .*= Δy
+        return NoTangent(), ∇, NoTangent(), NoTangent(), NoTangent()
+    end
+    return y, thg_pullback
+end
+
 """
     Tikhonov_cuda(; num_dims=nothing, sum_dims=nothing, weights=nothing, step=1, mode="laplace")
 
@@ -560,10 +889,72 @@ function Tikhonov_view(arr::AbstractArray{T, N}, sum_dims=nothing, weights=nothi
         term = zero(a0)
         for (d, w) in zip(sum_dims, weights)
             term = @lazybc (term .+ w .* abs2.(view(arr, shift_inds(rs, d, step)...) .-
-                                       view(arr, shift_inds(rs, d, (-1) * step)...)))
+                                        view(arr, shift_inds(rs, d, (-1) * step)...)))
         end
         return @fastmath sumbc(term)
     else
         throw(ArgumentError("The provided mode is not valid."))
     end
+end
+
+# Analytic gradient of the Tikhonov regularizer (custom adjoint). All three
+# modes are quadratic, so the gradient is a direct scatter of `2·(weight)·LC`.
+function tikhonov_view_gradient(arr::AbstractArray{T, N}, sum_dims=nothing, weights=nothing,
+                                step=1, mode="laplace") where {T, N}
+    if isnothing(sum_dims)
+        sum_dims = collect(1:N)
+    end
+    if isnothing(weights)
+        weights = ones(Float32, N)
+    end
+    if mode == "identity"
+        return 2 .* arr
+    end
+    off = mode == "spatial_grad_square" ? step : 1
+    rs = ntuple(N) do d
+        if d in sum_dims
+            (first(axes(arr, d)) .+ off):(last(axes(arr, d)) .- off)
+        else
+            axes(arr, d)
+        end
+    end
+    a0 = view(arr, rs...)
+    g = similar(arr)
+    fill!(g, zero(eltype(arr)))
+    if mode == "laplace"
+        sw = -2 .* sum(weights)
+        LC = zero(a0)
+        LC .+= sw .* a0
+        for (d, w) in zip(sum_dims, weights)
+            LC .+= w .* view(arr, shift_inds(rs, d, 1)...)
+            LC .+= w .* view(arr, shift_inds(rs, d, -1)...)
+        end
+        gradpart = 2 .* LC
+        acc!(g, rs, sw .* gradpart)
+        for (d, w) in zip(sum_dims, weights)
+            acc!(g, shift_inds(rs, d, 1), w .* gradpart)
+            acc!(g, shift_inds(rs, d, -1), w .* gradpart)
+        end
+    elseif mode == "spatial_grad_square"
+        for (d, w) in zip(sum_dims, weights)
+            LC = view(arr, shift_inds(rs, d, step)...) .- view(arr, shift_inds(rs, d, -step)...)
+            acc!(g, shift_inds(rs, d, step), 2 .* w .* LC)
+            acc!(g, shift_inds(rs, d, -step), (-2) .* w .* LC)
+        end
+    end
+    return g
+end
+
+# Custom adjoint for `Tikhonov_view` to avoid Zygote tracing through the fused
+# lazy broadcast tree.
+function ChainRulesCore.rrule(::typeof(Tikhonov_view), arr::AbstractArray{T, N},
+                              sum_dims=nothing, weights=nothing, step=1,
+                              mode="laplace") where {T, N}
+    y = Tikhonov_view(arr, sum_dims, weights, step, mode)
+    function tik_pullback(Δy)
+        ∇ = tikhonov_view_gradient(arr, sum_dims, weights, step, mode)
+        ∇ .*= Δy
+        return NoTangent(), ∇, NoTangent(), NoTangent(), NoTangent(), NoTangent()
+    end
+    return y, tik_pullback
 end

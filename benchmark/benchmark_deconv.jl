@@ -40,7 +40,16 @@ function main()
         # NoReg: CUDA: 2.16 sec, CPU: 22.40 sec
         # OldV0.7.4, NoReg: CUDA: 2.28 sec, CPU: 26.21 sec
         # New @lazybc macro: CUDA: 1.75 sec  CPU: 
-        
+        # New explicit gradients: CUDA: 1.83 sec
+
+        CUDA.reclaim()
+        R = Tikhonov()
+        #  CUDA.@time CUDA.@sync R(measured) # 84 bytes allocations
+        CUDA.@time @CUDA.sync res_noreg = deconvolution(measured, psf; mapping=Non_negative(), regularizer=R, iterations=iterations);
+        @time res_noreg = deconvolution(measured, psf; mapping=Non_negative(), regularizer=R, iterations=iterations);
+        # New @lazybc macro: 
+        # explicit gradients: CUDA: 2.56 (12 Gb) sec  CPU: 
+                
         CUDA.reclaim()
         # R = GR(num_dims=3)
         R = GR()
@@ -50,6 +59,7 @@ function main()
         # GR(): CUDA: 1.62 sec, CPU: 13.96 sec, CPU view version: 24.35 sec
         # OldV0.7.4, GR(): CUDA: (error) sec, CPU: 35.87 sec, CPU view version: (not existing) sec  (only with num_dims=3)
         # New @lazybc CUDA: 1.5 sec
+        # explicit gradients: CUDA: 1.12 (6 Gb) sec  CPU: 
 
         CUDA.reclaim()
         R = TV() # num_dims=3
@@ -59,7 +69,8 @@ function main()
         @time res_tv = deconvolution(measured, psf; mapping=Non_negative(), regularizer = R, iterations=iterations);
         # TV(): CUDA: 2.9 sec, CPU: 21.91 sec, CPU view version: 48.04 sec 
         # OldV0.7.4, TV(): CUDA: 3.21 sec, CPU: 32.43 sec, CPU view version: 82.82 sec  (only with num_dims=3)
-        # New CUDA: 2.8 sec 
+        # @lazbc: CUDA: 2.8 sec 
+        # explicit gradients: CUDA: 2.4 (13 Gb) sec  CPU: 
 
         CUDA.reclaim()
         # R = TH(num_dims=3)
@@ -70,6 +81,7 @@ function main()
         # TH(): CUDA: 4.9 sec, CPU: 23.78 sec, CPU view version: 88 sec
         # OldV0.7.4, TH(): CUDA: (error) sec, CPU: 31.11 sec, CPU view version: (not existing) sec  (only with num_dims=3)
         # New @lazybc: CUDA: 4.16 sec
+        # explicit gradients: CUDA: 3.3 sec (27 Gb)   CPU: 
 
         CUDA.reclaim()
         # R = TH(num_dims=3)
@@ -82,6 +94,7 @@ function main()
         # 44 sec 
         # OldV0.7.4, TH(): CUDA: (error) sec, CPU: 31.11 sec, CPU view version: (not existing) (only with num_dims=3)
         # New @lazybc: CUDA: 3.29 sec
+        # explicit gradients: CUDA: 2.99 sec (20 Gb)   CPU: 
 
         @vt obj
         @vt measured
