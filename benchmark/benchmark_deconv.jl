@@ -44,7 +44,7 @@ function main()
         CUDA.reclaim()
         # R = GR(num_dims=3)
         R = GR()
-        #  CUDA.@time CUDA.@sync R(measured) # 15 MiB allocations
+        #  CUDA.@time CUDA.@sync R(measured) # 84 bytes allocations
         CUDA.@time CUDA.@sync res_gr = deconvolution(measured, psf; mapping=Non_negative(), regularizer = R, iterations=iterations);
         @time res_gr = deconvolution(measured, psf; mapping=Non_negative(), regularizer = R, iterations=iterations);
         # GR(): CUDA: 1.62 sec, CPU: 13.96 sec, CPU view version: 24.35 sec
@@ -53,13 +53,13 @@ function main()
 
         CUDA.reclaim()
         R = TV() # num_dims=3
-        #  CUDA.@time CUDA.@sync R(measured) # 7 MiB allocations
+        #  CUDA.@time CUDA.@sync R(measured) # 84 bytes allocations
         # R = TV(num_dims=3) # num_dims=3
         CUDA.@time @CUDA.sync res_tv = deconvolution(measured, psf; mapping=Non_negative(), regularizer = R, iterations=iterations);
         @time res_tv = deconvolution(measured, psf; mapping=Non_negative(), regularizer = R, iterations=iterations);
         # TV(): CUDA: 2.9 sec, CPU: 21.91 sec, CPU view version: 48.04 sec 
         # OldV0.7.4, TV(): CUDA: 3.21 sec, CPU: 32.43 sec, CPU view version: 82.82 sec  (only with num_dims=3)
-        # New CUDA: 3.12 sec 
+        # New CUDA: 2.8 sec 
 
         CUDA.reclaim()
         # R = TH(num_dims=3)

@@ -164,19 +164,26 @@ function TV_view(arr::AbstractArray{T, N}, sum_dims=nothing, weights=nothing,
         end
     end
     arr0 = view(arr, rs...)
-    term = zero(arr0)
     # NOTE: use `abs2` (not `.^2`) here. `@lazybc` builds a deeply nested lazy
     # `Broadcasted` tree, and Zygote's CUDA backward pass emits NaN when
     # differentiating a `broadcasted(^, x, 2)` (an integer-exponent `.^2`) deep
     # inside such a tree. `abs2` has a well-defined GPU chain rule, so the
     # gradient stays finite. For real inputs `abs2(x) == x^2` (derivative `2x`),
     # so the math is identical.
+    # NOTE: we accumulate `term` without a materialized `zero(arr0)` seed. The
+    # first dimension's term is built directly and the rest are folded in, so
+    # the whole regularizer stays a single lazy `Broadcasted` tree that `sumbc`
+    # reduces in one fused pass (no full-size intermediate array is allocated).
+    d0, w0 = first(zip(sum_dims, weights))
     if mode == "forward"
-        for (d, w) in zip(sum_dims, weights)
+        term = @lazybc (w0 .* abs2.(view(arr, shift_inds(rs, d0, step)...) .- arr0))
+        for (d, w) in zip(sum_dims[2:end], weights[2:end])
             term = @lazybc (term .+ w .* abs2.(view(arr, shift_inds(rs, d, step)...) .- arr0))
         end
     else
-        for (d, w) in zip(sum_dims, weights)
+        term = @lazybc (w0 .* abs2.(view(arr, shift_inds(rs, d0, step)...) .-
+                             view(arr, shift_inds(rs, d0, -step)...)))
+        for (d, w) in zip(sum_dims[2:end], weights[2:end])
             term = @lazybc (term .+ w .* abs2.(view(arr, shift_inds(rs, d, step)...) .-
                                  view(arr, shift_inds(rs, d, -step)...)))
         end
@@ -282,28 +289,38 @@ function GR_cuda(; num_dims=nothing, sum_dims=nothing, weights=nothing, step=1,
 end
 
 function GR_cuda_apply(arr::AbstractArray{T, N}, s_dims, ws, step, mode, ϵ) where {T, N}
-    a = sqrt.(arr .+ ϵ)
     rs = ntuple(N) do d
         if d in s_dims
             if mode == "forward"
-                (first(axes(a, d))):(last(axes(a, d)) .- step)
+                (first(axes(arr, d))):(last(axes(arr, d)) .- step)
             else
-                (first(axes(a, d)) .+ step):(last(axes(a, d)) .- step)
+                (first(axes(arr, d)) .+ step):(last(axes(arr, d)) .- step)
             end
         else
-            axes(a, d)
+            axes(arr, d)
         end
     end
-    a0 = view(a, rs...)
-    term = zero(a0)
+    # Keep `sqrt.(arr .+ ϵ)` lazy (a `Broadcasted` over views) instead of
+    # materialising it, and accumulate `term` without a `zero` seed, so the
+    # whole regularizer is one fused `Broadcasted` tree that `sumbc` reduces
+    # without allocating any full-size intermediate array.
+    a0 = @lazybc sqrt.(view(arr, rs...) .+ ϵ)
+    d0, w0 = first(zip(s_dims, ws))
     if mode == "forward"
-        for (d, w) in zip(s_dims, ws)
-            term = @lazybc (term .+ w .* (view(a, shift_inds(rs, d, step)...) .+ a0))
+        a0d = @lazybc sqrt.(view(arr, shift_inds(rs, d0, step)...) .+ ϵ)
+        term = @lazybc (w0 .* (a0d .+ a0))
+        for (d, w) in zip(s_dims[2:end], ws[2:end])
+            ad = @lazybc sqrt.(view(arr, shift_inds(rs, d, step)...) .+ ϵ)
+            term = @lazybc (term .+ w .* (ad .+ a0))
         end
     else
-        for (d, w) in zip(s_dims, ws)
-            term = @lazybc (term .+ w .* (view(a, shift_inds(rs, d, step)...) .+
-                                 view(a, shift_inds(rs, d, -step)...)))
+        ad = @lazybc sqrt.(view(arr, shift_inds(rs, d0, step)...) .+ ϵ)
+        amd = @lazybc sqrt.(view(arr, shift_inds(rs, d0, -step)...) .+ ϵ)
+        term = @lazybc (w0 .* (ad .+ amd))
+        for (d, w) in zip(s_dims[2:end], ws[2:end])
+            ad = @lazybc sqrt.(view(arr, shift_inds(rs, d, step)...) .+ ϵ)
+            amd = @lazybc sqrt.(view(arr, shift_inds(rs, d, -step)...) .+ ϵ)
+            term = @lazybc (term .+ w .* (ad .+ amd))
         end
     end
     prefactor = mode == "forward" ? -4 / step : -2 / step
