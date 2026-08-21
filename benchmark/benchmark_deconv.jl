@@ -1,5 +1,6 @@
 # here we compare various deconvolution options in terms of image quality
-# add SyntheticObjects, NDTools, CUDA
+# using Pkg; Pkg.activate("."); using TestEnv; TestEnv.activate();
+# ]add SyntheticObjects, NDTools, CUDA
 using DeconvOptim, SyntheticObjects, Random, Noise, NDTools
 using CUDA
 using View5D
@@ -38,40 +39,49 @@ function main()
         @time res_noreg = deconvolution(measured, psf; mapping=Non_negative(), regularizer=R, iterations=iterations);
         # NoReg: CUDA: 2.16 sec, CPU: 22.40 sec
         # OldV0.7.4, NoReg: CUDA: 2.28 sec, CPU: 26.21 sec
+        # New @lazybc macro: CUDA: 1.75 sec  CPU: 
         
         CUDA.reclaim()
         # R = GR(num_dims=3)
         R = GR()
-        CUDA.@time @CUDA.sync res_gr = deconvolution(measured, psf; mapping=Non_negative(), regularizer = R, iterations=iterations);
+        #  CUDA.@time CUDA.@sync R(measured) # 15 MiB allocations
+        CUDA.@time CUDA.@sync res_gr = deconvolution(measured, psf; mapping=Non_negative(), regularizer = R, iterations=iterations);
         @time res_gr = deconvolution(measured, psf; mapping=Non_negative(), regularizer = R, iterations=iterations);
         # GR(): CUDA: 1.62 sec, CPU: 13.96 sec, CPU view version: 24.35 sec
         # OldV0.7.4, GR(): CUDA: (error) sec, CPU: 35.87 sec, CPU view version: (not existing) sec  (only with num_dims=3)
+        # New @lazybc CUDA: 1.5 sec
 
         CUDA.reclaim()
         R = TV() # num_dims=3
+        #  CUDA.@time CUDA.@sync R(measured) # 7 MiB allocations
         # R = TV(num_dims=3) # num_dims=3
         CUDA.@time @CUDA.sync res_tv = deconvolution(measured, psf; mapping=Non_negative(), regularizer = R, iterations=iterations);
         @time res_tv = deconvolution(measured, psf; mapping=Non_negative(), regularizer = R, iterations=iterations);
         # TV(): CUDA: 2.9 sec, CPU: 21.91 sec, CPU view version: 48.04 sec 
         # OldV0.7.4, TV(): CUDA: 3.21 sec, CPU: 32.43 sec, CPU view version: 82.82 sec  (only with num_dims=3)
+        # New CUDA: 3.12 sec 
 
         CUDA.reclaim()
         # R = TH(num_dims=3)
         R = TH()
+        #  CUDA.@time CUDA.@sync R(measured) # 84 bytes allocations
         CUDA.@time @CUDA.sync res_th = deconvolution(measured, psf; mapping=Non_negative(), regularizer = R, iterations=iterations);
         @time res_th = deconvolution(measured, psf; mapping=Non_negative(), regularizer = R, iterations=iterations);
         # TH(): CUDA: 4.9 sec, CPU: 23.78 sec, CPU view version: 88 sec
         # OldV0.7.4, TH(): CUDA: (error) sec, CPU: 31.11 sec, CPU view version: (not existing) sec  (only with num_dims=3)
+        # New @lazybc: CUDA: 4.16 sec
 
         CUDA.reclaim()
         # R = TH(num_dims=3)
         R = HS() # p=1
+        #  CUDA.@time CUDA.@sync R(measured) # 168 bytes allocation
         # R = DeconvOptim.HS_cuda()
         CUDA.@time @CUDA.sync res_hs = deconvolution(measured, psf; mapping=Non_negative(), regularizer = R, iterations=iterations);
         @time res_hs = deconvolution(measured, psf; mapping=Non_negative(), regularizer = R, iterations=iterations);
         # HS(): CUDA: 3.00 sec, CPU: 50 sec, CPU view version: (not existing)
         # 44 sec 
         # OldV0.7.4, TH(): CUDA: (error) sec, CPU: 31.11 sec, CPU view version: (not existing) (only with num_dims=3)
+        # New @lazybc: CUDA: 3.29 sec
 
         @vt obj
         @vt measured

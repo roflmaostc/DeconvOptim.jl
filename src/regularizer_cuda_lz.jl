@@ -1,81 +1,9 @@
+using LazyArrays # @lazy to defer broadcasts
+
 f_inds(rs, b) = ntuple(i -> i == b ? rs[i] .+ 1 : rs[i], length(rs))
 
 # offset a (possible subset of) dimensions by an arbitrary amount
 shift_inds(rs, d, off) = ntuple(i -> i == d ? rs[i] .+ off : rs[i], length(rs))
-
-macro lazybc(ex)
-    esc(_lazybc(ex))
-end
-
-function _lazybc(ex)
-    ex isa Expr || return ex
-
-    # f.(args...)
-    if ex.head === :. && length(ex.args) == 2
-        f, args = ex.args
-
-        return Expr(
-            :call,
-            :(Base.Broadcast.broadcasted),
-            _lazybc(f),
-            (_lazybc(a) for a in args.args)...,
-        )
-    end
-
-    # .+, .-, .*, ./, etc.
-    if ex.head === :call
-        f = ex.args[1]
-
-        if f isa Symbol && startswith(String(f), ".")
-            op = Symbol(String(f)[2:end])
-
-            return Expr(
-                :call,
-                :(Base.Broadcast.broadcasted),
-                op,
-                (_lazybc(a) for a in ex.args[2:end])...,
-            )
-        end
-
-        return Expr(:call, map(_lazybc, ex.args)...)
-    end
-
-    return Expr(ex.head, map(_lazybc, ex.args)...)
-end
-
-# Clean, one-line convenience function
-# sumbc(bc::Base.Broadcast.Broadcasted) = sum(bc[I] for I in CartesianIndices(Base.Broadcast.instantiate(bc)))
-
-# Or using mapreduce (which the compiler optimizes identically):
-# sumbc(bc::Base.Broadcast.Broadcasted) = let bci = Base.Broadcast.instantiate(bc)
-#     mapreduce(I -> bci[I], +, CartesianIndices(bci))
-# end
-
-function sumbc(bc::Base.Broadcast.Broadcasted)
-    bci = Base.Broadcast.instantiate(bc)    
-    return sum(bci)    
-end
-
-sumbc(a::AbstractArray) = sum(a)
-
-# Custom rule for Zygote / ChainRules-compatible ADs
-# function ChainRulesCore.rrule(::typeof(sumbc), bc::Base.Broadcast.Broadcasted)
-#     y = sumbc(bc)
-    
-#     function sumbc_pullback(Δy)
-#     @show "in pullback"
-#         # The gradient of sum(f(x)) w.r.t f(x) is just 1.0 * Δy broadcasted across the structure.
-#         # We materialise the broadcasted gradient expression lazy tree * Δy:
-#         # Base.Broadcast.broadcasted(*, Δy, ...) 
-#         # Or leverage Julia's native broadcast pullback mechanism:
-        
-#         # For simple broadcast trees, the gradient w.r.t the unmaterialized tree 
-#         # propagates Δy back into the leaves using Base.Broadcast:
-#         return (NoTangent(), Base.Broadcast.broadcasted(*, Δy, 1.0)) 
-#     end
-    
-#     return y, sumbc_pullback
-# end
 
 """
     HS_cuda(; p=1, sum_dims=nothing, weights=nothing)
@@ -165,27 +93,20 @@ function TV_view(arr::AbstractArray{T, N}, sum_dims=nothing, weights=nothing,
     end
     arr0 = view(arr, rs...)
     term = zero(arr0)
-    # NOTE: use `abs2` (not `.^2`) here. `@lazybc` builds a deeply nested lazy
-    # `Broadcasted` tree, and Zygote's CUDA backward pass emits NaN when
-    # differentiating a `broadcasted(^, x, 2)` (an integer-exponent `.^2`) deep
-    # inside such a tree. `abs2` has a well-defined GPU chain rule, so the
-    # gradient stays finite. For real inputs `abs2(x) == x^2` (derivative `2x`),
-    # so the math is identical.
     if mode == "forward"
         for (d, w) in zip(sum_dims, weights)
-            term = @lazybc (term .+ w .* abs2.(view(arr, shift_inds(rs, d, step)...) .- arr0))
+            term = @~ (term .+ w .* (view(arr, shift_inds(rs, d, step)...) .- arr0).^2)
         end
     else
         for (d, w) in zip(sum_dims, weights)
-            term = @lazybc (term .+ w .* abs2.(view(arr, shift_inds(rs, d, step)...) .-
-                                 view(arr, shift_inds(rs, d, -step)...)))
+            term = @~ (term .+ w .* (view(arr, shift_inds(rs, d, step)...) .-
+                                 view(arr, shift_inds(rs, d, -step)...)).^2)
         end
     end
-    expr = @lazybc sqrt.(ϵ .+ term)
-    return @fastmath sumbc(expr)
+    expr = @~ (sqrt.(ϵ .+ term))
+    return @fastmath sum(expr)
     # br_exp = Broadcast.instantiate(Broadcast.broadcasted(absdif, (@view a[2:end,:]), (@view a[1:end-1,:])));
-    # expr = @lazybc sqrt.(ϵ .+ term)
-    # return @fastmath sumbc()
+    # return @fastmath sum(sqrt.(ϵ .+ term))
 end
 
 function TV_1D_view(arr::AbstractArray{T, N}, weights=nothing, ϵ=1f-8) where {T, N}
@@ -196,10 +117,7 @@ function TV_1D_view(arr::AbstractArray{T, N}, weights=nothing, ϵ=1f-8) where {T
     rs = map(x -> first(x):last(x)-1, as)
     arr0 = view(arr, f_inds(rs, 0)...)
     arr1 = view(arr, f_inds(rs, 1)...)
-    # `abs2` instead of `.^2`: see the comment in `TV_view` (Zygote CUDA
-    # backward produces NaN for a lazy `.^2` inside a nested `Broadcasted`).
-    expr = @lazybc sqrt.(ϵ .+ weights[1] .* abs2.(arr1 .- arr0))
-    return @fastmath sumbc(expr)
+    return @fastmath sum(sqrt.(ϵ .+ weights[1] .* (arr1 .- arr0).^2))
 end
 
 function TV_2D_view(arr::AbstractArray{T, N}, weights=nothing, ϵ=1f-8) where {T, N}
@@ -211,10 +129,7 @@ function TV_2D_view(arr::AbstractArray{T, N}, weights=nothing, ϵ=1f-8) where {T
     arr0 = view(arr, f_inds(rs, 0)...)
     arr1 = view(arr, f_inds(rs, 1)...)
     arr2 = view(arr, f_inds(rs, 2)...)
-    # `abs2` instead of `.^2`: see the comment in `TV_view` (Zygote CUDA
-    # backward produces NaN for a lazy `.^2` inside a nested `Broadcasted`).
-    expr = @lazybc sqrt.(ϵ .+ weights[1] .* abs2.(arr1 .- arr0) .+ weights[2] .* abs2.(arr0 .- arr2))
-    return @fastmath sumbc()
+    return @fastmath sum(sqrt.(ϵ .+ weights[1] .* (arr1 .- arr0).^2 .+ weights[2] .* (arr0 .- arr2).^2))
 end
 
 function TV_3D_view(arr::AbstractArray{T, N}, weights=nothing, ϵ=1f-8) where {T, N}
@@ -227,11 +142,8 @@ function TV_3D_view(arr::AbstractArray{T, N}, weights=nothing, ϵ=1f-8) where {T
     arr1 = view(arr, f_inds(rs, 1)...)
     arr2 = view(arr, f_inds(rs, 2)...)
     arr3 = view(arr, f_inds(rs, 3)...)
-    # `abs2` instead of `.^2`: see the comment in `TV_view` (Zygote CUDA
-    # backward produces NaN for a lazy `.^2` inside a nested `Broadcasted`).
-    expr = @lazybc sqrt.(ϵ .+ weights[1] .* abs2.(arr1 .- arr0) .+ 
-                               weights[2] .* abs2.(arr2 .- arr0) .+  weights[3] .* abs2.(arr3 .- arr0) )
-    return @fastmath sumbc(expr)
+    return @fastmath sum(sqrt.(ϵ .+ weights[1] .* (arr1 .- arr0).^2 .+ 
+                               weights[2] .* (arr2 .- arr0).^2 .+  weights[3] .* (arr3 .- arr0).^2 ))
 end
 
 
@@ -298,18 +210,18 @@ function GR_cuda_apply(arr::AbstractArray{T, N}, s_dims, ws, step, mode, ϵ) whe
     term = zero(a0)
     if mode == "forward"
         for (d, w) in zip(s_dims, ws)
-            term = @lazybc (term .+ w .* (view(a, shift_inds(rs, d, step)...) .+ a0))
+            term = @~ (term .+ w .* (view(a, shift_inds(rs, d, step)...) .+ a0))
         end
     else
         for (d, w) in zip(s_dims, ws)
-            term = @lazybc (term .+ w .* (view(a, shift_inds(rs, d, step)...) .+
+            term = @~ (term .+ w .* (view(a, shift_inds(rs, d, step)...) .+
                                  view(a, shift_inds(rs, d, -step)...)))
         end
     end
     prefactor = mode == "forward" ? -4 / step : -2 / step
     sw = sum(ws)
-    expr = @lazybc (a0 .* (term .- ((2 * sw) .* a0)))
-    return @fastmath prefactor * sumbc(expr) # fused the sum with the broadcast
+    expr = @~ (a0 .* (term .- ((2 * sw) .* a0)))
+    return @fastmath prefactor * sum(expr) # fused the sum with the broadcast
 end
 
 
@@ -400,13 +312,13 @@ function TH_view_generic(arr::AbstractArray{T, N}, sum_dims, weights=nothing, ϵ
         end
     end
 
-    term = @lazybc (0 .* view(arr, rs...))
+    term = @~ (0 .* view(arr, rs...))
     for (k, d) in enumerate(s_dims)
         pref = weights[k] * weights[k]
         ap = view(arr, shift_inds(rs, d, 1)...)
         am = view(arr, shift_inds(rs, d, -1)...)
         a0 = view(arr, rs...)
-        term = @lazybc (term .+ pref .* abs2.(ap .+ am .- 2 .* a0))
+        term = @~ (term .+ pref .* abs2.(ap .+ am .- 2 .* a0))
     end
     for k in 1:length(s_dims), l in (k+1):length(s_dims)
         d, e = s_dims[k], s_dims[l]
@@ -415,10 +327,10 @@ function TH_view_generic(arr::AbstractArray{T, N}, sum_dims, weights=nothing, ϵ
         a0p = view(arr, f_inds(rs, e)...)
         ap0 = view(arr, f_inds(rs, d)...)
         a00 = view(arr, rs...)
-        term = @lazybc (term .+ pref .* abs2.(app .- a0p .- ap0 .+ a00))
+        term = @~ (term .+ pref .* abs2.(app .- a0p .- ap0 .+ a00))
     end
-    expr = @lazybc (sqrt.(ϵ .+ term))
-    return @fastmath sumbc(expr)
+    expr = @~ (sqrt.(ϵ .+ term))
+    return @fastmath sum(expr)
 end
 
 function TH_1D_view(arr::AbstractArray{T, N}, weights=nothing, ϵ=1f-8) where {T, N}
@@ -429,8 +341,8 @@ function TH_1D_view(arr::AbstractArray{T, N}, weights=nothing, ϵ=1f-8) where {T
     a0 = view(arr, rs)
     am = view(arr, rs .- 1)
     ap = view(arr, rs .+ 1)
-    expr = @lazybc (sqrt.(ϵ .+ (weights[1]*weights[1]) .* abs2.(ap .+ am .- 2 .* a0)))
-    return @fastmath sumbc(expr) # fused the sum with the broadcast
+    expr = @~ (sqrt.(ϵ .+ (weights[1]*weights[1]) .* abs2.(ap .+ am .- 2 .* a0)))
+    return @fastmath sum(expr) # fused the sum with the broadcast
 end
 
 function TH_2D_view(arr::AbstractArray{T, N}, weights=nothing, ϵ=1f-8) where {T, N}
@@ -447,11 +359,11 @@ function TH_2D_view(arr::AbstractArray{T, N}, weights=nothing, ϵ=1f-8) where {T
     w11 = weights[1]*weights[1];
     w22 = weights[2]*weights[2];
     w12 = 2*weights[1]*weights[2];
-    term = @lazybc (w11 .* abs2.(a10 .+ am0 .- 2 .* a00) .+ 
+    term = @~ (w11 .* abs2.(a10 .+ am0 .- 2 .* a00) .+ 
                w22 .* abs2.(a01 .+ a0m .- 2 .* a00)  .+
                w12 .* abs2.(a11 .- a10 .- a01 .+ a00));
-    expr = @lazybc (sqrt.(ϵ .+ term))
-    return @fastmath sumbc(expr) # fused the sum with the broadcast
+    expr = @~ (sqrt.(ϵ .+ term))
+    return @fastmath sum(expr) # fused the sum with the broadcast
 end
 
 function TH_3D_view(arr::AbstractArray{T, N}, weights=nothing, ϵ=1f-8) where {T, N}
@@ -475,14 +387,14 @@ function TH_3D_view(arr::AbstractArray{T, N}, weights=nothing, ϵ=1f-8) where {T
     w12 = 2*weights[1]*weights[2];
     w13 = 2*weights[1]*weights[3];
     w23 = 2*weights[2]*weights[3];
-    term = @lazybc (w11 .* abs2.(a100 .+ am00 .- 2 .* a000) .+
+    term = @~ (w11 .* abs2.(a100 .+ am00 .- 2 .* a000) .+
            w22 .* abs2.(a010 .+ a0m0 .- 2 .* a000) .+
            w33 .* abs2.(a001 .+ a00m .- 2 .* a000) .+
            w12 .* abs2.(a110 .- a100 .- a010 .+ a000) .+
            w13 .* abs2.(a101 .- a100 .- a001 .+ a000) .+
            w23 .* abs2.(a011 .- a001 .- a010 .+ a000))
-    expr = @lazybc (sqrt.(ϵ .+ term))
-    return @fastmath sumbc(expr)  # fused the sum with the broadcast
+    expr = @~ (sqrt.(ϵ .+ term))
+    return @fastmath sum(expr)  # fused the sum with the broadcast
 end
 
 """
@@ -518,8 +430,7 @@ function Tikhonov_view(arr::AbstractArray{T, N}, sum_dims=nothing, weights=nothi
         weights = ones(Float32, N)
     end
     if mode == "identity"
-        expr = @lazybc abs2.(arr)
-        return sumbc(expr)
+        return sum(abs2.(arr))
     end
     off = mode == "spatial_grad_square" ? step : 1
     rs = ntuple(N) do d
@@ -532,20 +443,20 @@ function Tikhonov_view(arr::AbstractArray{T, N}, sum_dims=nothing, weights=nothi
     a0 = view(arr, rs...)
     if mode == "laplace"
         sw = -2 .* sum(weights)
-        term = @lazybc sw .* a0
+        term = @~ sw .* a0
         for (d, w) in zip(sum_dims, weights)
-            term = @lazybc (term .+ w .* view(arr, shift_inds(rs, d, 1)...))
-            term = @lazybc (term .+ w .* view(arr, shift_inds(rs, d, -1)...))
+            term = @~ (term .+ w .* view(arr, shift_inds(rs, d, 1)...))
+            term = @~ (term .+ w .* view(arr, shift_inds(rs, d, -1)...))
         end
-        expr = @lazybc abs2.(term)
-        return @fastmath sumbc(expr)
+        expr = @~ abs2.(term)
+        return @fastmath sum(expr)
     elseif mode == "spatial_grad_square"
         term = zero(a0)
         for (d, w) in zip(sum_dims, weights)
-            term = @lazybc (term .+ w .* abs2.(view(arr, shift_inds(rs, d, step)...) .-
+            term = @~ (term .+ w .* abs2.(view(arr, shift_inds(rs, d, step)...) .-
                                        view(arr, shift_inds(rs, d, (-1) * step)...)))
         end
-        return @fastmath sumbc(term)
+        return @fastmath sum(term)
     else
         throw(ArgumentError("The provided mode is not valid."))
     end

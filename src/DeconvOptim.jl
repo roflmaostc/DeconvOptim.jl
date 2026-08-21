@@ -26,7 +26,6 @@ using ChainRulesCore
 using LinearAlgebra
 
 using FillArrays
-using LazyArrays # @lazy to defer broadcasts
 
 using PrecompileTools
 
