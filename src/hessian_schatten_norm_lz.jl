@@ -118,16 +118,16 @@ function HS_generic(arr, p, sum_dims, weights)
     w1sq = w[1] * w[1]
     w2sq = w[2] * w[2]
     w12  = w[1] * w[2]
-    a = @lazybc w1sq .* H11
-    d = @lazybc w2sq .* H22
-    b = @lazybc w12 .* H12
+    a = @~ w1sq .* H11
+    d = @~ w2sq .* H22
+    b = @~ w12 .* H12
     λ1, λ2 = hs_eigvals(a, b, d)
     if isone(p)
-        expr = @lazybc abs.(1f-8 .+ λ1) .+ abs.(1f-8 .+ λ2)
+        expr = abs.(1f-8 .+ λ1) .+ abs.(1f-8 .+ λ2)
     else
-        expr = @lazybc (abs.(1f-8 .+ λ1).^p .+ abs.(1f-8 .+ λ2).^p).^(1 / p)
+        expr = (abs.(1f-8 .+ λ1).^p .+ abs.(1f-8 .+ λ2).^p).^(1 / p)
     end
-    return @fastmath sumbc(expr)
+    return @fastmath sum(expr)
 end
 
 
@@ -186,7 +186,7 @@ function hs_diag(arr, d, s_dims)
     a0 = view(arr, rs...)
     a1 = view(arr, hs_offs(rs, Dict(d => 1))...)
     am1 = view(arr, hs_offs(rs, Dict(d => -1))...)
-    return @lazybc a1 .- 2 .* a0 .+ am1
+    return @~ a1 .- 2 .* a0 .+ am1
 end
 
 # mixed derivative along dims `d` and `e`:
@@ -197,15 +197,15 @@ function hs_cross(arr, d, e)
     am1_1 = view(arr, hs_offs(rs, Dict(d => -1, e => 1))...)
     a1_m1 = view(arr, hs_offs(rs, Dict(d => 1, e => -1))...)
     am1_m1 = view(arr, hs_offs(rs, Dict(d => -1, e => -1))...)
-    return @lazybc 0.25f0 .* (a11 .- am1_1 .- a1_m1 .+ am1_m1)
+    return @~ 0.25f0 .* (a11 .- am1_1 .- a1_m1 .+ am1_m1)
 end
 
 # eigenvalues of the weighted 2x2 pixel-wise Hessian [[a, b], [b, d]]
 function hs_eigvals(a, b, d)
-    A = @lazybc a .+ d
-    B = @lazybc sqrt.(1f-8 .+ (a .- d).^2 .+ 4 .* b.^2)
-    λ1 = @lazybc 0.5 .* (A .+ B)
-    λ2 = @lazybc 0.5 .* (A .- B)
+    A = @~ a .+ d
+    B = @~ sqrt.(1f-8 .+ (a .- d).^2 .+ 4 .* b.^2)
+    λ1 = @~ 0.5 .* (A .+ B)
+    λ2 = @~ 0.5 .* (A .- B)
     return λ1, λ2
 end
 
@@ -335,18 +335,4 @@ function ChainRulesCore.rrule(f::HessianSchattenNorm, arr::AbstractArray)
         return ChainRulesCore.NoTangent(), Δ .* gr
     end
     return y, hs_pullback
-end
-
-# The `HS_cuda()` path returns a plain closure `arr -> HS_generic(arr, p, sum_dims, weights)`
-# rather than the `HessianSchattenNorm` functor, so it would bypass the functor's
-# analytic adjoint and make Zygote trace through the broadcast tree (large
-# allocations). Give `HS_generic` its own analytic adjoint reusing `hs_gradient`.
-function ChainRulesCore.rrule(::typeof(HS_generic), arr::AbstractArray, p, sum_dims, weights)
-    y = HS_generic(arr, p, sum_dims, weights)
-    function hsgen_pullback(Δ)
-        gr = hs_gradient(arr, p, sum_dims, weights)
-        return ChainRulesCore.NoTangent(), Δ .* gr, ChainRulesCore.NoTangent(),
-               ChainRulesCore.NoTangent(), ChainRulesCore.NoTangent()
-    end
-    return y, hsgen_pullback
 end

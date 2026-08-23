@@ -1,0 +1,9 @@
+[deps]
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+DeconvOptim = "03e7cd2f-1a03-4ea9-b59b-760a446df67f"
+NDTools = "98581153-e998-4eef-8d0d-5ec2c052313d"
+Noise = "81d43f40-5267-43b7-ae1c-8b967f377efa"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+SyntheticObjects = "e7028c27-0967-45e9-8fdb-dbc10ccb2b0a"
+View5D = "90d841e0-6953-4e90-9f3a-43681da8e949"

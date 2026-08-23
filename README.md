@@ -66,8 +66,9 @@ Using regularizers together with a CUDA GPU is faster but unfortunately only a f
 For [3D](examples/cuda_3D.ipynb) the speed-up is larger.
 
 ## CUDA
-For CUDA we only provide a Total variation regularizer via `TV_cuda`. The reason is that Tullio.jl is currently not very fast with `CuArray`s and especially
-the derivative of such functions.
+The regularizers `TV()`, `GR()` and `TH()` automatically dispatch to separate GPU implementations with names ending with `_cuda()` when they receive a `CuArray`.
+These `_cuda()` variants can also be used directly, but their performance on CPU is significantly slower. 
+Deprecation notice: Variants such as `TV_cuda()` are now not any longer exported, as the users should use the general versions like `TV()` which automatically dispatch to the correct versions.
 
 ## Performance Tips
 ### Regularizers

@@ -1,6 +1,6 @@
 # here we compare various deconvolution options in terms of image quality
 using IndexFunArrays, LinearAlgebra, Random, Noise, TestImages, FourierTools
-using DeconvOptim, FFTW, Optim, LineSearches
+using DeconvOptim, FFTW, Optim #, LineSearches
 using View5D, Plots
 
 obj = 100f0 .* Float32.(testimage("resolution_test_512"))
@@ -84,6 +84,16 @@ res_tv = deconvolution(measured, psf;
         regularizer=DeconvOptim.TV(), λ=1e-3, 
         mapping=Non_negative(), opt_options=opt_tv, debug_f=nothing)
 
+opt_hs, hs_summary = DeconvOptim.options_trace_deconv(obj, iterations, Non_negative())
+res_hs = deconvolution(measured, psf;
+        regularizer=DeconvOptim.HS(), λ=1e-3, 
+        mapping=Non_negative(), opt_options=opt_hs, debug_f=nothing)
+
+opt_th, th_summary = DeconvOptim.options_trace_deconv(obj, iterations, Non_negative())
+res_th = deconvolution(measured, psf;
+        regularizer=DeconvOptim.TH(), λ=1e-3, 
+        mapping=Non_negative(), opt_options=opt_th, debug_f=nothing)
+
 plot()
 title!("Regularization")
 do_display=false
@@ -93,6 +103,10 @@ show_ncc!(gr_summary, "GR")
 show_nvar!(gr_summary, "GR")
 show_ncc!(tv_summary, "TV")
 show_nvar!(tv_summary, "TV")
+show_ncc!(hs_summary, "HS")
+show_nvar!(hs_summary, "HS")
+show_ncc!(th_summary, "TH")
+show_nvar!(th_summary, "TH")
 
 plot()
 title!("Optimization")
@@ -107,3 +121,6 @@ best_ncc_img, best_nvar_img = get_data(tv_summary)
 @vt best_ncc_img
 @vt best_nvar_img
 @vt res_noreg
+@vt res_gr
+@vt res_hs
+@vt res_th

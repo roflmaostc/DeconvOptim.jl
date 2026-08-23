@@ -23,6 +23,11 @@ reg1 = TV(num_dims=3, sum_dims=[1, 2, 3])
 reg2 = Tikhonov(num_dims=3, sum_dims=[1, 2, 3], mode="identity")
 ```
 
+With `weights` the different dimensions can be weighted differently, e.g. to regularize the axial direction with a different strength than the lateral directions. The weights are matched positionally to `sum_dims`:
+```@jldoctest
+reg3 = TH(num_dims=3, sum_dims=[1, 2], weights=[1.0, 0.5])
+```
+
 We can then invoke the deconvolution. For `Tikhonov` using `identity` mode a smaller $\lambda$ produces better results. In the first reconstruction we also specified the `padding`. This parameters adds some spacing around the reconstruction image to prevent wrap around effects of the FFT based deconvolution. However, since we don't have bright objects at the boundary of the image we don't see an impact of that parameter.
 ```@jldoctest
 @time res, ores = deconvolution(img, psf, regularizer=reg1, loss=Poisson(),
